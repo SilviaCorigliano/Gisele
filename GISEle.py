@@ -1,6 +1,6 @@
 """
 Born in Weed May 22 2019
-testing if github is working
+
 @author: nondarloavedere
 """
 
