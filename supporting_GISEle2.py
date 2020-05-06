@@ -48,7 +48,7 @@ def s():
 def import_csv_file():
     print(
         "3. Importing and processing base layer - Let's import the necessary layer!")
-    os.chdir(r'Input//1_starting_CSV_files')
+    os.chdir(r'Input//')
     print("The available csv files in this directory are: ")
     csv_files = glob.glob('*.{}'.format('csv'))
     s()
@@ -76,14 +76,13 @@ def import_csv_file():
 def import_weighted_file():
     print(
         "5. Importing and processing base layer - Let's import the necessary layer!")
-    os.chdir(r'Input//2_weighted_datasets')
+    os.chdir(r'Output//Datasets')
     print("The available shp files in this directory are: ")
     shp_files = glob.glob('*.{}'.format('csv'))
     s()
     print("\n".join(shp_files))
     s()
     file_name = str(input("Which file do you want to load?: "))
-    # file_name = 'enel_studyarea3_weighted'
     geo_csv = pd.read_csv(file_name + ".csv")
 
     print("Layer file successfully loaded.")
@@ -219,7 +218,7 @@ def creating_dataframe(Point, df_in, proj_coords, unit, file_name):
     choice_save = str(input(
         "Do you want to save the processed file as a .CSV and .SHP? (y/n): "))
     if choice_save == "y":
-        os.chdir(r'Input//2_weighted_datasets')
+        os.chdir(r'Output//Datasets')
         geodf_in.to_csv(file_name + "_weighted.csv")
         geodf_in.to_file(file_name + "_weighted.shp")
         os.chdir(r'..//..')
