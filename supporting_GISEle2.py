@@ -69,7 +69,7 @@ def import_csv_file():
     l()
     resolution = int(input(
         "Enter the resolution of the grid in the measurement unit chosen: "))
-    os.chdir(r'..//..')
+    os.chdir(r'..//')
     return points, proj_coords, unit, file_name, resolution
 
 
@@ -364,12 +364,12 @@ def clustering_sensitivity(pop_points, geodf_in, total_points, total_people):
         input("Do you want to export CSV files of these tables? (y/n): "))
     s()
     if export == "y":
-        os.chdir(r'Output//Sensitivity')
+        os.chdir(r'Output//Clusters//Sensitivity')
         tab_cluster.to_csv("n_clusters.csv")
         tab_peop.to_csv("%_peop.csv")
         tab_area.to_csv("%_area.csv")
         tab_people_area.to_csv("people_area.csv")
-        os.chdir(r'..//..')
+        os.chdir(r'..//..//..')
     l()
 
     return feature_matrix, pop_weight
@@ -566,10 +566,15 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
                                         'ConnectionType'])
     grid_resume['Cluster'] = clusters_list_2
     grid_resume['ClusterLoad'] = clusters_load[2]
-    os.chdir(r'Input//0_Dataset//Substations')
-    substations = gpd.read_file("substations.shp")
-    substations['ID'] = range(0, len(substations))
-    os.chdir(r'..//..//..')
+    os.chdir(r'Input//')
+    print("Please select the substation file you want to load: ")
+    csv_files = glob.glob('*.{}'.format('csv'))
+    s()
+    print("\n".join(csv_files))
+    s()
+    file_name = str(input("Which file do you want to load?: "))
+    substations = pd.read_csv(file_name + '.csv', sep=',')
+    os.chdir(r'//..')
     os.chdir(r'Output//Grids')
     for cluster_n in clusters_list_2:
 
