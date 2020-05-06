@@ -574,7 +574,7 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
     s()
     file_name = str(input("Which file do you want to load?: "))
     substations = pd.read_csv(file_name + '.csv', sep=',')
-    os.chdir(r'//..')
+    os.chdir(r'..')
     os.chdir(r'Output//Grids')
     for cluster_n in clusters_list_2:
 
