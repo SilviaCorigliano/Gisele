@@ -548,12 +548,12 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
          clusters_load):
     print("Starting grid creation")
     s()
-    # pop_threshold = int(input("What's the population threshold for the grid algorithm?: "))
-    pop_threshold = 50
+    pop_threshold = int(input("What's the population threshold for the grid algorithm?: "))
+    # pop_threshold = 50
     s()
     # unitary cost of electric line: dollars per kilometers
-    # paycheck = float(input("Which is the unitary money expenditure for the realization of a kilometer of grid?: "))
-    paycheck = 5000
+    paycheck = float(input("Which is the unitary money expenditure for the realization of a kilometer of grid?: "))
+    # paycheck = 5000
     s()
     limitHV = 3000
     limitMV = 1000
@@ -568,12 +568,13 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
     grid_resume['ClusterLoad'] = clusters_load[2]
     os.chdir(r'Input//')
     print("Please select the substation file you want to load: ")
-    csv_files = glob.glob('*.{}'.format('csv'))
+    shp_files = glob.glob('*.{}'.format('shp'))
     s()
-    print("\n".join(csv_files))
+    print("\n".join(shp_files))
     s()
     file_name = str(input("Which file do you want to load?: "))
-    substations = pd.read_csv(file_name + '.csv', sep=',')
+    substations = gpd.read_file(file_name + '.shp', sep=',')
+    substations['ID'] = range(0, len(substations))
     os.chdir(r'..')
     os.chdir(r'Output//Grids')
     for cluster_n in clusters_list_2:
@@ -1350,7 +1351,7 @@ def final_results(clusters_list_2, total_energy, grid_resume, mg_NPC):
 
 def grid_optimization(gdf_clusters, geodf_in, grid_resume, proj_coords,
                       resolution, paycheck):
-    os.chdir(r'C:\Users\Vinicius\PycharmProjects\GISEle_git\Output\Grids')
+    os.chdir(r'Output//Grids')
     new_connection_merged = pd.DataFrame()
     grid_resume = pd.read_csv('grid_resume.csv')
     grid_resume.reset_index(drop=True, inplace=True)
