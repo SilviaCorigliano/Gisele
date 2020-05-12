@@ -1,59 +1,21 @@
 """
-Born in Weed May 22 2019
+GIS For Electrification (GISEle)
+Developed by the Energy Department of Politecnico di Milano
+Running Code
 
-@author: nondarloavedere
+In order to run the following algorithm please check if the Input file is
+configured accordingly, for more information check the README.
 """
 
-'----------------------------------------------------------------------------------------------------------------------'
-print("Importing GISEle complementary package!")
-import sys
-# sys.path.insert(0, 'Codes') #necessary for native GISEle Packages
-# native GISEle Packages
-import supporting_GISEle2
 
-# from supporting_GISEle_pt_2 import *
-print("GISEle complementary package successfully imported!")
-'----------------------------------------------------------------------------------------------------------------------'
-supporting_GISEle2.s()
-'----------------------------------------------------------------------------------------------------------------------'
-supporting_GISEle2.l()
-'Installing packages'
-print("1.Installing packages - Let's check if you have all necessary packages!")
-
-print("You have all the necessary packages!")
-
-'----------------------------------------------------------------------------------------------------------------------'
-supporting_GISEle2.l()
-"2.Importing packages"
-print("2.Importing packages - Let's import import all packages!")
-
-# system packages
-import os
-import glob
-
-print("All system packages imported.")
-
-# third party packages
-import pandas as pd
-import numpy as np
-from sklearn.cluster import DBSCAN
-import matplotlib.pyplot as plt
 from shapely.geometry import Point
-from fiona.crs import from_epsg
-import geopandas as gpd
-
-print("All third party packages packages imported.")
-supporting_GISEle2.l()
-'----------------------------------------------------------------------------------------------------------------------'
+import supporting_GISEle2
 
 'Introduction'
 supporting_GISEle2.l()
 print("Welcome to GISEle! The steps are:")
 supporting_GISEle2.l()
-steps = ["1.Installing packages -completed-",
-         "2.Importing packages -completed-",
-         "3.Importing and processing base layer",
-         "4.Assigning weights, Cleaning and creating the DataFrame",
+steps = ["4.Assigning weights, Cleaning and creating the DataFrame",
          "5.DataFrame preparation",
          "6.Clustering",
          "7.Grid creation",
@@ -63,7 +25,7 @@ steps = ["1.Installing packages -completed-",
 print("\n".join(steps))
 supporting_GISEle2.s()
 step = int(input("Which step do you want to select?: "))
-# step = 7
+
 if step <= 5:
 
     "3. Importing and processing base layer"
