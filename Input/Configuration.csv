@@ -1,0 +1,10 @@
+input_csv,Namajavira-Mozambique-32737-1000
+input_sub,Substations-Namajavira
+crs,32737
+resolution,1000
+unit,1
+pop_load,0.4
+pop_thresh,50
+line_bc,5000
+limit_HV,3000
+limit_MV,1000
