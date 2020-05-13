@@ -7,7 +7,8 @@ In order to run the following algorithm please check if the Input file is
 configured accordingly, for more information check the README.
 """
 
-
+import os
+import pandas as pd
 from shapely.geometry import Point
 import supporting_GISEle2
 
@@ -27,15 +28,15 @@ supporting_GISEle2.s()
 step = int(input("Which step do you want to select?: "))
 
 if step <= 5:
+    print("Importing parameters and input files")
 
-    "3. Importing and processing base layer"
-
-    points, proj_coords, unit, file_name, resolution = supporting_GISEle2.import_csv_file()
+    df, input_sub, crs, resolution, unit, pop_load, pop_thresh, \
+    line_bc, limit_HV, limit_MV = supporting_GISEle2.import_csv_file()
     '------------------------------------------------------------------------------------------------------------------'
     "4. Assigning weights, Cleaning and creating the DataFrame"
 
-    df_in = supporting_GISEle2.carwash(points)
-    geo_DataFrame = supporting_GISEle2.creating_dataframe(Point, df_in, proj_coords, unit, file_name)
+    df_in = supporting_GISEle2.carwash(df)
+    geo_DataFrame = supporting_GISEle2.creating_dataframe(Point, df_in, crs, unit, df)
     '------------------------------------------------------------------------------------------------------------------'
     "5.DataFrame preparation"
 

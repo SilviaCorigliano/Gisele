@@ -46,31 +46,24 @@ def s():
 
 
 def import_csv_file():
-    print(
-        "3. Importing and processing base layer - Let's import the necessary layer!")
+    print("Importing parameters and input files")
     os.chdir(r'Input//')
-    print("The available csv files in this directory are: ")
-    csv_files = glob.glob('*.{}'.format('csv'))
-    s()
-    print("\n".join(csv_files))
-    s()
-    file_name = str(input("Which file do you want to load?: "))
-    points = pd.read_csv(file_name + '.csv', sep=',')
-    print("Layer file successfully loaded.")
-    s()
-
-    proj_coords = int(
-        input("Provide crs code of your layer reference system: "))
-    s()
-
-    unit = input(
-        "Enter coordinate measurement unit used by your crs: 0 = degrees, 1 = meters? ")
-    s()
-    l()
-    resolution = int(input(
-        "Enter the resolution of the grid in the measurement unit chosen: "))
+    config = pd.read_csv('Configuration.csv', header=None).values
+    input_csv = config[0, 1]
+    input_sub = config[1, 1]
+    crs = config[2, 1]
+    resolution = config[3, 1]
+    unit =  config[4, 1]
+    pop_load = config[5, 1]
+    pop_thresh = config[6, 1]
+    line_bc = config[7, 1]
+    limit_HV = config[8, 1]
+    limit_MV = config[9, 1]
+    df = pd.read_csv(input_csv + '.csv', sep=',')
+    print("Input file successfully loaded.")
     os.chdir(r'..//')
-    return points, proj_coords, unit, file_name, resolution
+    return df, input_sub, crs, resolution, unit, pop_load, pop_thresh, \
+           line_bc, limit_HV, limit_MV
 
 
 def import_weighted_file():
