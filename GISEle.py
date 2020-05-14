@@ -28,38 +28,32 @@ supporting_GISEle2.s()
 step = int(input("Which step do you want to select?: "))
 
 if step <= 5:
-    print("Importing parameters and input files")
 
-    df, input_sub, crs, resolution, unit, pop_load, pop_thresh, \
+    df, input_sub, input_csv, crs, resolution, unit, pop_load, pop_thresh, \
     line_bc, limit_HV, limit_MV = supporting_GISEle2.import_csv_file()
     '------------------------------------------------------------------------------------------------------------------'
-    "4. Assigning weights, Cleaning and creating the DataFrame"
+    "4. Assigning weights, Cleaning and Creating the GeoDataFrame"
 
-    df_in = supporting_GISEle2.carwash(df)
-    geo_DataFrame = supporting_GISEle2.creating_dataframe(Point, df_in, crs, unit, df)
-    '------------------------------------------------------------------------------------------------------------------'
-    "5.DataFrame preparation"
-
-    total_points, total_people = supporting_GISEle2.info_dataframe(geo_DataFrame)  # info on the dataframe
-    pop_points = supporting_GISEle2.dataframe_3D(geo_DataFrame)  # elevation as third dimension
-
+    df_weighted = supporting_GISEle2.weighting(df)
+    geodf_in, total_points, total_people, pop_points = supporting_GISEle2.creating_geodataframe(Point, df_weighted, crs,
+                                                     unit, input_csv)
     '------------------------------------------------------------------------------------------------------------------'
     "6.Clustering"
 
-    feature_matrix, pop_weight = supporting_GISEle2.clustering_sensitivity(pop_points, geo_DataFrame, total_points,
+    feature_matrix, pop_weight = supporting_GISEle2.clustering_sensitivity(pop_points, geodf_in, total_points,
                                                                            total_people)
-    gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.clustering(feature_matrix, pop_weight, geo_DataFrame,
-                                                                  total_people)
+    gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.clustering(feature_matrix, pop_weight, geodf_in,
+                                                                                 total_people)
 
     '------------------------------------------------------------------------------------------------------------------'
     "7.Grid creation"
 
-    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_DataFrame, proj_coords, clusters_list_2,
+    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geodf_in, crs, clusters_list_2,
                                                     resolution, clusters_load)
     '------------------------------------------------------------------------------------------------------------------'
     "8.Grid optimization"
 
-    grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geo_DataFrame, grid_resume, proj_coords,
+    grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geodf_in, grid_resume, crs,
                                                           resolution, paycheck)
     '------------------------------------------------------------------------------------------------------------------'
 
@@ -79,25 +73,25 @@ elif step == 6:
 
     "*.DataFrame preparation"
 
-    geo_DataFrame, proj_coords, unit, file_name, resolution = supporting_GISEle2.import_weighted_file()
-    print(geo_DataFrame)
-    total_points, total_people = supporting_GISEle2.info_dataframe(geo_DataFrame)  # info on the dataframe
-    pop_points = supporting_GISEle2.dataframe_3D(geo_DataFrame)  # elevation as third dimension
+    geodf_in, proj_coords, unit, file_name, resolution = supporting_GISEle2.import_weighted_file()
+    print(geodf_in)
+    total_points, total_people = supporting_GISEle2.info_dataframe(geodf_in)  # info on the dataframe
+    pop_points = supporting_GISEle2.dataframe_3D(geodf_in)  # elevation as third dimension
 
     '-----------------------------------------------------------------------------------------------------------------'
     "7.Clustering and Grid creation"
 
-    feature_matrix, pop_weight = supporting_GISEle2.clustering_sensitivity(pop_points, geo_DataFrame, total_points,
+    feature_matrix, pop_weight = supporting_GISEle2.clustering_sensitivity(pop_points, geodf_in, total_points,
                                                                            total_people)
     gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.clustering(feature_matrix, pop_weight,
-                                                                                geo_DataFrame, total_people)
+                                                                                 geodf_in, total_people)
 
-    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_DataFrame, proj_coords, clusters_list_2,
+    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geodf_in, proj_coords, clusters_list_2,
                                                     resolution, clusters_load)
 
     "8.Grid optimization"
 
-    grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geo_DataFrame, grid_resume, proj_coords,
+    grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geodf_in, grid_resume, proj_coords,
                                                           resolution, paycheck)
 
 
@@ -105,22 +99,22 @@ elif step == 7:
 
     "*.DataFrame preparation"
 
-    geo_DataFrame, proj_coords, unit, file_name, resolution = supporting_GISEle2.import_weighted_file()
-    print(geo_DataFrame)
-    total_points, total_people = supporting_GISEle2.info_dataframe(geo_DataFrame)  # info on the dataframe
-    pop_points = supporting_GISEle2.dataframe_3D(geo_DataFrame)  # elevation as third dimension
+    geodf_in, proj_coords, unit, file_name, resolution = supporting_GISEle2.import_weighted_file()
+    print(geodf_in)
+    total_points, total_people = supporting_GISEle2.info_dataframe(geodf_in)  # info on the dataframe
+    pop_points = supporting_GISEle2.dataframe_3D(geodf_in)  # elevation as third dimension
 
     '-----------------------------------------------------------------------------------------------------------------'
     "7. Grid creation"
 
     gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.import_cluster()
 
-    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_DataFrame, proj_coords, clusters_list_2,
-                                                     resolution, clusters_load)
+    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geodf_in, proj_coords, clusters_list_2,
+                                                    resolution, clusters_load)
 
     "8.Grid optimization"
 
-    grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geo_DataFrame, grid_resume, proj_coords,
+    grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geodf_in, grid_resume, proj_coords,
                                                           resolution, paycheck)
 
 

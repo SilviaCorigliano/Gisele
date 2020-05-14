@@ -46,25 +46,24 @@ def s():
 
 
 def import_csv_file():
-    print("Importing parameters and input files")
+    print("Importing parameters and input files..")
     os.chdir(r'Input//')
     config = pd.read_csv('Configuration.csv', header=None).values
     input_csv = config[0, 1]
     input_sub = config[1, 1]
     crs = config[2, 1]
     resolution = config[3, 1]
-    unit =  config[4, 1]
+    unit = config[4, 1]
     pop_load = config[5, 1]
     pop_thresh = config[6, 1]
     line_bc = config[7, 1]
     limit_HV = config[8, 1]
     limit_MV = config[9, 1]
     df = pd.read_csv(input_csv + '.csv', sep=',')
-    print("Input file successfully loaded.")
+    print("Input files successfully imported.")
     os.chdir(r'..//')
-    return df, input_sub, crs, resolution, unit, pop_load, pop_thresh, \
+    return df, input_sub, input_csv, crs, resolution, unit, pop_load, pop_thresh, \
            line_bc, limit_HV, limit_MV
-
 
 def import_weighted_file():
     print(
@@ -96,106 +95,88 @@ def import_weighted_file():
     os.chdir(r'..//..')
     return geo_DataFrame, proj_coords, unit, file_name, resolution
 
+def weighting(df):
 
-def Clean_and_Weight(points):
-    N = points.__len__()
-    # Cleaning section
-    points_clean = points.dropna(subset=['Elevation'])
-    points_clean.reset_index(drop=True)
-    points_clean.Slope.fillna(value=0, inplace=True)
-    points_clean.rename(columns={'Landcover': 'Land_cover'}, inplace=True)
-    points_clean.rename(columns={'Riverflow': 'River_flow'}, inplace=True)
-    points_clean.rename(columns={'NAME': 'Water_body'}, inplace=True)
-    points_clean.Land_cover.fillna(method='bfill', inplace=True)
-    points_clean['Land_cover'] = points_clean['Land_cover'].round(0)
-    points_clean.Population.fillna(value=0, inplace=True)
-    points_clean['Weight'] = 0
-    print('Pulizia è stata fatta!')
-    print('Sto creando i pesi punto per punto...')
+    # preparing the dataframe
+    df_weighted = df.dropna(subset=['Elevation'])
+    df_weighted.reset_index(drop=True)
+    df_weighted.Slope.fillna(value=0, inplace=True)
+    df_weighted.Land_cover.fillna(method='bfill', inplace=True)
+    df_weighted['Land_cover'] = df_weighted['Land_cover'].round(0)
+    df_weighted.Population.fillna(value=0, inplace=True)
+    df_weighted['Weight'] = 0
+
+    print('Weighting the Dataframe..')
+    del df
     # Weighting section
-    for index, row in points_clean.iterrows():
+    for index, row in df_weighted.iterrows():
         # print('iteration', index + 1, 'of', N)
         # Slope conditions
-        points_clean.loc[index, 'Weight'] = row.Weight + math.exp(
+        df_weighted.loc[index, 'Weight'] = row.Weight + math.exp(
             0.01732867951 * row.Slope)
         # Land cover
-        if row.Land_cover == 1 or row.Land_cover == 3 or row.Land_cover == 11 or row.Land_cover == 12 \
-                or row.Land_cover == 13 or row.Land_cover == 14 or row.Land_cover == 16 or row.Land_cover == 17 \
-                or row.Land_cover == 18 or row.Land_cover == 19 or row.Land_cover == 22:
-            points_clean.loc[index, 'Weight'] += 1
+        if row.Land_cover == 1 or row.Land_cover == 3 or row.Land_cover == 11 \
+                or row.Land_cover == 12 or row.Land_cover == 13 or \
+                row.Land_cover == 14 or row.Land_cover == 16 or \
+                row.Land_cover == 17 or row.Land_cover == 18 or \
+                row.Land_cover == 19 or row.Land_cover == 22:
+            df_weighted.loc[index, 'Weight'] += 1
         elif row.Land_cover == 2:
-            points_clean.loc[index, 'Weight'] += 5
+            df_weighted.loc[index, 'Weight'] += 5
         elif row.Land_cover == 7 or row.Land_cover == 8:
-            points_clean.loc[index, 'Weight'] += 8
+            df_weighted.loc[index, 'Weight'] += 8
         elif row.Land_cover == 4 or row.Land_cover == 5 or row.Land_cover == 6:
-            points_clean.loc[index, 'Weight'] += 3
+            df_weighted.loc[index, 'Weight'] += 3
         elif row.Land_cover == 9 or row.Land_cover == 10:
-            points_clean.loc[index, 'Weight'] += 2
+            df_weighted.loc[index, 'Weight'] += 2
         elif row.Land_cover == 15:
-            points_clean.loc[index, 'Weight'] += 6
+            df_weighted.loc[index, 'Weight'] += 6
         elif row.Land_cover == 20:
-            points_clean.loc[index, 'Weight'] += 9
+            df_weighted.loc[index, 'Weight'] += 9
         elif row.Land_cover == 21:
-            points_clean.loc[index, 'Weight'] += 7
-        # Water Bodies
-        if pd.isna(row.Water_body):
-            points_clean.loc[index, 'Weight'] += 0
+            df_weighted.loc[index, 'Weight'] += 7
         else:
-            points_clean.loc[index, 'Weight'] += 10
+            df_weighted.loc[index, 'Weight'] += 10
         # Restricted Areas
         # if pd.isna(row.Protected_areas):
         #    points_clean.loc[index, 'Weight'] += 0
         # else:
         #    points_clean.loc[index, 'Weight'] += 99999999
         # Rivers
-        if abs(row.River_flow) > 10:
-            points_clean.loc[index, 'Weight'] += 9
-        else:
-            points_clean.loc[index, 'Weight'] += 0
+        # if abs(row.River_flow) > 10:
+        #     points_clean.loc[index, 'Weight'] += 9
+        # else:
+        #     points_clean.loc[index, 'Weight'] += 0
+
         # Road distance conditions
-        # Road distance rules!!! Ground characteristics don't matter if road is really close to the site
         if row.Road_dist < 100:
-            points_clean.loc[index, 'Weight'] = 1
+            df_weighted.loc[index, 'Weight'] = 1
         elif row.Road_dist < 1000:
-            points_clean.loc[index, 'Weight'] += 5 * row.Road_dist / 1000
+            df_weighted.loc[index, 'Weight'] += 5 * row.Road_dist / 1000
         else:
-            points_clean.loc[index, 'Weight'] += 5
-
-    points_clean.drop_duplicates(['ID'], keep='last', inplace=True)
-    points_clean = points_clean.drop(
-        ['Slope', 'Land_cover', 'River_flow', 'Water_body', 'Road_dist'],
+            df_weighted.loc[index, 'Weight'] += 5
+    df_weighted.drop_duplicates(['ID'], keep='last', inplace=True)
+    df_weighted = df_weighted.drop(
+        ['Slope', 'Land_cover', 'River_flow', 'NAME', 'Road_dist'],
         axis=1)
-    print('Weighting process terminated')
-    s()
-    return points_clean
-
-
-def carwash(points):
-    print("4. Assigning weights, Cleaning and creating the DataFrame")
-
-    points_clean = Clean_and_Weight(points)
-    df_in = points_clean
-    del points_clean
-    # remove not useful columns
+    # another cleaning
     valid_fields = ['ID', 'X', 'Y', 'Population', 'Elevation', 'Weight']
     blacklist = []
-    for x in df_in.columns:
+    for x in df_weighted.columns:
         if x not in valid_fields:
             blacklist.append(x)
-    df_in.drop(blacklist, axis=1, inplace=True)
-    # remove repetitions in the dataframe
-    df_in.drop_duplicates(['ID'], keep='last', inplace=True)
-
+    df_weighted.drop(blacklist, axis=1, inplace=True)
+    df_weighted.drop_duplicates(['ID'], keep='last', inplace=True)
     print("Cleaning and weighting process completed")
     s()
-    return df_in
+    return df_weighted
 
-
-def creating_dataframe(Point, df_in, proj_coords, unit, file_name):
-    print("Creation of a GeoDataFrame")
-    geometry = [Point(xy) for xy in zip(df_in['X'], df_in['Y'])]
-    geodf_in = gpd.GeoDataFrame(df_in, geometry=geometry,
-                                crs=from_epsg(proj_coords))
+def creating_geodataframe(Point, df_weighted, crs, unit, input_csv):
+    print("Creating the GeoDataFrame")
+    geometry = [Point(xy) for xy in zip(df_weighted['X'], df_weighted['Y'])]
+    geodf_in = gpd.GeoDataFrame(df_weighted, geometry=geometry,
+                                crs=from_epsg(crs))
+    del df_weighted
     # - Check crs conformity for the clustering procedure
     if unit == '0':
         print(
@@ -205,40 +186,28 @@ def creating_dataframe(Point, df_in, proj_coords, unit, file_name):
             input("Provide a valid crs code to which reproject:"))
         geodf_in['geometry'] = geodf_in['geometry'].to_crs(epsg=Proj_coords)
         print("Done")
-    del df_in
-    print("DataFrame correctly created.")
+    print("GeoDataFrame ready!")
     s()
-    choice_save = str(input(
-        "Do you want to save the processed file as a .CSV and .SHP? (y/n): "))
+    choice_save = str(input("Would you like to save the "
+                            "processed file as a .CSV and .SHP? (y/n): "))
     if choice_save == "y":
         os.chdir(r'Output//Datasets')
-        geodf_in.to_csv(file_name + "_weighted.csv")
-        geodf_in.to_file(file_name + "_weighted.shp")
+        geodf_in.to_csv(input_csv + "_weighted.csv")
+        geodf_in.to_file(input_csv + "_weighted.shp")
         os.chdir(r'..//..')
-        print("Both files successfully saved.")
+        print("Files successfully saved.")
     l()
-    return geodf_in
-
-
-def info_dataframe(geodf_in):
-    print("5.DataFrame preparation")
-
     total_points = len(geodf_in)
     total_people = int(geodf_in['Population'].sum(axis=0))
 
     print("In the considered area there are " + str(
         total_points) + " points, for a total of " + str(total_people) +
           " people which could gain access to electricity.")
-    return total_points, total_people
 
-
-def dataframe_3D(geodf_in):
     d = {'x': geodf_in['X'], 'y': geodf_in['Y'], 'z': geodf_in['Elevation']}
     pop_points = pd.DataFrame(data=d)
     pop_points.index = geodf_in['ID']
-    l()
-    return pop_points
-
+    return geodf_in, total_points, total_people, pop_points
 
 def clustering_sensitivity(pop_points, geodf_in, total_points, total_people):
     print("6.Clustering - Searching for more densely populated areas")
