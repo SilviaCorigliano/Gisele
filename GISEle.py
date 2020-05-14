@@ -7,43 +7,41 @@ In order to run the following algorithm please check if the Input file is
 configured accordingly, for more information check the README.
 """
 
-import os
-import pandas as pd
 from shapely.geometry import Point
 import supporting_GISEle2
 
 'Introduction'
 supporting_GISEle2.l()
-print("Welcome to GISEle! The steps are:")
+print("Welcome to GISEle! From which step you want to start?")
 supporting_GISEle2.l()
-steps = ["4.Assigning weights, Cleaning and creating the DataFrame",
-         "5.DataFrame preparation",
-         "6.Clustering",
-         "7.Grid creation",
-         "8.Load creation",
-         "9.Generation sizing",
-         "10.Final results"]
+steps = ["1.Assigning weights, Cleaning and creating the GeoDataFrame",
+         "2.Clustering",
+         "3.Grid creation",
+         "4.Load creation",
+         "5.Generation sizing",
+         "6.Final results"]
 print("\n".join(steps))
 supporting_GISEle2.s()
 step = int(input("Which step do you want to select?: "))
 
-if step <= 5:
+if step == 1:
 
     df, input_sub, input_csv, crs, resolution, unit, pop_load, pop_thresh, \
-    line_bc, limit_HV, limit_MV = supporting_GISEle2.import_csv_file()
+        line_bc, limit_HV, limit_MV = supporting_GISEle2.import_csv_file()
     '------------------------------------------------------------------------------------------------------------------'
     "4. Assigning weights, Cleaning and Creating the GeoDataFrame"
 
     df_weighted = supporting_GISEle2.weighting(df)
-    geodf_in, total_points, total_people, pop_points = supporting_GISEle2.creating_geodataframe(Point, df_weighted, crs,
-                                                     unit, input_csv)
+    geodf_in, total_points, total_people, pop_points = supporting_GISEle2.\
+        creating_geodataframe(Point, df_weighted, crs, unit, input_csv)
     '------------------------------------------------------------------------------------------------------------------'
     "6.Clustering"
 
-    feature_matrix, pop_weight = supporting_GISEle2.clustering_sensitivity(pop_points, geodf_in, total_points,
-                                                                           total_people)
-    gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.clustering(feature_matrix, pop_weight, geodf_in,
-                                                                                 total_people)
+    feature_matrix, pop_weight = supporting_GISEle2.\
+        clustering_sensitivity(pop_points, geodf_in, total_points, total_people)
+
+    gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.\
+        clustering(feature_matrix, pop_weight, geodf_in, total_people)
 
     '------------------------------------------------------------------------------------------------------------------'
     "7.Grid creation"
@@ -69,7 +67,7 @@ if step <= 5:
     "11.Final results"
     final_LCOEs = supporting_GISEle2.final_results(clusters_list_2, total_energy, grid_resume, mg_NPC)
 
-elif step == 6:
+elif step == 2:
 
     "*.DataFrame preparation"
 
@@ -95,7 +93,7 @@ elif step == 6:
                                                           resolution, paycheck)
 
 
-elif step == 7:
+elif step == 3:
 
     "*.DataFrame preparation"
 
@@ -118,7 +116,7 @@ elif step == 7:
                                                           resolution, paycheck)
 
 
-elif step == 9:
+elif step == 4:
 
     "8.Load creation"
 

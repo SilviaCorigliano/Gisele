@@ -48,7 +48,7 @@ def s():
 def import_csv_file():
     print("Importing parameters and input files..")
     os.chdir(r'Input//')
-    config = pd.read_csv('Configuration.csv', header=None).values
+    config = pd.read_csv('Configuration.csv').values
     input_csv = config[0, 1]
     input_sub = config[1, 1]
     crs = config[2, 1]
