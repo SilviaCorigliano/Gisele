@@ -98,17 +98,20 @@ elif step == 3:
 
     "*.DataFrame preparation"
 
-    geo_df, proj_coords, unit, file_name, resolution = supporting_GISEle2.import_csv_file(step)
+    df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
+        pop_thresh, line_bc, limit_HV, limit_MV,  gdf_clusters, \
+        clusters_list_2, clusters_load = \
+        supporting_GISEle2.import_csv_file(step)
 
-    total_points, total_people = supporting_GISEle2.info_dataframe(geo_df)  # info on the dataframe
-    pop_points = supporting_GISEle2.dataframe_3D(geo_df)  # elevation as third dimension
+    geo_df, total_points, total_people, pop_points = supporting_GISEle2. \
+        creating_geodataframe(df_weighted, crs, unit, input_csv, step)
 
     '-----------------------------------------------------------------------------------------------------------------'
     "7. Grid creation"
 
-    gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.import_cluster()
+    # gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.import_cluster()
 
-    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, proj_coords, clusters_list_2,
+    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs, clusters_list_2,
                                                     resolution, clusters_load)
 
     "8.Grid optimization"

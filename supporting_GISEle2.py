@@ -53,18 +53,18 @@ def import_csv_file(step):
     crs = config[2, 1]
     resolution = config[3, 1]
     unit = config[4, 1]
-    pop_load = config[5, 1]
-    pop_thresh = config[6, 1]
-    line_bc = config[7, 1]
-    limit_HV = config[8, 1]
-    limit_MV = config[9, 1]
+    pop_load = float(config[5, 1])
+    pop_thresh = float(config[6, 1])
+    line_bc = float(config[7, 1])
+    limit_HV = float(config[8, 1])
+    limit_MV = float(config[9, 1])
     if step == 1:
         df = pd.read_csv(input_csv + '.csv', sep=',')
         print("Input files successfully imported.")
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
             pop_thresh, line_bc, limit_HV, limit_MV
-    elif step == 2:
+    elif step == 2 | step == 3:
         os.chdir(r'..//')
         os.chdir(r'Output//Datasets')
         df_weighted = pd.read_csv(input_csv + '_weighted.csv')
@@ -77,12 +77,33 @@ def import_csv_file(step):
         df_weighted.drop_duplicates(['ID'], keep='last', inplace=True)
         print("Input files successfully imported.")
         os.chdir(r'..//..')
+        if step == 3:
+            os.chdir(r'Output//Clusters')
+            gdf_clusters = gpd.read_file("gdf_clusters.shp")
+            clusters_list_2 = np.unique(gdf_clusters['clusters'])
+            clusters_list_2 = np.delete(clusters_list_2, np.where(
+                clusters_list_2 == -1))  # removes the noises
+            clusters_list = np.vstack(
+                [clusters_list_2, clusters_list_2, clusters_list_2])
+
+            for i in clusters_list_2:
+                pop_cluster = gdf_clusters[gdf_clusters['clusters'] == i]
+                clusters_list[1, np.where(clusters_list_2 == i)] = sum(
+                    pop_cluster['Population'])
+                clusters_list[2, np.where(clusters_list_2 == i)] = clusters_list[1, np.where(clusters_list_2 == i)] * pop_load
+
+            print("Clusters successfully imported")
+            l()
+            os.chdir(r'..//..')
+            return df_weighted, input_sub, input_csv, crs, resolution, unit, \
+                pop_load, pop_thresh, line_bc, limit_HV, limit_MV, \
+                gdf_clusters, clusters_list_2, clusters_list
         return df_weighted, input_sub, input_csv, crs, resolution, unit, \
             pop_load, pop_thresh, line_bc, limit_HV, limit_MV
 
+
 def weighting(df):
 
-    # preparing the dataframe
     df_weighted = df.dropna(subset=['Elevation'])
     df_weighted.reset_index(drop=True)
     df_weighted.Slope.fillna(value=0, inplace=True)
@@ -90,12 +111,11 @@ def weighting(df):
     df_weighted['Land_cover'] = df_weighted['Land_cover'].round(0)
     df_weighted.Population.fillna(value=0, inplace=True)
     df_weighted['Weight'] = 0
-
     print('Weighting the Dataframe..')
     del df
     # Weighting section
     for index, row in df_weighted.iterrows():
-        # print('iteration', index + 1, 'of', N)
+        # print('iteration', index + 1, 'of', df_weighted.__len__(), end='\r')
         # Slope conditions
         df_weighted.loc[index, 'Weight'] = row.Weight + math.exp(
             0.01732867951 * row.Slope)
@@ -156,20 +176,20 @@ def weighting(df):
     s()
     return df_weighted
 
+
 def creating_geodataframe(df_weighted, crs, unit, input_csv,step):
     print("Creating the GeoDataFrame..")
     geometry = [Point(xy) for xy in zip(df_weighted['X'], df_weighted['Y'])]
-    geodf_in = gpd.GeoDataFrame(df_weighted, geometry=geometry,
-                                crs=from_epsg(crs))
+    geo_df = gpd.GeoDataFrame(df_weighted, geometry=geometry,
+                              crs=from_epsg(crs))
     del df_weighted
     # - Check crs conformity for the clustering procedure
     if unit == '0':
         print(
             'Attention: the clustering procedure requires measurements in meters. '
             'Therefore, your dataset must be reprojected.')
-        Proj_coords = int(
-            input("Provide a valid crs code to which reproject:"))
-        geodf_in['geometry'] = geodf_in['geometry'].to_crs(epsg=Proj_coords)
+        crs = int(input("Provide a valid crs code to which reproject:"))
+        geo_df['geometry'] = geo_df['geometry'].to_crs(epsg=crs)
         print("Done")
     print("GeoDataFrame ready!")
     s()
@@ -178,22 +198,22 @@ def creating_geodataframe(df_weighted, crs, unit, input_csv,step):
                                 "processed file as a .CSV and .SHP? (y/n): "))
         if choice_save == "y":
             os.chdir(r'Output//Datasets')
-            geodf_in.to_csv(input_csv + "_weighted.csv")
-            geodf_in.to_file(input_csv + "_weighted.shp")
+            geo_df.to_csv(input_csv + "_weighted.csv")
+            geo_df.to_file(input_csv + "_weighted.shp")
             os.chdir(r'..//..')
             print("Files successfully saved.")
         l()
-    total_points = len(geodf_in)
-    total_people = int(geodf_in['Population'].sum(axis=0))
+    total_points = len(geo_df)
+    total_people = int(geo_df['Population'].sum(axis=0))
 
     print("In the considered area there are " + str(
         total_points) + " points, for a total of " + str(total_people) +
           " people which could gain access to electricity.")
 
-    d = {'x': geodf_in['X'], 'y': geodf_in['Y'], 'z': geodf_in['Elevation']}
+    d = {'x': geo_df['X'], 'y': geo_df['Y'], 'z': geo_df['Elevation']}
     pop_points = pd.DataFrame(data=d)
-    pop_points.index = geodf_in['ID']
-    return geodf_in, total_points, total_people, pop_points
+    pop_points.index = geo_df['ID']
+    return geo_df, total_points, total_people, pop_points
 
 def clustering_sensitivity(pop_points, geodf_in, total_points, total_people):
     print("6.Clustering - Searching for more densely populated areas")
@@ -332,8 +352,7 @@ def import_cluster():
         clusters_list_2 == -1))  # removes the noises
     clusters_list = np.vstack(
         [clusters_list_2, clusters_list_2, clusters_list_2])
-    # pop_load = int(input("What is the load estimation in kW per person?"))
-    pop_load = 0.4  # estimation of 2kW per person
+    pop_load = 0.4
     for i in clusters_list_2:
         pop_cluster = gdf_clusters[gdf_clusters['clusters'] == i]
         clusters_list[1, np.where(clusters_list_2 == i)] = sum(
