@@ -82,7 +82,6 @@ def import_weighted_file():
     geometry = [Point(xy) for xy in zip(geo_csv.X, geo_csv.Y)]
     proj_coords = int(
         input("Provide crs code of your layer reference system: "))
-    # proj_coords = 32723
     geo_DataFrame = gpd.GeoDataFrame(geo_csv, crs=from_epsg(proj_coords),
                                      geometry=geometry)
     s()
