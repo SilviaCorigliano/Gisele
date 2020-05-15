@@ -46,7 +46,7 @@ if step == 1:
     "7.Grid creation"
 
     grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs, clusters_list_2,
-                                                    resolution, clusters_load)
+                                                    resolution, clusters_load, pop_thresh, input_sub, line_bc)
     '-------------------------------------------------------------------------'
     "8.Grid optimization"
 
@@ -85,8 +85,11 @@ elif step == 2:
     gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.clustering(feature_matrix, pop_weight,
                                                                                  geo_df, total_people)
 
-    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs, clusters_list_2,
-                                                    resolution, clusters_load)
+    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs,
+                                                    clusters_list_2,
+                                                    resolution, clusters_load,
+                                                    pop_thresh, input_sub,
+                                                    line_bc)
 
     "8.Grid optimization"
 
@@ -111,12 +114,15 @@ elif step == 3:
 
     # gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.import_cluster()
 
-    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs, clusters_list_2,
-                                                    resolution, clusters_load)
+    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs,
+                                                    clusters_list_2,
+                                                    resolution, clusters_load,
+                                                    pop_thresh, input_sub,
+                                                    line_bc, limit_HV, limit_MV)
 
     "8.Grid optimization"
 
-    grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geo_df, grid_resume, proj_coords,
+    grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geo_df, grid_resume, crs,
                                                           resolution, paycheck)
 
 

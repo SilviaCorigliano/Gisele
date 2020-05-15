@@ -51,7 +51,7 @@ def import_csv_file(step):
     input_csv = config[0, 1]
     input_sub = config[1, 1]
     crs = config[2, 1]
-    resolution = config[3, 1]
+    resolution = float(config[3, 1])
     unit = config[4, 1]
     pop_load = float(config[5, 1])
     pop_thresh = float(config[6, 1])
@@ -78,6 +78,8 @@ def import_csv_file(step):
         print("Input files successfully imported.")
         os.chdir(r'..//..')
         if step == 3:
+            l()
+            print("Importing Clusters..")
             os.chdir(r'Output//Clusters')
             gdf_clusters = gpd.read_file("gdf_clusters.shp")
             clusters_list_2 = np.unique(gdf_clusters['clusters'])
@@ -214,6 +216,7 @@ def creating_geodataframe(df_weighted, crs, unit, input_csv,step):
     pop_points = pd.DataFrame(data=d)
     pop_points.index = geo_df['ID']
     return geo_df, total_points, total_people, pop_points
+
 
 def clustering_sensitivity(pop_points, geodf_in, total_points, total_people):
     print("6.Clustering - Searching for more densely populated areas")
@@ -512,18 +515,8 @@ def nearest(row, geom_union, df1, df2, geom1_col='geometry',
 
 
 def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
-         clusters_load):
+         clusters_load, pop_threshold, input_sub, paycheck, limit_HV, limit_MV):
     print("Starting grid creation")
-    s()
-    pop_threshold = int(input("What's the population threshold for the grid algorithm?: "))
-    # pop_threshold = 50
-    s()
-    # unitary cost of electric line: dollars per kilometers
-    paycheck = float(input("Which is the unitary money expenditure for the realization of a kilometer of grid?: "))
-    # paycheck = 5000
-    s()
-    limitHV = 3000
-    limitMV = 1000
 
     grid_merged = connection_merged = pd.DataFrame()
     grid_resume = pd.DataFrame(index=clusters_list_2,
@@ -534,13 +527,7 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
     grid_resume['Cluster'] = clusters_list_2
     grid_resume['ClusterLoad'] = clusters_load[2]
     os.chdir(r'Input//')
-    print("Please select the substation file you want to load: ")
-    shp_files = glob.glob('*.{}'.format('shp'))
-    s()
-    print("\n".join(shp_files))
-    s()
-    file_name = str(input("Which file do you want to load?: "))
-    substations = gpd.read_file(file_name + '.shp', sep=',')
+    substations = gpd.read_file(input_sub + '.shp', sep=',')
     substations['ID'] = range(0, len(substations))
     os.chdir(r'..')
     os.chdir(r'Output//Grids')
@@ -549,15 +536,15 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
         #  SUBSTATIONS -----------------------------------------------------------------
         substations_new = substations
         if clusters_load[2][
-            np.where(clusters_list_2 == cluster_n)[0][0]] > limitHV:
+            np.where(clusters_list_2 == cluster_n)[0][0]] > limit_HV:
             substations_new = substations[substations['Type'] == 'HV']
         elif clusters_load[2][
-            np.where(clusters_list_2 == cluster_n)[0][0]] > limitMV and \
+            np.where(clusters_list_2 == cluster_n)[0][0]] > limit_MV and \
                 clusters_load[2][
-                    np.where(clusters_list_2 == cluster_n)[0][0]] < limitHV:
+                    np.where(clusters_list_2 == cluster_n)[0][0]] < limit_HV:
             substations_new = substations[substations['Type'] == 'MV']
         elif clusters_load[2][
-            np.where(clusters_list_2 == cluster_n)[0][0]] < limitMV:
+            np.where(clusters_list_2 == cluster_n)[0][0]] < limit_MV:
             substations_new = substations[substations['Type'] != 'HV']
 
         unary_union = geodf_in.unary_union
