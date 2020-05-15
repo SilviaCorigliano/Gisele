@@ -62,8 +62,8 @@ def import_csv_file():
     df = pd.read_csv(input_csv + '.csv', sep=',')
     print("Input files successfully imported.")
     os.chdir(r'..//')
-    return df, input_sub, input_csv, crs, resolution, unit, pop_load, pop_thresh, \
-           line_bc, limit_HV, limit_MV
+    return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
+           pop_thresh, line_bc, limit_HV, limit_MV
 
 def import_weighted_file():
     print(
@@ -84,12 +84,7 @@ def import_weighted_file():
         input("Provide crs code of your layer reference system: "))
     geo_DataFrame = gpd.GeoDataFrame(geo_csv, crs=from_epsg(proj_coords),
                                      geometry=geometry)
-    s()
-
     unit = 1
-    s()
-    l()
-
     resolution = 1000
     os.chdir(r'..//..')
     return geo_DataFrame, proj_coords, unit, file_name, resolution
