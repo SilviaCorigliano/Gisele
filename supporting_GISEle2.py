@@ -1,5 +1,6 @@
 import os
 import glob
+import warnings
 import pandas as pd
 import math
 import geopandas as gpd
@@ -12,10 +13,8 @@ from shapely.geometry import Point, MultiPoint, box, LineString
 from shapely.ops import nearest_points
 from scipy.spatial.distance import cdist
 from scipy.spatial import distance_matrix
-from shapely.ops import nearest_points
 from Codes.Weight_matrix import *
 from Codes.remove_cycles_weight_final import *
-import warnings
 
 #  remove the warnings from the output screen
 warnings.filterwarnings("ignore")
@@ -45,7 +44,7 @@ def s():
     print("-" * 40)
 
 
-def import_csv_file():
+def import_csv_file(step):
     print("Importing parameters and input files..")
     os.chdir(r'Input//')
     config = pd.read_csv('Configuration.csv').values
@@ -59,35 +58,27 @@ def import_csv_file():
     line_bc = config[7, 1]
     limit_HV = config[8, 1]
     limit_MV = config[9, 1]
-    df = pd.read_csv(input_csv + '.csv', sep=',')
-    print("Input files successfully imported.")
-    os.chdir(r'..//')
-    return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-           pop_thresh, line_bc, limit_HV, limit_MV
-
-def import_weighted_file():
-    print(
-        "5. Importing and processing base layer - Let's import the necessary layer!")
-    os.chdir(r'Output//Datasets')
-    print("The available shp files in this directory are: ")
-    shp_files = glob.glob('*.{}'.format('csv'))
-    s()
-    print("\n".join(shp_files))
-    s()
-    file_name = str(input("Which file do you want to load?: "))
-    geo_csv = pd.read_csv(file_name + ".csv")
-
-    print("Layer file successfully loaded.")
-    s()
-    geometry = [Point(xy) for xy in zip(geo_csv.X, geo_csv.Y)]
-    proj_coords = int(
-        input("Provide crs code of your layer reference system: "))
-    geo_DataFrame = gpd.GeoDataFrame(geo_csv, crs=from_epsg(proj_coords),
-                                     geometry=geometry)
-    unit = 1
-    resolution = 1000
-    os.chdir(r'..//..')
-    return geo_DataFrame, proj_coords, unit, file_name, resolution
+    if step == 1:
+        df = pd.read_csv(input_csv + '.csv', sep=',')
+        print("Input files successfully imported.")
+        os.chdir(r'..//')
+        return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
+            pop_thresh, line_bc, limit_HV, limit_MV
+    elif step == 2:
+        os.chdir(r'..//')
+        os.chdir(r'Output//Datasets')
+        df_weighted = pd.read_csv(input_csv + '_weighted.csv')
+        valid_fields = ['ID', 'X', 'Y', 'Population', 'Elevation', 'Weight']
+        blacklist = []
+        for x in df_weighted.columns:
+            if x not in valid_fields:
+                blacklist.append(x)
+        df_weighted.drop(blacklist, axis=1, inplace=True)
+        df_weighted.drop_duplicates(['ID'], keep='last', inplace=True)
+        print("Input files successfully imported.")
+        os.chdir(r'..//..')
+        return df_weighted, input_sub, input_csv, crs, resolution, unit, \
+            pop_load, pop_thresh, line_bc, limit_HV, limit_MV
 
 def weighting(df):
 
@@ -165,8 +156,8 @@ def weighting(df):
     s()
     return df_weighted
 
-def creating_geodataframe(Point, df_weighted, crs, unit, input_csv):
-    print("Creating the GeoDataFrame")
+def creating_geodataframe(df_weighted, crs, unit, input_csv,step):
+    print("Creating the GeoDataFrame..")
     geometry = [Point(xy) for xy in zip(df_weighted['X'], df_weighted['Y'])]
     geodf_in = gpd.GeoDataFrame(df_weighted, geometry=geometry,
                                 crs=from_epsg(crs))
@@ -182,15 +173,16 @@ def creating_geodataframe(Point, df_weighted, crs, unit, input_csv):
         print("Done")
     print("GeoDataFrame ready!")
     s()
-    choice_save = str(input("Would you like to save the "
-                            "processed file as a .CSV and .SHP? (y/n): "))
-    if choice_save == "y":
-        os.chdir(r'Output//Datasets')
-        geodf_in.to_csv(input_csv + "_weighted.csv")
-        geodf_in.to_file(input_csv + "_weighted.shp")
-        os.chdir(r'..//..')
-        print("Files successfully saved.")
-    l()
+    if step == 1:
+        choice_save = str(input("Would you like to save the "
+                                "processed file as a .CSV and .SHP? (y/n): "))
+        if choice_save == "y":
+            os.chdir(r'Output//Datasets')
+            geodf_in.to_csv(input_csv + "_weighted.csv")
+            geodf_in.to_file(input_csv + "_weighted.shp")
+            os.chdir(r'..//..')
+            print("Files successfully saved.")
+        l()
     total_points = len(geodf_in)
     total_people = int(geodf_in['Population'].sum(axis=0))
 
