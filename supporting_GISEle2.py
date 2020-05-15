@@ -86,11 +86,11 @@ def import_weighted_file():
     geo_DataFrame = gpd.GeoDataFrame(geo_csv, crs=from_epsg(proj_coords),
                                      geometry=geometry)
     s()
-    # unit = input("Enter coordinate measurement unit used by your crs: 0 = degrees, 1 = meters? ")
+
     unit = 1
     s()
     l()
-    # resolution = int(input("Enter the resolution of the grid in the measurement unit chosen: "))
+
     resolution = 1000
     os.chdir(r'..//..')
     return geo_DataFrame, proj_coords, unit, file_name, resolution
