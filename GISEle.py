@@ -45,8 +45,12 @@ if step == 1:
     '-------------------------------------------------------------------------'
     "7.Grid creation"
 
-    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs, clusters_list_2,
-                                                    resolution, clusters_load, pop_thresh, input_sub, line_bc)
+    grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs,
+                                                    clusters_list_2,
+                                                    resolution, clusters_load,
+                                                    pop_thresh, input_sub,
+                                                    line_bc, limit_HV,
+                                                    limit_MV)
     '-------------------------------------------------------------------------'
     "8.Grid optimization"
 
@@ -89,13 +93,13 @@ elif step == 2:
                                                     clusters_list_2,
                                                     resolution, clusters_load,
                                                     pop_thresh, input_sub,
-                                                    line_bc)
+                                                    line_bc, limit_HV,
+                                                    limit_MV)
 
     "8.Grid optimization"
 
     grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geo_df, grid_resume, crs,
                                                           resolution, paycheck)
-
 
 elif step == 3:
 
@@ -124,7 +128,6 @@ elif step == 3:
 
     grid_optimized = supporting_GISEle2.grid_optimization(gdf_clusters, geo_df, grid_resume, crs,
                                                           resolution, paycheck)
-
 
 elif step == 4:
 

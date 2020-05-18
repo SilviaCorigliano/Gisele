@@ -64,7 +64,7 @@ def import_csv_file(step):
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
             pop_thresh, line_bc, limit_HV, limit_MV
-    elif step == 2 | step == 3:
+    elif step == 2 or step == 3:
         os.chdir(r'..//')
         os.chdir(r'Output//Datasets')
         df_weighted = pd.read_csv(input_csv + '_weighted.csv')
@@ -114,47 +114,18 @@ def weighting(df):
     df_weighted.Population.fillna(value=0, inplace=True)
     df_weighted['Weight'] = 0
     print('Weighting the Dataframe..')
+    os.chdir(r'Input//')
+    landcover_csv = pd.read_csv('Landcover.csv')
+    os.chdir(r'..//')
     del df
     # Weighting section
     for index, row in df_weighted.iterrows():
-        # print('iteration', index + 1, 'of', df_weighted.__len__(), end='\r')
         # Slope conditions
         df_weighted.loc[index, 'Weight'] = row.Weight + math.exp(
             0.01732867951 * row.Slope)
         # Land cover
-        if row.Land_cover == 1 or row.Land_cover == 3 or row.Land_cover == 11 \
-                or row.Land_cover == 12 or row.Land_cover == 13 or \
-                row.Land_cover == 14 or row.Land_cover == 16 or \
-                row.Land_cover == 17 or row.Land_cover == 18 or \
-                row.Land_cover == 19 or row.Land_cover == 22:
-            df_weighted.loc[index, 'Weight'] += 1
-        elif row.Land_cover == 2:
-            df_weighted.loc[index, 'Weight'] += 5
-        elif row.Land_cover == 7 or row.Land_cover == 8:
-            df_weighted.loc[index, 'Weight'] += 8
-        elif row.Land_cover == 4 or row.Land_cover == 5 or row.Land_cover == 6:
-            df_weighted.loc[index, 'Weight'] += 3
-        elif row.Land_cover == 9 or row.Land_cover == 10:
-            df_weighted.loc[index, 'Weight'] += 2
-        elif row.Land_cover == 15:
-            df_weighted.loc[index, 'Weight'] += 6
-        elif row.Land_cover == 20:
-            df_weighted.loc[index, 'Weight'] += 9
-        elif row.Land_cover == 21:
-            df_weighted.loc[index, 'Weight'] += 7
-        else:
-            df_weighted.loc[index, 'Weight'] += 10
-        # Restricted Areas
-        # if pd.isna(row.Protected_areas):
-        #    points_clean.loc[index, 'Weight'] += 0
-        # else:
-        #    points_clean.loc[index, 'Weight'] += 99999999
-        # Rivers
-        # if abs(row.River_flow) > 10:
-        #     points_clean.loc[index, 'Weight'] += 9
-        # else:
-        #     points_clean.loc[index, 'Weight'] += 0
-
+        df_weighted.loc[index, 'Weight'] += landcover_csv.WeightGLC[
+            landcover_csv.iloc[:, 0] == row.Land_cover].values[0]
         # Road distance conditions
         if row.Road_dist < 100:
             df_weighted.loc[index, 'Weight'] = 1
@@ -162,6 +133,7 @@ def weighting(df):
             df_weighted.loc[index, 'Weight'] += 5 * row.Road_dist / 1000
         else:
             df_weighted.loc[index, 'Weight'] += 5
+
     df_weighted.drop_duplicates(['ID'], keep='last', inplace=True)
     df_weighted = df_weighted.drop(
         ['Slope', 'Land_cover', 'River_flow', 'NAME', 'Road_dist'],
@@ -303,8 +275,10 @@ def clustering_sensitivity(pop_points, geodf_in, total_points, total_people):
                 area = total_points - len(gdf_pop_noise)
                 perc_area = int(area / total_points * 100)
                 clustered_people = int((1 - noise_people / total_people) * 100)
-                people_area = (total_people - noise_people) / area
-
+                if area != 0:
+                    people_area = (total_people - noise_people) / area
+                else:
+                    people_area = 0
                 tab_cluster.at[eps1, peop1] = n_clusters_
                 tab_peop.at[eps1, peop1] = clustered_people
                 tab_area.at[eps1, peop1] = perc_area
