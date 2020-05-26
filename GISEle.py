@@ -21,8 +21,8 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
          '6.Final results']
 print("\n".join(steps))
 supporting_GISEle2.s()
-step = int(input('Which step do you want to select?: '))
-
+# step = int(input('Which step do you want to select?: '))
+step=2
 if step == 1:
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
 
@@ -31,16 +31,15 @@ if step == 1:
 
     df_weighted = supporting_GISEle2.weighting(df)
 
-    geo_df, total_points, total_people, pop_points = supporting_GISEle2.\
+    geo_df, pop_points = supporting_GISEle2.\
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
     '-------------------------------------------------------------------------'
     "2.Clustering"
 
-    feature_matrix, pop_weight = supporting_GISEle2.\
-        clustering_sensitivity(pop_points, geo_df, total_points, total_people)
+    supporting_GISEle2.clustering_sensitivity(pop_points, geo_df)
 
     gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.\
-        clustering(feature_matrix, pop_weight, geo_df, total_people)
+        clustering(pop_points, geo_df,)
 
     '-------------------------------------------------------------------------'
     "7.Grid creation"
@@ -78,16 +77,15 @@ elif step == 2:
         pop_thresh, line_bc, limit_HV, limit_MV = \
         supporting_GISEle2.import_csv_file(step)
 
-    geo_df, total_points, total_people, pop_points = supporting_GISEle2. \
+    geo_df, pop_points = supporting_GISEle2. \
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
 
     '-----------------------------------------------------------------------------------------------------------------'
     "7.Clustering and Grid creation"
 
-    feature_matrix, pop_weight = supporting_GISEle2.clustering_sensitivity(pop_points, geo_df, total_points,
-                                                                           total_people)
-    gdf_clusters, clusters_list_2, clusters_load = supporting_GISEle2.clustering(feature_matrix, pop_weight,
-                                                                                 geo_df, total_people)
+    supporting_GISEle2.clustering_sensitivity(pop_points, geo_df)
+    gdf_clusters, clusters_list_2, clusters_load = \
+        supporting_GISEle2.clustering(pop_points, geo_df)
 
     grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs,
                                                     clusters_list_2,
