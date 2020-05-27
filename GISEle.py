@@ -22,7 +22,7 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
 print("\n".join(steps))
 supporting_GISEle2.s()
 # step = int(input('Which step do you want to select?: '))
-step=2
+step=3
 if step == 1:
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
 
@@ -44,17 +44,18 @@ if step == 1:
     '-------------------------------------------------------------------------'
     "7.Grid creation"
 
-    grid_resume, paycheck = supporting_GISEle2.grid(geo_df_clustered, geo_df, crs,
-                                                    clusters_list,
-                                                    resolution,
-                                                    pop_thresh, input_sub,
-                                                    line_bc, limit_HV,
-                                                    limit_MV)
+    grid_resume, paycheck = supporting_GISEle2.grid(geo_df_clustered, geo_df,
+                                                    crs, clusters_list,
+                                                    resolution, pop_thresh,
+                                                    input_sub, line_bc,
+                                                    limit_HV, limit_MV)
     '-------------------------------------------------------------------------'
     "8.Grid optimization"
 
-    grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered, geo_df, grid_resume, crs,
-                                                          resolution, paycheck)
+    grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered,
+                                                          geo_df, grid_resume,
+                                                          crs, resolution,
+                                                          paycheck)
     '------------------------------------------------------------------------------------------------------------------'
 
     "9.Load creation"
@@ -89,15 +90,16 @@ elif step == 2:
 
     grid_resume, paycheck = supporting_GISEle2.grid(geo_df_clustered, geo_df,
                                                     crs, clusters_list,
-                                                    resolution,
-                                                    pop_thresh, input_sub,
-                                                    line_bc, limit_HV,
-                                                    limit_MV)
+                                                    resolution, pop_thresh,
+                                                    input_sub, line_bc,
+                                                    limit_HV, limit_MV)
 
     "8.Grid optimization"
 
-    grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered, geo_df, grid_resume, crs,
-                                                          resolution, paycheck)
+    grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered,
+                                                          geo_df, grid_resume,
+                                                          crs, resolution,
+                                                          paycheck)
 
 elif step == 3:
 
