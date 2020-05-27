@@ -78,26 +78,24 @@ def import_csv_file(step):
             l()
             print("Importing Clusters..")
             os.chdir(r'Output//Clusters')
-            gdf_clusters = gpd.read_file("gdf_clusters.shp")
-            clusters_list_2 = np.unique(gdf_clusters['clusters'])
-            clusters_list_2 = np.delete(clusters_list_2, np.where(
-                clusters_list_2 == -1))  # removes the noises
-            clusters_list = np.vstack(
-                [clusters_list_2, clusters_list_2, clusters_list_2])
-
-            for i in clusters_list_2:
-                pop_cluster = gdf_clusters[gdf_clusters['clusters'] == i]
-                clusters_list[1, np.where(clusters_list_2 == i)] = sum(
-                    pop_cluster['Population'])
-                clusters_list[2, np.where(clusters_list_2 == i)] = \
-                    clusters_list[1, np.where(clusters_list_2 == i)] * pop_load
+            geo_df_clustered = gpd.read_file("geo_df_clustered.shp")
+            clusters_list = np.unique(geo_df_clustered['clusters'])
+            clusters_list = np.delete(clusters_list, np.where(
+                clusters_list == -1))  # removes the noises
+            clusters_list = np.tile(clusters_list, (3, 1))
+            for i in clusters_list[0]:
+                pop_i = sum(geo_df_clustered.loc
+                            [geo_df_clustered['clusters'] == i, 'Population'])
+                clusters_list[1, np.where(clusters_list[0] == i)] = pop_i
+                clusters_list[
+                    2, np.where(clusters_list[0] == i)] = pop_i * pop_load
 
             print("Clusters successfully imported")
             l()
             os.chdir(r'..//..')
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
                    pop_load, pop_thresh, line_bc, limit_HV, limit_MV, \
-                   gdf_clusters, clusters_list_2, clusters_list
+                   geo_df_clustered, clusters_list
         return df_weighted, input_sub, input_csv, crs, resolution, unit, \
                pop_load, pop_thresh, line_bc, limit_HV, limit_MV
 
@@ -194,7 +192,7 @@ def clustering_sensitivity(pop_points, geo_df):
         "populated to be considered as valuable for electrification.\n"
         "We'll need you to define 'RANGE' and 'SPANS' for the two parameters defining these CORE areas,"
         " which are the NEIGHBOURHOOD and MINIMUM POINTS.")
-    check = "y"
+    check = "n"
     while check == "y":
         s()
         eps = input("Provide the limits for the NEIGHBOURHOOD parameter \n"
@@ -260,14 +258,14 @@ def clustering_sensitivity(pop_points, geo_df):
         check = str(input("Would you like to run another sensitivity "
                           "analysis with a more precise interval? (y/n): "))
         s()
-    os.chdir(r'Output//Clusters//Sensitivity')
-    tab_cluster.to_csv("n_clusters.csv")
-    tab_people.to_csv("%_peop.csv")
-    tab_area.to_csv("%_area.csv")
-    tab_people_area.to_csv("people_area.csv")
-    os.chdir(r'..//..//..')
-    print("Clustering sensitivity process completed.\n"
-          "You can check the tables in the Output folder.")
+    # os.chdir(r'Output//Clusters//Sensitivity')
+    # tab_cluster.to_csv("n_clusters.csv")
+    # tab_people.to_csv("%_peop.csv")
+    # tab_area.to_csv("%_area.csv")
+    # tab_people_area.to_csv("people_area.csv")
+    # os.chdir(r'..//..//..')
+    # print("Clustering sensitivity process completed.\n"
+    #       "You can check the tables in the Output folder.")
     l()
 
     return
@@ -356,59 +354,59 @@ def nearest(row, geom_union, df1, df2, geom1_col='geometry',
     # Find the geometry that is closest
     nearest = df2[geom2_col] == nearest_points(row[geom1_col], geom_union)[1]
     # Get the corresponding value from df2 (matching is based on the geometry)
-    value = df2[nearest][src_column].get_values()[0]
+    value = df2[nearest][src_column].values[0]
     return value
 
 
-def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
-         clusters_load, pop_threshold, input_sub, paycheck, limit_HV,
+def grid(geo_df_clustered, geo_df, crs, clusters_list, resolution,
+         pop_threshold, input_sub, paycheck, limit_HV,
          limit_MV):
     print("Starting grid creation")
 
     grid_merged = connection_merged = pd.DataFrame()
-    grid_resume = pd.DataFrame(index=clusters_list_2,
+    grid_resume = pd.DataFrame(index=clusters_list[0],
                                columns=['Cluster', 'Grid_Length', 'Grid_Cost',
                                         'Connection_Length',
                                         'Connection_Cost', 'ClusterLoad',
                                         'ConnectionType'])
-    grid_resume['Cluster'] = clusters_list_2
-    grid_resume['ClusterLoad'] = clusters_load[2]
+    grid_resume['Cluster'] = clusters_list[0]
+    grid_resume['ClusterLoad'] = clusters_list[2]
     os.chdir(r'Input//')
     substations = gpd.read_file(input_sub + '.shp', sep=',')
     substations['ID'] = range(0, len(substations))
     os.chdir(r'..')
     os.chdir(r'Output//Grids')
-    for cluster_n in clusters_list_2:
+    for cluster_n in clusters_list[0]:
 
         #  SUBSTATIONS -----------------------------------------------------------------
         substations_new = substations
-        if clusters_load[2][
-            np.where(clusters_list_2 == cluster_n)[0][0]] > limit_HV:
+        if clusters_list[2][
+            np.where(clusters_list[0] == cluster_n)[0][0]] > limit_HV:
             substations_new = substations[substations['Type'] == 'HV']
-        elif clusters_load[2][
-            np.where(clusters_list_2 == cluster_n)[0][0]] > limit_MV and \
-                clusters_load[2][
-                    np.where(clusters_list_2 == cluster_n)[0][0]] < limit_HV:
+        elif clusters_list[2][
+            np.where(clusters_list[0] == cluster_n)[0][0]] > limit_MV and \
+                clusters_list[2][
+                    np.where(clusters_list[0] == cluster_n)[0][0]] < limit_HV:
             substations_new = substations[substations['Type'] == 'MV']
-        elif clusters_load[2][
-            np.where(clusters_list_2 == cluster_n)[0][0]] < limit_MV:
+        elif clusters_list[2][
+            np.where(clusters_list[0] == cluster_n)[0][0]] < limit_MV:
             substations_new = substations[substations['Type'] != 'HV']
 
-        unary_union = geodf_in.unary_union
+        unary_union = geo_df.unary_union
         substations_new['nearest_id'] = substations_new.apply(nearest,
                                                               geom_union=unary_union,
                                                               df1=substations_new,
-                                                              df2=geodf_in,
+                                                              df2=geo_df,
                                                               geom1_col='geometry',
                                                               src_column='ID',
                                                               axis=1)
-        subinmesh = gpd.GeoDataFrame(crs=from_epsg(Proj_coords))
+        subinmesh = gpd.GeoDataFrame(crs=from_epsg(crs))
         for i, row in substations_new.iterrows():
             subinmesh = subinmesh.append(
-                geodf_in[geodf_in['ID'] == row['nearest_id']], sort=False)
+                geo_df[geo_df['ID'] == row['nearest_id']], sort=False)
         subinmesh.reset_index(drop=True, inplace=True)
         # -------------------------------------------------------------------------------
-        gdf_cluster = gdf_clusters[gdf_clusters['clusters'] == cluster_n]
+        gdf_cluster = geo_df_clustered[geo_df_clustered['clusters'] == cluster_n]
         gdf_cluster_pop = gdf_cluster[
             gdf_cluster['Population'] >= pop_threshold]
         print(gdf_cluster_pop)
@@ -434,7 +432,7 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
             0]
         l()
         print("Creating grid for cluster n." + str(cluster_n) + " of " + str(
-            len(clusters_list_2)))
+            len(clusters_list[0])))
         points_to_electrify = int(len(gdf_cluster_pop))
         l()
         if points_to_electrify == 0:
@@ -449,9 +447,9 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
 
             cluster_grid.to_file(fileout)
             direct_connection, direct_cost, direct_length = grid_direct_connection(
-                geodf_in, gdf_cluster_pop,
+                geo_df, gdf_cluster_pop,
                 substation_designata,
-                Proj_coords, paycheck, resolution)
+                crs, paycheck, resolution)
             direct = 'Connection_' + str(cluster_n) + '.shp'
 
             direct_connection.to_file(direct)
@@ -465,11 +463,11 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
 
         elif points_to_electrify < 400:
             cluster_grid1, cluster_cost1, cluster_line_length1, connections1 = Steinerman(
-                geodf_in, gdf_cluster_pop,
-                Proj_coords, paycheck, resolution)
+                geo_df, gdf_cluster_pop,
+                crs, paycheck, resolution)
             cluster_grid2, cluster_cost2, cluster_line_length2, connections2 = Spiderman(
-                geodf_in, gdf_cluster_pop,
-                Proj_coords, paycheck,
+                geo_df, gdf_cluster_pop,
+                crs, paycheck,
                 resolution)
 
             if cluster_cost1 <= cluster_cost2:
@@ -484,10 +482,10 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
                 checkpoint = list(cluster_grid1['ID1'].values) + list(
                     cluster_grid1['ID2'].values)
                 checkpoint = list(dict.fromkeys(checkpoint))
-                checkpoint_ext = gpd.GeoDataFrame(crs=from_epsg(Proj_coords))
+                checkpoint_ext = gpd.GeoDataFrame(crs=from_epsg(crs))
                 for i in checkpoint:
                     checkpoint_ext = checkpoint_ext.append(
-                        geodf_in[geodf_in['ID'] == i], sort=False)
+                        geo_df[geo_df['ID'] == i], sort=False)
                 checkpoint_ext.reset_index(drop=True, inplace=True)
                 unary_union = checkpoint_ext.unary_union
                 substation_designata[
@@ -502,13 +500,13 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
                 Pointsub = Point(substation_designata['X'],
                                  substation_designata['Y'])
                 idgrid = int(substation_designata['nearest_gridpoint'].values)
-                Pointgrid = Point(float(geodf_in[geodf_in['ID'] == idgrid].X),
-                                  float(geodf_in[geodf_in['ID'] == idgrid].Y))
+                Pointgrid = Point(float(geo_df[geo_df['ID'] == idgrid].X),
+                                  float(geo_df[geo_df['ID'] == idgrid].Y))
                 dist = Pointsub.distance(Pointgrid)
                 if dist < 30000:
                     cordone_ombelicale, ombelico_cost, ombelico_length = grid_connection(
-                        geodf_in, substation_designata,
-                        Proj_coords, connections1,
+                        geo_df, substation_designata,
+                        crs, connections1,
                         paycheck, resolution)
 
                     cordone = 'connection_' + str(cluster_n) + '.shp'
@@ -535,10 +533,10 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
                 checkpoint = list(cluster_grid2['ID1'].values) + list(
                     cluster_grid2['ID2'].values)
                 checkpoint = list(dict.fromkeys(checkpoint))
-                checkpoint_ext = gpd.GeoDataFrame(crs=from_epsg(Proj_coords))
+                checkpoint_ext = gpd.GeoDataFrame(crs=from_epsg(crs))
                 for i in checkpoint:
                     checkpoint_ext = checkpoint_ext.append(
-                        geodf_in[geodf_in['ID'] == i], sort=False)
+                        geo_df[geo_df['ID'] == i], sort=False)
                 checkpoint_ext.reset_index(drop=True, inplace=True)
                 unary_union = checkpoint_ext.unary_union
                 substation_designata[
@@ -553,13 +551,13 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
                 Pointsub = Point(substation_designata['X'],
                                  substation_designata['Y'])
                 idgrid = int(substation_designata['nearest_gridpoint'].values)
-                Pointgrid = Point(float(geodf_in[geodf_in['ID'] == idgrid].X),
-                                  float(geodf_in[geodf_in['ID'] == idgrid].Y))
+                Pointgrid = Point(float(geo_df[geo_df['ID'] == idgrid].X),
+                                  float(geo_df[geo_df['ID'] == idgrid].Y))
                 dist = Pointsub.distance(Pointgrid)
                 if dist < 30000:
                     cordone_ombelicale, ombelico_cost, ombelico_length = grid_connection(
-                        geodf_in, substation_designata,
-                        Proj_coords, connections2,
+                        geo_df, substation_designata,
+                        crs, connections2,
                         paycheck, resolution)
 
                     cordone = 'connection_' + str(cluster_n) + '.shp'
@@ -576,8 +574,8 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
         else:
             print('Too many points to electrify, Steiner not recommended.')
             cluster_grid2, cluster_cost, cluster_line_length, connections = Spiderman(
-                geodf_in, gdf_cluster_pop,
-                Proj_coords, paycheck, resolution)
+                geo_df, gdf_cluster_pop,
+                crs, paycheck, resolution)
 
             fileout = "Grid_" + str(cluster_n) + '.shp'
             cluster_grid2.to_file(fileout)
@@ -587,10 +585,10 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
             checkpoint = list(cluster_grid2['ID1'].values) + list(
                 cluster_grid2['ID2'].values)
             checkpoint = list(dict.fromkeys(checkpoint))
-            checkpoint_ext = gpd.GeoDataFrame(crs=from_epsg(Proj_coords))
+            checkpoint_ext = gpd.GeoDataFrame(crs=from_epsg(crs))
             for i in checkpoint:
                 checkpoint_ext = checkpoint_ext.append(
-                    geodf_in[geodf_in['ID'] == i], sort=False)
+                    geo_df[geo_df['ID'] == i], sort=False)
             checkpoint_ext.reset_index(drop=True, inplace=True)
             unary_union = checkpoint_ext.unary_union
             substation_designata[
@@ -605,13 +603,13 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
             Pointsub = Point(substation_designata['X'],
                              substation_designata['Y'])
             idgrid = int(substation_designata['nearest_gridpoint'].values)
-            Pointgrid = Point(float(geodf_in[geodf_in['ID'] == idgrid].X),
-                              float(geodf_in[geodf_in['ID'] == idgrid].Y))
+            Pointgrid = Point(float(geo_df[geo_df['ID'] == idgrid].X),
+                              float(geo_df[geo_df['ID'] == idgrid].Y))
             dist = Pointsub.distance(Pointgrid)
             if dist < 30000:
                 cordone_ombelicale, ombelico_cost, ombelico_length = grid_connection(
-                    geodf_in, substation_designata,
-                    Proj_coords, connections,
+                    geo_df, substation_designata,
+                    crs, connections,
                     paycheck, resolution)
                 if dist != 0:
                     cordone = 'connection_' + str(cluster_n) + '.shp'
@@ -632,7 +630,7 @@ def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
         grid_resume.at[cluster_n, 'Connection_Cost'] = ombelico_cost / 1000
 
     grid_resume.to_csv('grid_resume.csv')
-    connection_merged.crs = grid_merged.crs = geodf_in.crs
+    connection_merged.crs = grid_merged.crs = geo_df.crs
     connection_merged.to_file('merged_connections')
     grid_merged.to_file('merged_grid')
     os.chdir(r'..//..')
