@@ -31,11 +31,11 @@ def Spiderman(mesh, cluster_points, Proj_coords, paycheck,resolution):
     for x in mesh.columns:
         if x not in valid_fields:
             blacklist.append(x)
-    mesh.drop(blacklist, axis=1, inplace=True)
-    #cluster_points.drop(blacklist, axis=1, inplace=True)
+    # mesh.drop(blacklist, axis=1, inplace=True)
+    cluster_points.drop(blacklist, axis=1, inplace=True)
     # remove repetitions in the dataframe
     mesh.drop_duplicates('ID', keep='last', inplace=True)
-    cluster_points.drop_duplicates('ID', keep='last', inplace=True)
+    # cluster_points.drop_duplicates('ID', keep='last', inplace=True)
     # Creation of a pandas DataFrame containing only coordinates of populated points
     d = {'x': cluster_points['X'], 'y': cluster_points['Y'], 'z': cluster_points['Elevation']}
     pop_points = pd.DataFrame(data=d)
