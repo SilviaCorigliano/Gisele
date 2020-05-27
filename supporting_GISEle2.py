@@ -289,9 +289,9 @@ def clustering(pop_points, geo_df, pop_load):
     clusters_list = np.arange(n_clusters)
     print('Initial number of clusters: %d' % n_clusters)
     # print('Estimated number of noise points: %d' % list(labels).count(-1))
-    check = "n"
+    check = "y"
 
-    while check == "n":
+    while check == "y":
         unique_labels = set(labels)
         colors = [plt.cm.Spectral(each)
                   for each in np.linspace(0, 1, len(unique_labels))]
@@ -316,13 +316,12 @@ def clustering(pop_points, geo_df, pop_load):
         plt.clf()
 
         s()
-        check = str(input('Are you satisfied with the result? (y/n): '))
+        check = str(input('Would you like to merge clusters? (y/n): '))
         s()
-        if check == "y":
+        if check == "n":
             break
-        print('In order to improve the cluster analysis a merging process '
-              'will be executed..\nThe current clusters available for '
-              'merging are:\n' + str(clusters_list))
+        print('The current clusters available for merging are:'
+              '\n' + str(clusters_list))
         s()
         merge1 = int(input('Select a base cluster that you want to merge: '))
         merge2 = input('Which clusters would you like to merge into the '
