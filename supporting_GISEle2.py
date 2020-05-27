@@ -17,7 +17,6 @@ from scipy.spatial import distance_matrix
 from Codes.Weight_matrix import *
 from Codes.remove_cycles_weight_final import *
 
-
 sys.path.insert(0, 'Codes')  # necessary for native GISEle Packages
 # native GISEle Packages
 from Codes.Steinerman import *
@@ -61,7 +60,7 @@ def import_csv_file(step):
         print("Input files successfully imported.")
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-            pop_thresh, line_bc, limit_HV, limit_MV
+               pop_thresh, line_bc, limit_HV, limit_MV
     elif step == 2 or step == 3:
         os.chdir(r'..//')
         os.chdir(r'Output//Datasets')
@@ -90,16 +89,17 @@ def import_csv_file(step):
                 pop_cluster = gdf_clusters[gdf_clusters['clusters'] == i]
                 clusters_list[1, np.where(clusters_list_2 == i)] = sum(
                     pop_cluster['Population'])
-                clusters_list[2, np.where(clusters_list_2 == i)] = clusters_list[1, np.where(clusters_list_2 == i)] * pop_load
+                clusters_list[2, np.where(clusters_list_2 == i)] = \
+                    clusters_list[1, np.where(clusters_list_2 == i)] * pop_load
 
             print("Clusters successfully imported")
             l()
             os.chdir(r'..//..')
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-                pop_load, pop_thresh, line_bc, limit_HV, limit_MV, \
-                gdf_clusters, clusters_list_2, clusters_list
+                   pop_load, pop_thresh, line_bc, limit_HV, limit_MV, \
+                   gdf_clusters, clusters_list_2, clusters_list
         return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-            pop_load, pop_thresh, line_bc, limit_HV, limit_MV
+               pop_load, pop_thresh, line_bc, limit_HV, limit_MV
 
 
 def weighting(df):
@@ -148,7 +148,7 @@ def weighting(df):
     return df_weighted
 
 
-def creating_geodataframe(df_weighted, crs, unit, input_csv,step):
+def creating_geodataframe(df_weighted, crs, unit, input_csv, step):
     print("Creating the GeoDataFrame..")
     geometry = [Point(xy) for xy in zip(df_weighted['X'], df_weighted['Y'])]
     geo_df = gpd.GeoDataFrame(df_weighted, geometry=geometry,
@@ -187,56 +187,46 @@ def creating_geodataframe(df_weighted, crs, unit, input_csv,step):
 
 
 def clustering_sensitivity(pop_points, geo_df):
-    print("2.Clustering - Searching for more densely populated areas")
+    print("2.Clustering - Sensitivity Analysis")
     print(
         "To do this we need two important parameters defining what's a dense area.\n"
         "This passes through the definition of the CORE area which is a zone sufficiently big and sufficiently "
         "populated to be considered as valuable for electrification.\n"
         "We'll need you to define 'RANGE' and 'SPANS' for the two parameters defining these CORE areas,"
-        " which are the MAX RADIUS and the MINIMUM POPULATION.")
-    spans = "y"
-    while spans == "n":
+        " which are the NEIGHBOURHOOD and MINIMUM POINTS.")
+    check = "y"
+    while check == "y":
         s()
-        eps_min = float(input(
-            "Which is the lower limit for the MAX RADIUS (in meters) you want to consider?: "))
+        eps = input("Provide the limits for the NEIGHBOURHOOD parameter \n"
+                    "(Example 250, 2500): ")
+        eps = sorted(list(map(int, eps.split(','))))
         s()
-        eps_max = float(input(
-            "Which is the upper limit for the MAX RADIUS (in meters) you want to consider?: "))
+        pts = input("Provide the limits for the MINIMUM POINTS parameter:\n"
+                    "(Example 10, 100):  ")
+        pts = sorted(list(map(int, pts.split(','))))
         s()
-        # d1 = int(input("How many SPANS between these values?: "))
-        d1 = 10
-        s()
-        pts_min = int(input(
-            "Which is the lower limit for the MINIMUM POPULATION you want to consider?: "))
-        s()
-        pts_max = int(input(
-            "Which is the upper limit for the MINIMUM POPULATION you want to consider?: "))
-        s()
-        # d2 = int(input("How many SPANS between these values?: "))
-        d2 = 6
+        spans = int(input("How many SPANS between these values?: "))
         s()
         span_eps = []
-        for j in range(1, d1 + 1):  # eps
-            if d1 != 1:
-                eps = int(eps_min + (eps_max - eps_min) / (d1 - 1) * (j - 1))
-            else:
-                eps = int(eps_min + (eps_max - eps_min) / d1 * (j - 1))
-            span_eps.append(eps)
-
         span_pts = []
-        for i in range(1, d2 + 1):  # min_people
-            if d2 != 1:
-                pts = int(pts_min + (pts_max - pts_min) / (d2 - 1) * (i - 1))
+        for j in range(1, spans + 1):
+            if spans != 1:
+                eps_ = int(eps[0] + (eps[1] - eps[0]) / (spans - 1) * (j - 1))
             else:
-                pts = int(pts_min + (pts_max - pts_min) / d2 * (i - 1))
-            span_pts.append(pts)
-
+                eps_ = int(eps[0] + (eps[1] - eps[0]) / spans * (j - 1))
+            span_eps.append(eps_)
+        for i in range(1, spans + 1):
+            if spans != 1:
+                pts_ = int(pts[0] + (pts[1] - pts[0]) / (spans - 1) * (i - 1))
+            else:
+                pts_ = int(pts[0] + (pts[1] - pts[0]) / spans * (i - 1))
+            span_pts.append(pts_)
         tab_area = tab_people = tab_people_area = tab_cluster = \
             pd.DataFrame(index=span_eps, columns=span_pts)
         total_people = int(geo_df['Population'].sum(axis=0))
         for eps in span_eps:  # eps
             for pts in span_pts:  # min_people
-                db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean').\
+                db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean'). \
                     fit(pop_points, sample_weight=geo_df['Population'])
                 labels = db.labels_
                 n_clusters_ = int(len(set(labels)) -
@@ -255,164 +245,110 @@ def clustering_sensitivity(pop_points, geo_df):
                 tab_people.at[eps, pts] = clustered_people
                 tab_area.at[eps, pts] = perc_area
                 tab_people_area.at[eps, pts] = people_area
-
-        print(
-            "Number of clusters - columns MINIMUM POPULATION - rows MAX RADIUS")
+        print("Number of clusters - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
         print(tab_cluster)
         l()
-        print(
-            "% of clustered people - columns MINIMUM POPULATION - rows MAX RADIUS")
+        print("% of clustered people - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
         print(tab_people)
         l()
-        print(
-            "% of clustered area - columns MINIMUM POPULATION - rows MAX RADIUS")
+        print("% of clustered area - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
         print(tab_area)
         l()
-        print("People per area - columns MINIMUM POPULATION - rows MAX RADIUS")
+        print("People per area - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
         print(tab_people_area)
         l()
-        spans = str(input(
-            "Are you satisfied or want to try again circumscribing a more precise interval? (y/n): "))
+        check = str(input("Would you like to run another sensitivity "
+                          "analysis with a more precise interval? (y/n): "))
         s()
-
-    print("Clustering sensitivity process completed!")
-    s()
-    # export = str(
-    #     input("Do you want to export CSV files of these tables? (y/n): "))
-    export = 'n'
-    s()
-    if export == "y":
-        os.chdir(r'Output//Clusters//Sensitivity')
-        tab_cluster.to_csv("n_clusters.csv")
-        tab_people.to_csv("%_peop.csv")
-        tab_area.to_csv("%_area.csv")
-        tab_people_area.to_csv("people_area.csv")
-        os.chdir(r'..//..//..')
+    os.chdir(r'Output//Clusters//Sensitivity')
+    tab_cluster.to_csv("n_clusters.csv")
+    tab_people.to_csv("%_peop.csv")
+    tab_area.to_csv("%_area.csv")
+    tab_people_area.to_csv("people_area.csv")
+    os.chdir(r'..//..//..')
+    print("Clustering sensitivity process completed.\n"
+          "You can check the tables in the Output folder.")
     l()
 
     return
 
 
-def clustering(pop_points, geo_df):
-    print("Choose the final combination of MINIMUM POINTS and NEIGHBOURHOOD")
+def clustering(pop_points, geo_df, pop_load):
+    print('Choose the final combination of NEIGHBOURHOOD and MINIMUM POINTS')
     l()
-    # eps = float(input("NEIGHBOURHOOD: "))
+    # eps = float(input("Chosen NEIGHBOURHOOD: "))
     eps = 1500
     s()
     pts = 500
-    # pts = int(input("MINIMUM POINTS: "))
+    # pts = int(input("Chosen MINIMUM POINTS: "))
     s()
-
     db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean').fit(
         pop_points, sample_weight=geo_df['Population'])
-
     labels = db.labels_
-    labels_2 = labels
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)  # ignore noise
+    clusters_list = np.arange(n_clusters)
+    print('Initial number of clusters: %d' % n_clusters)
+    # print('Estimated number of noise points: %d' % list(labels).count(-1))
+    check = "n"
 
-    # Number of clusters in labels, ignoring noise if present.
-    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-    n_noise_ = list(labels).count(-1)
-
-    print('Estimated number of clusters: %d' % n_clusters_)
-    print('Estimated number of noise points: %d' % n_noise_)
-
-    # create output shapefile with additional columns for clusters
-    gdf_clusters = geo_df
-    gdf_clusters['clusters'] = labels
-    gdf_clusters = gdf_clusters.sort_values(by=['ID'])
-
-    print("First clustering step completed.")
-    print("Starting manual clusters assembling procedure.")
-
-    are_clusters_ok = "n"
-
-    #    unique_labels = set(labels_2)
-    clusters_list = np.arange(n_clusters_)
-    clusters_list_2 = clusters_list[:]
-
-    while are_clusters_ok == "n":  # if n in clusters_list_2:
-
-        # Black removed and is used for noise instead.
-        unique_labels = set(labels_2)
-        # clusters_list = np.arange(n_clusters_)
+    while check == "n":
+        unique_labels = set(labels)
         colors = [plt.cm.Spectral(each)
                   for each in np.linspace(0, 1, len(unique_labels))]
-
         for k, col in zip(unique_labels, colors):
-            # for k, col in zip(clusters_list_2, colors):
             markersize = 3
             fontsize = 15
-            if k == -1:
-                # Black used for noise.
+            if k == -1:  # Black used for noise.
                 col = [0, 0, 0, 1]
                 markersize = 1
                 fontsize = 0
-
             cluster_points = (labels == k)
-
-            # xy = pop_points[cluster_points & core_samples_mask]
             xy = pop_points[cluster_points]
-            # np.delete(xy, 2, 1)
-
             plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
                      markeredgecolor='k', markeredgewidth=0.0,
                      markersize=markersize)
-
             for i, ((x, y, z),) in enumerate(zip(xy)):
                 plt.text(x, y, str(k), ha="center", va="center",
                          fontsize=fontsize, color='black')
-
                 if i == 0:
                     break
-
         plt.show()
         plt.clf()
 
         s()
-        are_clusters_ok = str(input("Are clusters ok? (y/n): "))
+        check = str(input('Are you satisfied with the result? (y/n): '))
         s()
-        if are_clusters_ok == "y":
+        if check == "y":
             break
-
-        print("Clusters:")
-        print(clusters_list_2)
+        print('In order to improve the cluster analysis a merging process '
+              'will be executed..\nThe current clusters available for '
+              'merging are:\n' + str(clusters_list))
         s()
-        merge1 = int(input("Which base cluster you want to merge: "))
-        merge2_in = input(
-            "Which clusters you want to merge into the cluster number " + str(
-                merge1) + " (Example: 1,13,25): ")
-        merge2_clean = merge2_in.split(",")
-        merge2 = []
-        for i in merge2_clean:
-            merge2.append(int(i))
+        merge1 = int(input('Select a base cluster that you want to merge: '))
+        merge2 = input('Which clusters would you like to merge into the '
+                       'cluster' + str(merge1) + '? (Example: 1,13,25): ')
+        merge2 = sorted(list(map(int, merge2.split(','))))
         s()
         for i in merge2:
-            clusters_list_2 = np.delete(clusters_list_2,
-                                        np.where(clusters_list_2 == i))
-
-            labels_2[labels_2 == i] = merge1
-            # gdf_clusters['clusters'].replace(clusters_list[n], merge)
-
-    gdf_clusters['clusters'] = labels_2
-    clusters_list = np.vstack(
-        [clusters_list_2, clusters_list_2, clusters_list_2])
-    # pop_load = int(input("What is the load estimation in kW per person?"))
-    pop_load = 0.4  # estimation of 2kW per person
-    for i in clusters_list_2:
-        pop_cluster = gdf_clusters[gdf_clusters['clusters'] == i]
-        clusters_list[1, np.where(clusters_list_2 == i)] = sum(
-            pop_cluster['Population'])
-        clusters_list[2, np.where(clusters_list_2 == i)] = clusters_list[
-                                                               1, np.where(
-                                                                   clusters_list_2 == i)] * pop_load
+            clusters_list = np.delete(clusters_list,
+                                      np.where(clusters_list == i))
+            labels[labels == i] = merge1
+    geo_df_clustered = geo_df
+    geo_df_clustered['clusters'] = labels
+    clusters_list = np.tile(clusters_list, (3, 1))
+    for i in clusters_list[0]:
+        pop_i = sum(geo_df_clustered.loc
+                    [geo_df_clustered['clusters'] == i, 'Population'])
+        clusters_list[1, np.where(clusters_list[0] == i)] = pop_i
+        clusters_list[2, np.where(clusters_list[0] == i)] = pop_i * pop_load
     os.chdir(r'Output//Clusters')
-    gdf_cluster_total = gdf_clusters[gdf_clusters['clusters'] != -1]
-    gdf_clusters.to_file("gdf_clusters.shp")
-    gdf_cluster_total.to_file("total_cluster.shp")
-    print("Clustering completed and cluster file extracted")
+    geo_df_clustered.to_file("geo_df_clustered.shp")
+    gdf_clustered_clean = geo_df_clustered[geo_df_clustered['clusters'] != -1]
+    gdf_clustered_clean.to_file("geo_df_clustered_clean.shp")
+    print("Clustering completed and files exported")
     os.chdir(r'..//..')
     l()
-    return gdf_clusters, clusters_list_2, clusters_list
+    return geo_df_clustered, clusters_list
 
 
 def nearest(row, geom_union, df1, df2, geom1_col='geometry',
@@ -426,7 +362,8 @@ def nearest(row, geom_union, df1, df2, geom1_col='geometry',
 
 
 def grid(gdf_clusters, geodf_in, Proj_coords, clusters_list_2, resolution,
-         clusters_load, pop_threshold, input_sub, paycheck, limit_HV, limit_MV):
+         clusters_load, pop_threshold, input_sub, paycheck, limit_HV,
+         limit_MV):
     print("Starting grid creation")
 
     grid_merged = connection_merged = pd.DataFrame()
@@ -1168,7 +1105,7 @@ def final_results(clusters_list_2, total_energy, grid_resume, mg_NPC):
     for clu in clusters_list_2:
         print(clu)
         final_LCOEs.at[clu, 'Total Energy Consumption [kWh]'] = \
-        total_energy.loc[clu, 'Total Energy Consumption [kWh]']
+            total_energy.loc[clu, 'Total Energy Consumption [kWh]']
         final_LCOEs.at[clu, 'GRID_NPC [$]'] = grid_resume.loc[
                                                   clu, 'Grid_Cost'] + \
                                               grid_resume.loc[

@@ -84,12 +84,12 @@ elif step == 2:
     "7.Clustering and Grid creation"
 
     supporting_GISEle2.clustering_sensitivity(pop_points, geo_df)
-    gdf_clusters, clusters_list_2, clusters_load = \
-        supporting_GISEle2.clustering(pop_points, geo_df)
+    gdf_clusters, clusters_list = \
+        supporting_GISEle2.clustering(pop_points, geo_df, pop_load)
 
     grid_resume, paycheck = supporting_GISEle2.grid(gdf_clusters, geo_df, crs,
-                                                    clusters_list_2,
-                                                    resolution, clusters_load,
+                                                    clusters_list,
+                                                    resolution,
                                                     pop_thresh, input_sub,
                                                     line_bc, limit_HV,
                                                     limit_MV)
