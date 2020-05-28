@@ -154,23 +154,19 @@ def creating_geodataframe(df_weighted, crs, unit, input_csv, step):
     del df_weighted
     # - Check crs conformity for the clustering procedure
     if unit == '0':
-        print(
-            'Attention: the clustering procedure requires measurements in meters. '
-            'Therefore, your dataset must be reprojected.')
+        print('Attention: the clustering procedure requires measurements in '
+              'meters. Therefore, your dataset must be reprojected.')
         crs = int(input("Provide a valid crs code to which reproject:"))
         geo_df['geometry'] = geo_df['geometry'].to_crs(epsg=crs)
         print("Done")
     print("GeoDataFrame ready!")
     s()
     if step == 1:
-        choice_save = str(input("Would you like to save the "
-                                "processed file as a .CSV and .SHP? (y/n): "))
-        if choice_save == "y":
-            os.chdir(r'Output//Datasets')
-            geo_df.to_csv(input_csv + "_weighted.csv")
-            geo_df.to_file(input_csv + "_weighted.shp")
-            os.chdir(r'..//..')
-            print("Files successfully saved.")
+        os.chdir(r'Output//Datasets')
+        geo_df.to_csv(input_csv + "_weighted.csv")
+        geo_df.to_file(input_csv + "_weighted.shp")
+        os.chdir(r'..//..')
+        print("GeoDataFrame exported. You can find it in the output folder.")
         l()
 
     print("In the considered area there are " + str(
@@ -222,8 +218,8 @@ def clustering_sensitivity(pop_points, geo_df):
         tab_area = tab_people = tab_people_area = tab_cluster = \
             pd.DataFrame(index=span_eps, columns=span_pts)
         total_people = int(geo_df['Population'].sum(axis=0))
-        for eps in span_eps:  # eps
-            for pts in span_pts:  # min_people
+        for eps in span_eps:
+            for pts in span_pts:
                 db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean'). \
                     fit(pop_points, sample_weight=geo_df['Population'])
                 labels = db.labels_
@@ -236,20 +232,24 @@ def clustering_sensitivity(pop_points, geo_df):
                 perc_area = int(clustered_area / len(geo_df) * 100)
                 clustered_people = int((1 - noise_people / total_people) * 100)
                 if clustered_area != 0:  # check to avoid crash by divide zero
-                    people_area = (total_people - noise_people)/clustered_area
+                    people_area = (
+                                              total_people - noise_people) / clustered_area
                 else:
                     people_area = 0
                 tab_cluster.at[eps, pts] = n_clusters_
                 tab_people.at[eps, pts] = clustered_people
                 tab_area.at[eps, pts] = perc_area
                 tab_people_area.at[eps, pts] = people_area
-        print("Number of clusters - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
+        print(
+            "Number of clusters - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
         print(tab_cluster)
         l()
-        print("% of clustered people - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
+        print(
+            "% of clustered people - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
         print(tab_people)
         l()
-        print("% of clustered area - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
+        print(
+            "% of clustered area - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
         print(tab_area)
         l()
         print("People per area - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
@@ -406,7 +406,8 @@ def grid(geo_df_clustered, geo_df, crs, clusters_list, resolution,
                 geo_df[geo_df['ID'] == row['nearest_id']], sort=False)
         subinmesh.reset_index(drop=True, inplace=True)
         # -------------------------------------------------------------------------------
-        gdf_cluster = geo_df_clustered[geo_df_clustered['clusters'] == cluster_n]
+        gdf_cluster = geo_df_clustered[
+            geo_df_clustered['clusters'] == cluster_n]
         gdf_cluster_pop = gdf_cluster[
             gdf_cluster['Population'] >= pop_threshold]
         print(gdf_cluster_pop)
