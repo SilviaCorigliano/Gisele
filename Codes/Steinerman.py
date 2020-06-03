@@ -26,7 +26,7 @@ def Steinerman(mesh, cluster_points, Proj_coords, paycheck, resolution):
     start_time = time.time()
     # remove repetitions in the dataframe
     mesh.drop_duplicates(['ID'], keep='last', inplace=True)
-    cluster_points.drop_duplicates(['ID'], keep='last', inplace=True)
+    # cluster_points.drop_duplicates(['ID'], keep='last', inplace=True)
     # Creation of a pandas DataFrame containing only coordinates of populated points
     d = {'x': cluster_points['X'], 'y': cluster_points['Y'], 'z': cluster_points['Elevation']}
     pop_points = pd.DataFrame(data=d)
