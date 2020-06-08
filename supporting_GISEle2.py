@@ -16,6 +16,7 @@ from scipy.spatial.distance import cdist
 from scipy.spatial import distance_matrix
 from Codes.Weight_matrix import *
 from Codes.remove_cycles_weight_final import *
+import contextily as ctx
 
 sys.path.insert(0, 'Codes')  # necessary for native GISEle Packages
 # native GISEle Packages
@@ -60,7 +61,7 @@ def import_csv_file(step):
         print("Input files successfully imported.")
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-               pop_thresh, line_bc, limit_HV, limit_MV
+            pop_thresh, line_bc, limit_HV, limit_MV
     elif step == 2 or step == 3:
         os.chdir(r'..//')
         os.chdir(r'Output//Datasets')
@@ -94,10 +95,10 @@ def import_csv_file(step):
             l()
             os.chdir(r'..//..')
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-                   pop_load, pop_thresh, line_bc, limit_HV, limit_MV, \
-                   geo_df_clustered, clusters_list
+                pop_load, pop_thresh, line_bc, limit_HV, limit_MV, \
+                geo_df_clustered, clusters_list
         return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-               pop_load, pop_thresh, line_bc, limit_HV, limit_MV
+            pop_load, pop_thresh, line_bc, limit_HV, limit_MV
 
 
 def weighting(df):
@@ -263,14 +264,14 @@ def clustering_sensitivity(pop_points, geo_df):
         check = str(input("Would you like to run another sensitivity "
                           "analysis with a more precise interval? (y/n): "))
         s()
-    # os.chdir(r'Output//Clusters//Sensitivity')
-    # tab_cluster.to_csv("n_clusters.csv")
-    # tab_people.to_csv("%_peop.csv")
-    # tab_area.to_csv("%_area.csv")
-    # tab_people_area.to_csv("people_area.csv")
-    # os.chdir(r'..//..//..')
-    # print("Clustering sensitivity process completed.\n"
-    #       "You can check the tables in the Output folder.")
+    os.chdir(r'Output//Clusters//Sensitivity')
+    tab_cluster.to_csv("n_clusters.csv")
+    tab_people.to_csv("%_peop.csv")
+    tab_area.to_csv("%_area.csv")
+    tab_people_area.to_csv("people_area.csv")
+    os.chdir(r'..//..//..')
+    print("Clustering sensitivity process completed.\n"
+          "You can check the tables in the Output folder.")
     l()
 
     return
@@ -295,29 +296,23 @@ def clustering(pop_points, geo_df, pop_load):
     check = "y"
 
     while check == "y":
-        unique_labels = set(labels)
-        colors = [plt.cm.Spectral(each)
-                  for each in np.linspace(0, 1, len(unique_labels))]
-        for k, col in zip(unique_labels, colors):
-            markersize = 3
-            fontsize = 15
-            if k == -1:  # Black used for noise.
-                col = [0, 0, 0, 1]
-                markersize = 1
-                fontsize = 0
-            cluster_points = (labels == k)
-            xy = pop_points[cluster_points]
-            plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-                     markeredgecolor='k', markeredgewidth=0.0,
-                     markersize=markersize)
-            for i, ((x, y, z),) in enumerate(zip(xy)):
-                plt.text(x, y, str(k), ha="center", va="center",
-                         fontsize=fontsize, color='black')
-                if i == 0:
-                    break
-        plt.show()
-        plt.clf()
+        geo_df_clustered = geo_df
+        geo_df_clustered['clusters'] = labels
+        gdf_clustered_clean = geo_df_clustered[
+            geo_df_clustered['clusters'] != -1]
 
+        fig, ax = plt.subplots(figsize=(10, 10))
+        for cluster_n in clusters_list:
+            plot_cluster = gdf_clustered_clean[
+                gdf_clustered_clean['clusters'] == cluster_n]
+            plot_cluster = plot_cluster.to_crs(epsg=3857)
+            plot_cluster.plot(ax=ax, label=str(cluster_n))
+            ax.legend()
+            fig.tight_layout()
+            ax.set_axis_off()
+            ax.set_title('Cluster Analysis')
+        ctx.add_basemap(ax)
+        plt.show()
         s()
         check = str(input('Would you like to merge clusters? (y/n): '))
         s()
@@ -335,21 +330,20 @@ def clustering(pop_points, geo_df, pop_load):
             clusters_list = np.delete(clusters_list,
                                       np.where(clusters_list == i))
             labels[labels == i] = merge1
-    geo_df_clustered = geo_df
-    geo_df_clustered['clusters'] = labels
+
     clusters_list = np.tile(clusters_list, (3, 1))
     for i in clusters_list[0]:
         pop_i = sum(geo_df_clustered.loc
                     [geo_df_clustered['clusters'] == i, 'Population'])
         clusters_list[1, np.where(clusters_list[0] == i)] = pop_i
         clusters_list[2, np.where(clusters_list[0] == i)] = pop_i * pop_load
+
     os.chdir(r'Output//Clusters')
     geo_df_clustered.to_file("geo_df_clustered.shp")
-    gdf_clustered_clean = geo_df_clustered[geo_df_clustered['clusters'] != -1]
     gdf_clustered_clean.to_file("geo_df_clustered_clean.shp")
-    print("Clustering completed and files exported")
     os.chdir(r'..//..')
-    l()
+
+    print("Clustering completed and files exported")
     return geo_df_clustered, clusters_list
 
 
@@ -359,7 +353,7 @@ def nearest(row, df, src_column=None):
     nearest_p = df['geometry'] == nearest_points(row['geometry'],
                                                  df.unary_union)[1]
     # Get the corresponding value from df2 (matching is based on the geometry)
-    value = df[nearest_p][src_column].values[0]
+    value = df.loc[nearest_p, src_column].values[0]
     return value
 
 
@@ -391,11 +385,12 @@ def substation_assignment(cluster_n, geo_df, gdf_cluster_pop, substations,
             < limit_HV:
         substations = substations[substations['Type'] == 'MV']
     elif clusters_list[2][
-        np.where(clusters_list[0] == cluster_n)[0][0]] < limit_MV:
+            np.where(clusters_list[0] == cluster_n)[0][0]] < limit_MV:
         substations = substations[substations['Type'] != 'HV']
 
-    substations['nearest_id'] = substations.apply(nearest, df=geo_df,
-                                                  src_column='ID', axis=1)
+    substations = substations.assign(
+        nearest_id=substations.apply(nearest, df=geo_df, src_column='ID',
+                                     axis=1))
 
     sub_in_df = gpd.GeoDataFrame(crs=from_epsg(crs))
     for i, row in substations.iterrows():
@@ -408,7 +403,7 @@ def substation_assignment(cluster_n, geo_df, gdf_cluster_pop, substations,
     assigned_substation = sub_in_df[sub_in_df['ID'] == dist.min().idxmin()]
     connection_type = substations[substations['nearest_id']
                                   == dist.min().idxmin()].Type.values[0]
-    l()
+
     return assigned_substation, connection_type
 
 
@@ -459,12 +454,12 @@ def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
         checkpoint_ext = checkpoint_ext.append(
             geo_df[geo_df['ID'] == i], sort=False)
     checkpoint_ext.reset_index(drop=True, inplace=True)
-    assigned_substation[
-        'nearest_gridpoint'] = assigned_substation.apply(nearest,
-                                                         df=checkpoint_ext,
-                                                         src_column='ID',
-                                                         axis=1)
-    # -------------------------
+
+    assigned_substation = assigned_substation.assign(
+        nearest_gridpoint=assigned_substation.apply(nearest, df=checkpoint_ext,
+                                                    src_column='ID',axis=1))
+
+    # ------------------------------------------------------------------------
     Pointsub = Point(assigned_substation['X'],
                      assigned_substation['Y'])
     idgrid = int(assigned_substation['nearest_gridpoint'].values)
@@ -486,12 +481,13 @@ def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
 
 
 def grid(geo_df_clustered, geo_df, crs, clusters_list, resolution,
-         pop_threshold, input_sub, line_bc, limit_HV, limit_MV):
+         pop_threshold, input_sub, line_bc, limit_hv, limit_mv):
     s()
     print("3. Grid Creation")
     s()
 
     grid_merged = connection_merged = pd.DataFrame()
+    grid_merged.crs = connection_merged.crs = geo_df.crs
     grid_resume = pd.DataFrame(index=clusters_list[0],
                                columns=['Cluster', 'Grid_Length', 'Grid_Cost',
                                         'Connection_Length',
@@ -517,10 +513,10 @@ def grid(geo_df_clustered, geo_df, crs, clusters_list, resolution,
 
             assigned_substation, connection_type = \
                 substation_assignment(cluster_n, geo_df, gdf_cluster_pop,
-                                      substations, clusters_list, limit_HV,
-                                      limit_MV, crs)
-
+                                      substations, clusters_list, limit_hv,
+                                      limit_mv, crs)
             grid_resume.loc[cluster_n, 'ConnectionType'] = connection_type
+
             l()
             print("Creating grid for Cluster n." + str(cluster_n) + " of "
                   + str(len(clusters_list[0])))
@@ -557,13 +553,12 @@ def grid(geo_df_clustered, geo_df, crs, clusters_list, resolution,
             grid_resume.at[cluster_n, 'Connection_Cost'] = 0
 
     grid_resume.to_csv('grid_resume.csv')
-    connection_merged.crs = grid_merged.crs = geo_df.crs
     connection_merged.to_file('merged_connections')
     grid_merged.to_file('merged_grid')
     os.chdir(r'..//..')
     print("All grids have been optimized and exported.")
     l()
-    return grid_resume, line_bc
+    return grid_resume
 
 
 def load():

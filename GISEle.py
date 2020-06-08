@@ -28,33 +28,33 @@ if step == 1:
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
 
     df, input_sub, input_csv, crs, resolution, unit, pop_load, pop_thresh, \
-        line_bc, limit_HV, limit_MV = supporting_GISEle2.import_csv_file(step)
+        line_bc, limit_hv, limit_mv = supporting_GISEle2.import_csv_file(step)
 
     df_weighted = supporting_GISEle2.weighting(df)
 
-    geo_df, pop_points = supporting_GISEle2.\
+    geo_df, pop_points = supporting_GISEle2. \
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
     '-------------------------------------------------------------------------'
     "2.Clustering"
 
     supporting_GISEle2.clustering_sensitivity(pop_points, geo_df)
 
-    geo_df_clustered, clusters_list = supporting_GISEle2.\
+    geo_df_clustered, clusters_list = supporting_GISEle2. \
         clustering(pop_points, geo_df, pop_load)
 
     '-------------------------------------------------------------------------'
     "3.Grid creation"
 
-    grid_resume, paycheck = supporting_GISEle2.grid(geo_df_clustered, geo_df,
-                                                    crs, clusters_list,
-                                                    resolution, pop_thresh,
-                                                    input_sub, line_bc,
-                                                    limit_HV, limit_MV)
+    grid_resume = supporting_GISEle2.grid(geo_df_clustered, geo_df,
+                                          crs, clusters_list,
+                                          resolution, pop_thresh,
+                                          input_sub, line_bc,
+                                          limit_hv, limit_mv)
 
     grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered,
                                                           geo_df, grid_resume,
                                                           crs, resolution,
-                                                          paycheck)
+                                                          line_bc)
     '-------------------------------------------------------------------------'
 
     "4.Load creation"
@@ -76,7 +76,7 @@ elif step == 2:
     "1. Importing and Creating the GeoDataFrame"
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
-        pop_thresh, line_bc, limit_HV, limit_MV = \
+        pop_thresh, line_bc, limit_hv, limit_mv = \
         supporting_GISEle2.import_csv_file(step)
 
     geo_df, pop_points = supporting_GISEle2. \
@@ -90,25 +90,24 @@ elif step == 2:
         supporting_GISEle2.clustering(pop_points, geo_df, pop_load)
     '-------------------------------------------------------------------------'
     "3.Grid creation"
-    grid_resume, paycheck = supporting_GISEle2.grid(geo_df_clustered, geo_df,
-                                                    crs, clusters_list,
-                                                    resolution, pop_thresh,
-                                                    input_sub, line_bc,
-                                                    limit_HV, limit_MV)
+    grid_resume = supporting_GISEle2.grid(geo_df_clustered, geo_df,
+                                          crs, clusters_list,
+                                          resolution, pop_thresh,
+                                          input_sub, line_bc,
+                                          limit_hv, limit_mv)
 
     grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered,
                                                           geo_df, grid_resume,
                                                           crs, resolution,
-                                                          paycheck)
+                                                          line_bc)
 
 elif step == 3:
     '-------------------------------------------------------------------------'
     "1. Importing and Creating the GeoDataFrame"
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
-        pop_thresh, line_bc, limit_HV, limit_MV,  geo_df_clustered, \
-        clusters_list,  = \
-        supporting_GISEle2.import_csv_file(step)
+        pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
+        clusters_list, = supporting_GISEle2.import_csv_file(step)
 
     geo_df, pop_points = supporting_GISEle2. \
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
@@ -116,16 +115,16 @@ elif step == 3:
     '-------------------------------------------------------------------------'
     "3. Grid creation"
 
-    grid_resume, paycheck = supporting_GISEle2.grid(geo_df_clustered, geo_df,
-                                                    crs, clusters_list,
-                                                    resolution, pop_thresh,
-                                                    input_sub, line_bc,
-                                                    limit_HV, limit_MV)
+    grid_resume = supporting_GISEle2.grid(geo_df_clustered, geo_df,
+                                          crs, clusters_list,
+                                          resolution, pop_thresh,
+                                          input_sub, line_bc,
+                                          limit_hv, limit_mv)
 
     grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered,
                                                           geo_df, grid_resume,
                                                           crs, resolution,
-                                                          paycheck)
+                                                          line_bc)
 
 elif step == 4:
     '-------------------------------------------------------------------------'

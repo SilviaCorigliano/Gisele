@@ -32,7 +32,7 @@ def Spiderman(mesh, cluster_points, Proj_coords, paycheck,resolution):
         if x not in valid_fields:
             blacklist.append(x)
     # mesh.drop(blacklist, axis=1, inplace=True)
-    cluster_points.drop(blacklist, axis=1, inplace=True)
+    # cluster_points.drop(blacklist, axis=1, inplace=True)
     # remove repetitions in the dataframe
     mesh.drop_duplicates('ID', keep='last', inplace=True)
     # cluster_points.drop_duplicates('ID', keep='last', inplace=True)
