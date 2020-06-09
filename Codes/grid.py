@@ -52,17 +52,18 @@ def substation_assignment(cluster_n, geo_df, gdf_cluster_pop, substations,
 
 
 def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
-                         points_to_electrify):
+                 points_to_electrify):
+
     if points_to_electrify < 3:
         c_grid = gdf_cluster_pop
         c_grid_cost = 0
         c_grid_length = 0
 
     elif points_to_electrify < 1000:
-        c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = \
-            Steinerman.Steinerman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
-        c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = \
-            Spiderman.Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
+        c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman.\
+            Steinerman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
+        c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman.\
+            Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
 
         if c_grid_cost1 <= c_grid_cost2:
             print(" Steiner Wins!")
@@ -80,8 +81,8 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
 
     elif points_to_electrify >= 1000:
         print("Too many points to use Steiner")
-        c_grid, c_grid_cost, c_grid_length, c_grid_points = \
-            Spiderman.Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
+        c_grid, c_grid_cost, c_grid_length, c_grid_points = Spiderman.\
+            Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
 
     return c_grid, c_grid_cost, c_grid_length, c_grid_points
 
@@ -259,7 +260,6 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
     s()
     print("3. Grid Creation")
     s()
-
     grid_merged = connection_merged = pd.DataFrame()
     grid_resume = pd.DataFrame(index=clusters_list[0],
                                columns=['Cluster', 'Grid_Length', 'Grid_Cost',
@@ -268,11 +268,15 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
                                         'ConnectionType'])
     grid_resume['Cluster'] = clusters_list[0]
     grid_resume['ClusterLoad'] = clusters_list[2]
+
     os.chdir(r'Input//')
-    substations = gpd.read_file(input_sub + '.shp', sep=',')
-    substations['ID'] = range(0, len(substations))
+    substations = pd.read_csv(input_sub + '.csv')
+    geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
+    substations = gpd.GeoDataFrame(substations, geometry=geometry,
+                                   crs=from_epsg(crs))
     os.chdir(r'..')
     os.chdir(r'Output//Grids')
+
     for cluster_n in clusters_list[0]:
 
         gdf_cluster = geo_df_clustered[
@@ -284,19 +288,20 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
 
         if points_to_electrify > 0:
 
+            l()
+            print("Creating grid for Cluster n." + str(cluster_n) + " of "
+                  + str(len(clusters_list[0])))
+            l()
+
             assigned_substation, connection_type = \
                 substation_assignment(cluster_n, geo_df, gdf_cluster_pop,
                                       substations, clusters_list, limit_hv,
                                       limit_mv, crs)
             grid_resume.loc[cluster_n, 'ConnectionType'] = connection_type
 
-            l()
-            print("Creating grid for Cluster n." + str(cluster_n) + " of "
-                  + str(len(clusters_list[0])))
-            l()
             c_grid, c_grid_cost, c_grid_length, c_grid_points = \
                 cluster_grid(geo_df, gdf_cluster_pop, crs, resolution,
-                                     line_bc, points_to_electrify)
+                             line_bc, points_to_electrify)
 
             connection, connection_cost, connection_length = \
                 substation_connection(c_grid, assigned_substation,
@@ -417,13 +422,13 @@ def connection_optimization(gdf_clusters, geodf_in, grid_resume, proj_coords,
                     dist.Distance[j] = 9999999
                     dist.Cost[j] = 99999999
                     continue
-
+                block_print()
                 direct_connection, direct_cost, direct_length = grid_direct_connection(
                     geodf_in, p1, p2,
                     proj_coords,
                     paycheck,
                     resolution)
-
+                enable_print()
 
                 dist.Distance[j] = direct_length
                 if grid_resume.ConnectionType.values[

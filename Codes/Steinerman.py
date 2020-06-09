@@ -15,7 +15,7 @@ from fiona.crs import from_epsg
 from scipy.spatial import distance_matrix
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
-from Codes.Weight_matrix import*
+from supporting_GISEle2 import*
 from Codes.Steiner_tree_code import*
 from shapely.geometry import Point, LineString, Polygon, box
 from scipy.spatial.distance import cdist

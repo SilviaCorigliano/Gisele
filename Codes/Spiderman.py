@@ -8,7 +8,7 @@ import geopandas as gpd
 import pandas as pd
 import math
 import numpy
-from Codes.Weight_matrix import *
+from supporting_GISEle2 import *
 from Codes.remove_cycles_weight_final import *
 from scipy.spatial import distance_matrix
 from scipy.spatial.distance import cdist
