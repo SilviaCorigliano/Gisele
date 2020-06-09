@@ -9,6 +9,8 @@ import networkx as nx
 import numpy as np
 from fiona.crs import from_epsg
 from sklearn.cluster import DBSCAN
+import plotly.graph_objs as go
+from plotly.offline import plot
 from matplotlib import pyplot as plt
 from shapely.geometry import Point, MultiPoint, box, LineString
 from shapely.ops import nearest_points
@@ -54,14 +56,14 @@ def import_csv_file(step):
     pop_load = float(config[5, 1])
     pop_thresh = float(config[6, 1])
     line_bc = float(config[7, 1])
-    limit_HV = float(config[8, 1])
-    limit_MV = float(config[9, 1])
+    limit_hv = float(config[8, 1])
+    limit_mv = float(config[9, 1])
     if step == 1:
         df = pd.read_csv(input_csv + '.csv', sep=',')
         print("Input files successfully imported.")
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-            pop_thresh, line_bc, limit_HV, limit_MV
+            pop_thresh, line_bc, limit_hv, limit_mv
     elif step == 2 or step == 3:
         os.chdir(r'..//')
         os.chdir(r'Output//Datasets')
@@ -95,10 +97,10 @@ def import_csv_file(step):
             l()
             os.chdir(r'..//..')
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-                pop_load, pop_thresh, line_bc, limit_HV, limit_MV, \
+                pop_load, pop_thresh, line_bc, limit_hv, limit_mv, \
                 geo_df_clustered, clusters_list
         return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-            pop_load, pop_thresh, line_bc, limit_HV, limit_MV
+            pop_load, pop_thresh, line_bc, limit_hv, limit_mv
 
 
 def weighting(df):
@@ -192,7 +194,7 @@ def clustering_sensitivity(pop_points, geo_df):
         "First, provide a RANGE for these parameters and also the number of "
         "SPANS between the range values.")
 
-    check = "y"
+    check = "n"
     while check == "y":
         s()
         eps = input("Provide the limits for the NEIGHBOURHOOD parameter \n"
@@ -264,11 +266,11 @@ def clustering_sensitivity(pop_points, geo_df):
         check = str(input("Would you like to run another sensitivity "
                           "analysis with a more precise interval? (y/n): "))
         s()
-    os.chdir(r'Output//Clusters//Sensitivity')
-    tab_cluster.to_csv("n_clusters.csv")
-    tab_people.to_csv("%_peop.csv")
-    tab_area.to_csv("%_area.csv")
-    tab_people_area.to_csv("people_area.csv")
+    # os.chdir(r'Output//Clusters//Sensitivity')
+    # tab_cluster.to_csv("n_clusters.csv")
+    # tab_people.to_csv("%_peop.csv")
+    # tab_area.to_csv("%_area.csv")
+    # tab_people_area.to_csv("people_area.csv")
     os.chdir(r'..//..//..')
     print("Clustering sensitivity process completed.\n"
           "You can check the tables in the Output folder.")
@@ -282,6 +284,8 @@ def clustering(pop_points, geo_df, pop_load):
     l()
     # eps = float(input("Chosen NEIGHBOURHOOD: "))
     eps = 1500
+    # eps = 3100
+    # pts = 20
     s()
     pts = 500
     # pts = int(input("Chosen MINIMUM POINTS: "))
@@ -301,19 +305,45 @@ def clustering(pop_points, geo_df, pop_load):
         gdf_clustered_clean = geo_df_clustered[
             geo_df_clustered['clusters'] != -1]
 
-        fig, ax = plt.subplots(figsize=(10, 10))
+
+        fig = go.Figure()
         for cluster_n in clusters_list:
-            plot_cluster = gdf_clustered_clean[
-                gdf_clustered_clean['clusters'] == cluster_n]
-            plot_cluster = plot_cluster.to_crs(epsg=3857)
-            plot_cluster.plot(ax=ax, label=str(cluster_n))
-            ax.legend()
-            fig.tight_layout()
-            ax.set_axis_off()
-            ax.set_title('Cluster Analysis')
-        ctx.add_basemap(ax)
-        plt.show()
-        s()
+
+            plot_cluster = gdf_clustered_clean[gdf_clustered_clean['clusters']==cluster_n]
+            plot_cluster = plot_cluster.to_crs(epsg=4326)
+            plot_cluster.X = plot_cluster.geometry.x
+            plot_cluster.Y = plot_cluster.geometry.y
+            # plot_cluster['clusters'] = plot_cluster['clusters'].astype(str)
+            fig.add_trace(go.Scattermapbox(
+                lat=plot_cluster.Y,
+                lon=plot_cluster.X,
+                mode='markers',
+                # showlegend=True,
+                name='Cluster ' + str(cluster_n),
+                # color="clusters",
+                # color_discrete_sequence=px.colors.plot_cluster.clusters,
+                marker=go.scattermapbox.Marker(
+                    size=10,
+                    # cauto=False,x
+                    # cmin=0,
+                    # cmax=3,
+                    # showscale=True,
+                    color=cluster_n,
+                    # colorbar=True,
+                    # colorscale="Rainbow",
+                    opacity=0.9
+                ),
+                text=plot_cluster.clusters,
+                hoverinfo='text',
+                below="''"
+            ))
+            fig.update_layout(mapbox_style="carto-positron",
+                              mapbox_zoom=8.5)
+            fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
+                              mapbox_center={"lat": -16.9, "lon": 36.5})
+            fig.update_layout(clickmode='event+select')
+
+        plot(fig)
         check = str(input('Would you like to merge clusters? (y/n): '))
         s()
         if check == "n":
@@ -374,18 +404,19 @@ def distance_3d(df1, df2, x, y, z):
 
 
 def substation_assignment(cluster_n, geo_df, gdf_cluster_pop, substations,
-                          clusters_list, limit_HV, limit_MV, crs):
+                          clusters_list, limit_hv, limit_mv, crs):
+    print('Assigning the nearest substation to each cluster..')
 
     if clusters_list[2][np.where(clusters_list[0] == cluster_n)[0][0]] \
-            > limit_HV:
+            > limit_hv:
         substations = substations[substations['Type'] == 'HV']
     elif clusters_list[2][
-        np.where(clusters_list[0] == cluster_n)[0][0]] > limit_MV and \
+        np.where(clusters_list[0] == cluster_n)[0][0]] > limit_mv and \
             clusters_list[2][np.where(clusters_list[0] == cluster_n)[0][0]] \
-            < limit_HV:
+            < limit_hv:
         substations = substations[substations['Type'] == 'MV']
     elif clusters_list[2][
-            np.where(clusters_list[0] == cluster_n)[0][0]] < limit_MV:
+            np.where(clusters_list[0] == cluster_n)[0][0]] < limit_mv:
         substations = substations[substations['Type'] != 'HV']
 
     substations = substations.assign(
@@ -404,12 +435,13 @@ def substation_assignment(cluster_n, geo_df, gdf_cluster_pop, substations,
     connection_type = substations[substations['nearest_id']
                                   == dist.min().idxmin()].Type.values[0]
 
+    print('Substation assignment complete.')
+
     return assigned_substation, connection_type
 
 
 def cluster_grid_routing(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
                          points_to_electrify):
-
     if points_to_electrify < 3:
         c_grid = gdf_cluster_pop
         c_grid_cost = 0
@@ -445,7 +477,6 @@ def cluster_grid_routing(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
 
 def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
                           line_bc, resolution, crs):
-
     checkpoint = list(c_grid['ID1'].values) + list(
         c_grid['ID2'].values)
     checkpoint = list(dict.fromkeys(checkpoint))
@@ -457,7 +488,7 @@ def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
 
     assigned_substation = assigned_substation.assign(
         nearest_gridpoint=assigned_substation.apply(nearest, df=checkpoint_ext,
-                                                    src_column='ID',axis=1))
+                                                    src_column='ID', axis=1))
 
     # ------------------------------------------------------------------------
     Pointsub = Point(assigned_substation['X'],
@@ -487,7 +518,6 @@ def grid(geo_df_clustered, geo_df, crs, clusters_list, resolution,
     s()
 
     grid_merged = connection_merged = pd.DataFrame()
-    grid_merged.crs = connection_merged.crs = geo_df.crs
     grid_resume = pd.DataFrame(index=clusters_list[0],
                                columns=['Cluster', 'Grid_Length', 'Grid_Cost',
                                         'Connection_Length',
@@ -526,7 +556,8 @@ def grid(geo_df_clustered, geo_df, crs, clusters_list, resolution,
                                      line_bc, points_to_electrify)
 
             connection, connection_cost, connection_length = \
-                substation_connection(c_grid, assigned_substation, c_grid_points,
+                substation_connection(c_grid, assigned_substation,
+                                      c_grid_points,
                                       geo_df, line_bc, resolution, crs)
 
             fileout = 'Grid_' + str(cluster_n) + '.shp'
@@ -542,8 +573,10 @@ def grid(geo_df_clustered, geo_df, crs, clusters_list, resolution,
 
             grid_resume.at[cluster_n, 'Grid_Length'] = c_grid_length / 1000
             grid_resume.at[cluster_n, 'Grid_Cost'] = c_grid_cost / 1000
-            grid_resume.at[cluster_n, 'Connection_Length'] = connection_length / 1000
-            grid_resume.at[cluster_n, 'Connection_Cost'] = connection_cost / 1000
+            grid_resume.at[
+                cluster_n, 'Connection_Length'] = connection_length / 1000
+            grid_resume.at[
+                cluster_n, 'Connection_Cost'] = connection_cost / 1000
 
         elif points_to_electrify == 0:
 
@@ -553,8 +586,9 @@ def grid(geo_df_clustered, geo_df, crs, clusters_list, resolution,
             grid_resume.at[cluster_n, 'Connection_Cost'] = 0
 
     grid_resume.to_csv('grid_resume.csv')
-    connection_merged.to_file('merged_connections')
+    grid_merged.crs = connection_merged.crs = geo_df.crs
     grid_merged.to_file('merged_grid')
+    connection_merged.to_file('merged_connections')
     os.chdir(r'..//..')
     print("All grids have been optimized and exported.")
     l()
