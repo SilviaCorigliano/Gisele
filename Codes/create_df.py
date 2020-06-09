@@ -5,16 +5,7 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 from fiona.crs import from_epsg
-
-
-# function for long separating lines
-def l():
-    print('-' * 100)
-
-
-# function for short separating lines
-def s():
-    print("-" * 40)
+from supporting_GISEle2 import l, s
 
 
 def import_csv_file(step):
