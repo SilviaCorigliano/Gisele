@@ -118,7 +118,7 @@ def creating_geodataframe(df_weighted, crs, unit, input_csv, step):
     geometry = [Point(xy) for xy in zip(df_weighted['X'], df_weighted['Y'])]
     geo_df = gpd.GeoDataFrame(df_weighted, geometry=geometry,
                               crs=from_epsg(crs))
-    del df_weighted
+
     # - Check crs conformity for the clustering procedure
     if unit == '0':
         print('Attention: the clustering procedure requires measurements in '
@@ -141,7 +141,7 @@ def creating_geodataframe(df_weighted, crs, unit, input_csv, step):
           str(int(geo_df['Population'].sum(axis=0))) +
           " people which could gain access to electricity.")
 
-    d = {'x': geo_df['X'], 'y': geo_df['Y'], 'z': geo_df['Elevation']}
-    pop_points = pd.DataFrame(data=d).values
+    loc = {'x': geo_df['X'], 'y': geo_df['Y'], 'z': geo_df['Elevation']}
+    pop_points = pd.DataFrame(data=loc).values
 
     return geo_df, pop_points

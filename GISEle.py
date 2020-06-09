@@ -8,7 +8,7 @@ configured accordingly, for more information check the README.
 """
 
 import supporting_GISEle2
-from Codes import create_df, clustering
+from Codes import initialization, clustering, grid
 
 "Introduction"
 supporting_GISEle2.l()
@@ -23,39 +23,36 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
 print("\n".join(steps))
 supporting_GISEle2.s()
 # step = int(input('Which step do you want to select?: '))
-step = 1
+step = 3
 if step == 1:
     '-------------------------------------------------------------------------'
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
 
     df, input_sub, input_csv, crs, resolution, unit, pop_load, pop_thresh, \
-        line_bc, limit_hv, limit_mv = create_df.import_csv_file(step)
+        line_bc, limit_hv, limit_mv = initialization.import_csv_file(step)
 
-    df_weighted = create_df.weighting(df)
+    df_weighted = initialization.weighting(df)
 
-    geo_df, pop_points = create_df.creating_geodataframe(df_weighted, crs,
-                                                         unit, input_csv, step)
+    geo_df, pop_points = initialization.creating_geodataframe(df_weighted, crs,
+                                                              unit, input_csv,
+                                                              step)
     '-------------------------------------------------------------------------'
     "2.Clustering"
 
-    clustering.cluster_sensitivity(pop_points, geo_df)
+    clustering.sensitivity(pop_points, geo_df)
 
-    geo_df_clustered, clusters_list = clustering.cluster_analysis(pop_points,
-                                                                  geo_df,
-                                                                  pop_load)
+    geo_df_clustered, clusters_list = clustering.analysis(pop_points, geo_df,
+                                                          pop_load)
     '-------------------------------------------------------------------------'
     "3.Grid creation"
 
-    grid_resume = supporting_GISEle2.grid(geo_df_clustered, geo_df,
-                                          crs, clusters_list,
-                                          resolution, pop_thresh,
-                                          input_sub, line_bc,
-                                          limit_hv, limit_mv)
+    grid_resume = grid.routing(geo_df_clustered, geo_df, crs, clusters_list,
+                               resolution, pop_thresh, input_sub, line_bc,
+                               limit_hv, limit_mv)
 
-    grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered,
-                                                          geo_df, grid_resume,
-                                                          crs, resolution,
-                                                          line_bc)
+    grid_optimized = grid.connection_optimization(geo_df_clustered, geo_df,
+                                                  grid_resume, crs, resolution,
+                                                  line_bc)
     '-------------------------------------------------------------------------'
 
     "4.Load creation"
@@ -78,29 +75,26 @@ elif step == 2:
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
         pop_thresh, line_bc, limit_hv, limit_mv = \
-        supporting_GISEle2.import_csv_file(step)
+        initialization.import_csv_file(step)
 
-    geo_df, pop_points = supporting_GISEle2. \
+    geo_df, pop_points = initialization. \
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
 
     '-------------------------------------------------------------------------'
     "2.Clustering"
 
-    supporting_GISEle2.clustering_sensitivity(pop_points, geo_df)
+    clustering.sensitivity(pop_points, geo_df)
     geo_df_clustered, clusters_list = \
-        supporting_GISEle2.clustering(pop_points, geo_df, pop_load)
+        clustering.analysis(pop_points, geo_df, pop_load)
     '-------------------------------------------------------------------------'
     "3.Grid creation"
-    grid_resume = supporting_GISEle2.grid(geo_df_clustered, geo_df,
-                                          crs, clusters_list,
-                                          resolution, pop_thresh,
-                                          input_sub, line_bc,
-                                          limit_hv, limit_mv)
+    grid_resume = grid.routing(geo_df_clustered, geo_df, crs, clusters_list,
+                               resolution, pop_thresh, input_sub, line_bc,
+                               limit_hv, limit_mv)
 
-    grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered,
-                                                          geo_df, grid_resume,
-                                                          crs, resolution,
-                                                          line_bc)
+    grid_optimized = grid.connection_optimization(geo_df_clustered, geo_df,
+                                                  grid_resume, crs, resolution,
+                                                  line_bc)
 
 elif step == 3:
     '-------------------------------------------------------------------------'
@@ -108,24 +102,21 @@ elif step == 3:
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
         pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
-        clusters_list, = supporting_GISEle2.import_csv_file(step)
+        clusters_list, = initialization.import_csv_file(step)
 
-    geo_df, pop_points = supporting_GISEle2. \
+    geo_df, pop_points = initialization. \
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
 
     '-------------------------------------------------------------------------'
     "3. Grid creation"
 
-    grid_resume = supporting_GISEle2.grid(geo_df_clustered, geo_df,
-                                          crs, clusters_list,
-                                          resolution, pop_thresh,
-                                          input_sub, line_bc,
-                                          limit_hv, limit_mv)
+    grid_resume = grid.routing(geo_df_clustered, geo_df, crs, clusters_list,
+                               resolution, pop_thresh, input_sub, line_bc,
+                               limit_hv, limit_mv)
 
-    grid_optimized = supporting_GISEle2.grid_optimization(geo_df_clustered,
-                                                          geo_df, grid_resume,
-                                                          crs, resolution,
-                                                          line_bc)
+    grid_optimized = grid.connection_optimization(geo_df_clustered, geo_df,
+                                                  grid_resume, crs, resolution,
+                                                  line_bc)
 
 elif step == 4:
     '-------------------------------------------------------------------------'
