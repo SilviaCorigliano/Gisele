@@ -4,6 +4,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 from shapely.ops import nearest_points
+from scipy.spatial import distance_matrix
 from scipy.spatial.distance import cdist
 
 # sys.path.insert(0, 'Codes')  # necessary for native GISEle Packages
@@ -38,8 +39,23 @@ def nearest(row, df, src_column=None):
     return value
 
 
+def distance_2d(df1, df2, x, y):
+    """Find the 2D distance matrix between two datasets of points."""
+
+    d1_coordinates = {'x': df1[x], 'y': df1[y]}
+    df1_loc = pd.DataFrame(data=d1_coordinates)
+    df1_loc.index = df1['ID']
+
+    d2_coordinates = {'x': df2[x], 'y': df2[y]}
+    df2_loc = pd.DataFrame(data=d2_coordinates)
+    df2_loc.index = df2['ID']
+
+    value = distance_matrix(df1_loc, df2_loc)
+    return value
+
+
 def distance_3d(df1, df2, x, y, z):
-    """Find the 3D euclidean distance between two dataframes of points."""
+    """Find the 3D euclidean distance matrix between two datasets of points."""
 
     d1_coordinates = {'x': df1[x], 'y': df1[y], 'z': df1[z]}
     df1_loc = pd.DataFrame(data=d1_coordinates)
@@ -54,18 +70,19 @@ def distance_3d(df1, df2, x, y, z):
     return value
 
 
-def weight_matrix(gdf, Distance_3D, paycheck):
+def weight_matrix(gdf, distance_3D, paycheck):
+
     # Altitude distance in meters
     weight = gdf['Weight'].values
     N = gdf['X'].size
     weight_columns = np.repeat(weight[:, np.newaxis], N, 1)
     weight_rows = np.repeat(weight[np.newaxis, :], N, 0)
-    Tot_weight = (weight_columns + weight_rows) / 2
+    total_weight = (weight_columns + weight_rows) / 2
 
     # 3D distance
-    weight_matrix = (Distance_3D * Tot_weight) * paycheck / 1000
+    value = (distance_3D * total_weight) * paycheck / 1000
 
-    return weight_matrix
+    return value
 
 
 def line_to_points(line, df):
