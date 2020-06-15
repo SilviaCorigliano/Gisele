@@ -89,27 +89,28 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
 
 def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
                           line_bc, resolution, crs):
-    checkpoint = list(c_grid['ID1'].values) + list(
-        c_grid['ID2'].values)
-    checkpoint = list(dict.fromkeys(checkpoint))
-    checkpoint_ext = gpd.GeoDataFrame(crs=from_epsg(crs))
-    for i in checkpoint:
-        checkpoint_ext = checkpoint_ext.append(
-            geo_df[geo_df['ID'] == i], sort=False)
-    checkpoint_ext.reset_index(drop=True, inplace=True)
+    # c_nodes = list(c_grid['ID1'].values) + list(
+    #     c_grid['ID2'].values)
+    # c_nodes = list(dict.fromkeys(c_nodes))
+    # c_nodes_df = gpd.GeoDataFrame(crs=geo_df.crs)
+    # for i in c_nodes:
+    #     c_nodes_df = c_nodes_df.append(
+    #         geo_df[geo_df['ID'] == i], sort=False)
+    # c_nodes_df.reset_index(drop=True, inplace=True)
+
+    c_nodes_df = line_to_points(c_grid, geo_df)
 
     assigned_substation = assigned_substation.assign(
-        nearest_gridpoint=assigned_substation.apply(nearest, df=checkpoint_ext,
+        nearest_gridpoint=assigned_substation.apply(nearest, df=c_nodes_df,
                                                     src_column='ID', axis=1))
 
     # ------------------------------------------------------------------------
-    Pointsub = Point(assigned_substation['X'],
-                     assigned_substation['Y'])
-    idgrid = int(assigned_substation['nearest_gridpoint'].values)
-    Pointgrid = Point(float(geo_df[geo_df['ID'] == idgrid].X),
-                      float(geo_df[geo_df['ID'] == idgrid].Y))
-    dist = Pointsub.distance(Pointgrid)
-    p1 = geo_df[geo_df['ID'] == idgrid]
+    point_sub = Point(assigned_substation['X'], assigned_substation['Y'])
+    id_grid = int(assigned_substation['nearest_gridpoint'].values)
+    point_grid = Point(float(geo_df[geo_df['ID'] == id_grid].X),
+                      float(geo_df[geo_df['ID'] == id_grid].Y))
+    dist = point_sub.distance(point_grid)
+    p1 = geo_df[geo_df['ID'] == id_grid]
     if dist < 30000:
         connection, connection_cost, connection_length = \
             grid_direct_connection(geo_df, assigned_substation, p1, crs,
@@ -117,9 +118,9 @@ def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
     else:
         print('Cluster too far from the main grid to be connected, a'
               ' microgrid solution is suggested')
-        connection_cost = 0
-        connection_length = 99999
-
+        connection_cost = 999999
+        connection_length = 0
+        connection = gpd.GeoDataFrame()
     return connection, connection_cost, connection_length
 
 
@@ -175,83 +176,89 @@ def grid_direct_connection(mesh, gdf_cluster_pop, substation_designata,
     print('Checkpoint 2')
 
     Distance_2D_box = distance_matrix(Battlefield2, Battlefield2)
-    Distance_3D_box = pd.DataFrame(
-        cdist(Battlefield3.values, Battlefield3.values, 'euclidean'),
-        index=Battlefield3.index, columns=Battlefield3.index)
-    Weight_matrix = weight_matrix(df_box, Distance_3D_box, paycheck)
-    print('3D distance matrix has been created')
-    min_length = Distance_2D_box[Distance_2D_box > 0].min()
-    diag_length = resolution * 1.5
+    if np.any(Distance_2D_box):
+        Distance_3D_box = pd.DataFrame(
+            cdist(Battlefield3.values, Battlefield3.values, 'euclidean'),
+            index=Battlefield3.index, columns=Battlefield3.index)
+        Weight_matrix = weight_matrix(df_box, Distance_3D_box, paycheck)
+        print('3D distance matrix has been created')
+        # min_length = Distance_2D_box[Distance_2D_box > 0].min()
+        diag_length = resolution * 1.5
 
-    # Definition of weighted connections matrix
-    Edges_matrix = Weight_matrix
-    # Edges_matrix[Distance_2D_box > math.ceil(diag_length)] = 999999999
-    Edges_matrix[Distance_2D_box > math.ceil(diag_length)] = 0
-    Edges_matrix_sparse = sparse.csr_matrix(Edges_matrix)
-    print('Checkpoint 4: Edges matrix completed')
-    # Graph = nx.from_numpy_matrix(Edges_matrix.to_numpy())
-    Graph = nx.from_scipy_sparse_matrix(Edges_matrix_sparse)
-    #    Graph.remove_edges_from(np.where(Edges_matrix.to_numpy() == 999999999))
-    source = df_box.loc[df_box['ID'].values == idsub, :]
-    target = df_box.loc[df_box['ID'].values == idgrid, :]
-    source = source.index[0]
-    target = target.index[0]
-    print('Checkpoint 5')
-    # Lancio Dijkstra e ottengo il percorso ottimale per connettere 'source' a 'target'
-    path = nx.dijkstra_path(Graph, source, target, weight='weight')
-    Steps = len(path)
-    # Analisi del path
-    r = 0  # Giusto un contatore
-    PathID = []
-    Digievoluzione = gpd.GeoDataFrame(crs=from_epsg(Proj_coords))
-    Digievoluzione['id'] = pd.Series(range(1, Steps))
-    Digievoluzione['x1'] = pd.Series(range(1, Steps))
-    Digievoluzione['x2'] = pd.Series(range(1, Steps))
-    Digievoluzione['y1'] = pd.Series(range(1, Steps))
-    Digievoluzione['y2'] = pd.Series(range(1, Steps))
-    Digievoluzione['ID1'] = pd.Series(range(1, Steps))
-    Digievoluzione['ID2'] = pd.Series(range(1, Steps))
-    Digievoluzione['Weight'] = pd.Series(range(1, Steps))
-    Digievoluzione['geometry'] = None
-    Digievoluzione['geometry'].stype = gpd.geoseries.GeoSeries
-    print('Checkpoint 6:')
+        # Definition of weighted connections matrix
+        Edges_matrix = Weight_matrix
+        # Edges_matrix[Distance_2D_box > math.ceil(diag_length)] = 999999999
+        Edges_matrix[Distance_2D_box > math.ceil(diag_length)] = 0
+        Edges_matrix_sparse = sparse.csr_matrix(Edges_matrix)
+        print('Checkpoint 4: Edges matrix completed')
+        # Graph = nx.from_numpy_matrix(Edges_matrix.to_numpy())
+        Graph = nx.from_scipy_sparse_matrix(Edges_matrix_sparse)
+        #    Graph.remove_edges_from(np.where(Edges_matrix.to_numpy() == 999999999))
+        source = df_box.loc[df_box['ID'].values == idsub, :]
+        target = df_box.loc[df_box['ID'].values == idgrid, :]
+        source = source.index[0]
+        target = target.index[0]
+        print('Checkpoint 5')
+        # Lancio Dijkstra e ottengo il percorso ottimale per connettere 'source' a 'target'
+        path = nx.dijkstra_path(Graph, source, target, weight='weight')
+        Steps = len(path)
+        # Analisi del path
+        r = 0  # Giusto un contatore
+        PathID = []
+        Digievoluzione = gpd.GeoDataFrame(crs=from_epsg(Proj_coords))
+        Digievoluzione['id'] = pd.Series(range(1, Steps))
+        Digievoluzione['x1'] = pd.Series(range(1, Steps))
+        Digievoluzione['x2'] = pd.Series(range(1, Steps))
+        Digievoluzione['y1'] = pd.Series(range(1, Steps))
+        Digievoluzione['y2'] = pd.Series(range(1, Steps))
+        Digievoluzione['ID1'] = pd.Series(range(1, Steps))
+        Digievoluzione['ID2'] = pd.Series(range(1, Steps))
+        Digievoluzione['Weight'] = pd.Series(range(1, Steps))
+        Digievoluzione['geometry'] = None
+        Digievoluzione['geometry'].stype = gpd.geoseries.GeoSeries
+        print('Checkpoint 6:')
 
-    for h in range(0, Steps - 1):
-        con = [min(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']),
-               max(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID'])]
-        # if con not in connections:
-        PathID.append(df_box.loc[path[h], 'ID'])
-        PathID.append(df_box.loc[path[h + 1], 'ID'])
-        Digievoluzione.at[r, 'geometry'] = LineString(
-            [(df_box.loc[path[h], 'X'], df_box.loc[path[h], 'Y'],
-              df_box.loc[path[h], 'Elevation']),
-             (
-                 df_box.loc[path[h + 1], 'X'], df_box.loc[path[h + 1], 'Y'],
-                 df_box.loc[path[h + 1], 'Elevation'])])
-        Digievoluzione.at[r, ['id']] = 0
-        Digievoluzione.at[r, ['x1']] = df_box.loc[path[h], 'X']
-        Digievoluzione.at[r, ['x2']] = df_box.loc[path[h + 1], 'X']
-        Digievoluzione.at[r, ['y1']] = df_box.loc[path[h], ['Y']]
-        Digievoluzione.at[r, ['y2']] = df_box.loc[path[h + 1], ['Y']]
-        Digievoluzione.at[r, 'ID1'] = df_box.loc[path[h], 'ID']
-        Digievoluzione.at[r, 'ID2'] = df_box.loc[path[h + 1], 'ID']
-        Digievoluzione.at[r, 'Weight'] = Edges_matrix.loc[
-            df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']]
-        # connections.append(con)
-        r += 1
+        for h in range(0, Steps - 1):
+            con = [min(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']),
+                   max(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID'])]
+            # if con not in connections:
+            PathID.append(df_box.loc[path[h], 'ID'])
+            PathID.append(df_box.loc[path[h + 1], 'ID'])
+            Digievoluzione.at[r, 'geometry'] = LineString(
+                [(df_box.loc[path[h], 'X'], df_box.loc[path[h], 'Y'],
+                  df_box.loc[path[h], 'Elevation']),
+                 (
+                     df_box.loc[path[h + 1], 'X'], df_box.loc[path[h + 1], 'Y'],
+                     df_box.loc[path[h + 1], 'Elevation'])])
+            Digievoluzione.at[r, ['id']] = 0
+            Digievoluzione.at[r, ['x1']] = df_box.loc[path[h], 'X']
+            Digievoluzione.at[r, ['x2']] = df_box.loc[path[h + 1], 'X']
+            Digievoluzione.at[r, ['y1']] = df_box.loc[path[h], ['Y']]
+            Digievoluzione.at[r, ['y2']] = df_box.loc[path[h + 1], ['Y']]
+            Digievoluzione.at[r, 'ID1'] = df_box.loc[path[h], 'ID']
+            Digievoluzione.at[r, 'ID2'] = df_box.loc[path[h + 1], 'ID']
+            Digievoluzione.at[r, 'Weight'] = Edges_matrix.loc[
+                df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']]
+            # connections.append(con)
+            r += 1
 
-    print('Checkpoint 7: Genomica di digievoluzione identificata')
-    # Elimino le righe inutili di Digievoluzione e i doppioni da PathID
-    indexNames = Digievoluzione[Digievoluzione['id'] > 0].index
-    Digievoluzione.drop(indexNames, inplace=True)
-    PathID = list(dict.fromkeys(PathID))
-    cordone_ombelicale = Digievoluzione
-    cordone_ombelicale = cordone_ombelicale.drop(
-        ['id', 'x1', 'x2', 'y1', 'y2'], axis=1)
-    cordone_ombelicale['line_length'] = cordone_ombelicale['geometry'].length
-    total_cost = int(cordone_ombelicale['Weight'].sum(axis=0))
-    total_length = cordone_ombelicale['line_length'].sum(axis=0)
+        print('Checkpoint 7: Genomica di digievoluzione identificata')
+        # Elimino le righe inutili di Digievoluzione e i doppioni da PathID
+        indexNames = Digievoluzione[Digievoluzione['id'] > 0].index
+        Digievoluzione.drop(indexNames, inplace=True)
+        PathID = list(dict.fromkeys(PathID))
+        cordone_ombelicale = Digievoluzione
+        cordone_ombelicale = cordone_ombelicale.drop(
+            ['id', 'x1', 'x2', 'y1', 'y2'], axis=1)
+        cordone_ombelicale['line_length'] = cordone_ombelicale['geometry'].length
+        total_cost = int(cordone_ombelicale['Weight'].sum(axis=0))
+        total_length = cordone_ombelicale['line_length'].sum(axis=0)
 
+        return cordone_ombelicale, total_cost, total_length
+    elif not np.any(Distance_2D_box):
+        cordone_ombelicale = gpd.GeoDataFrame()
+        total_cost = 0
+        total_length = 0
     return cordone_ombelicale, total_cost, total_length
 
 
@@ -278,7 +285,6 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
     os.chdir(r'Output//Grids')
 
     for cluster_n in clusters_list[0]:
-
         gdf_cluster = geo_df_clustered[
             geo_df_clustered['clusters'] == cluster_n]
         gdf_cluster_pop = gdf_cluster[
@@ -314,7 +320,7 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
                 pd.concat([grid_merged, c_grid], sort=True))
             fileout = 'connection_' + str(cluster_n) + '.shp'
 
-            if connection.type.values[0] == 'LineString':
+            if not connection.empty:
                 connection.to_file(fileout)
                 connection_merged = gpd.GeoDataFrame(pd.concat(
                     [connection_merged, connection], sort=True))
