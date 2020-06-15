@@ -68,6 +68,17 @@ def weight_matrix(gdf, Distance_3D, paycheck):
     return weight_matrix
 
 
+def line_to_points(line, df):
+
+    nodes = list(line['ID1'].values) + list(line['ID2'].values)
+    nodes = list(dict.fromkeys(nodes))
+    nodes_in_df = gpd.GeoDataFrame(crs=df.crs)
+    for i in nodes:
+        nodes_in_df = nodes_in_df.append(df[df['ID'] == i], sort=False)
+    nodes_in_df.reset_index(drop=True, inplace=True)
+
+    return nodes_in_df
+
 def load():
     print("8.Load creation")
     s()

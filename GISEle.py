@@ -23,7 +23,7 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
 print("\n".join(steps))
 supporting_GISEle2.s()
 # step = int(input('Which step do you want to select?: '))
-step = 3
+step = 2
 if step == 1:
     '-------------------------------------------------------------------------'
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
