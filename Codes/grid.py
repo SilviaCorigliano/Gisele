@@ -89,32 +89,22 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
 
 def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
                           line_bc, resolution, crs):
-    # c_nodes = list(c_grid['ID1'].values) + list(
-    #     c_grid['ID2'].values)
-    # c_nodes = list(dict.fromkeys(c_nodes))
-    # c_nodes_df = gpd.GeoDataFrame(crs=geo_df.crs)
-    # for i in c_nodes:
-    #     c_nodes_df = c_nodes_df.append(
-    #         geo_df[geo_df['ID'] == i], sort=False)
-    # c_nodes_df.reset_index(drop=True, inplace=True)
 
-    c_nodes_df = line_to_points(c_grid, geo_df)
+    nodes = line_to_points(c_grid, geo_df)
 
     assigned_substation = assigned_substation.assign(
-        nearest_gridpoint=assigned_substation.apply(nearest, df=c_nodes_df,
-                                                    src_column='ID', axis=1))
+        connecting_point=assigned_substation.apply(nearest, df=nodes,
+                                                   src_column='ID', axis=1))
 
-    # ------------------------------------------------------------------------
-    point_sub = Point(assigned_substation['X'], assigned_substation['Y'])
-    id_grid = int(assigned_substation['nearest_gridpoint'].values)
-    point_grid = Point(float(geo_df[geo_df['ID'] == id_grid].X),
-                      float(geo_df[geo_df['ID'] == id_grid].Y))
-    dist = point_sub.distance(point_grid)
-    p1 = geo_df[geo_df['ID'] == id_grid]
+    connecting_point = geo_df[
+        geo_df['ID'] == int(assigned_substation['connecting_point'].values)]
+    dist = assigned_substation.unary_union.distance(connecting_point.
+                                                    unary_union)
+
     if dist < 30000:
         connection, connection_cost, connection_length = \
-            grid_direct_connection(geo_df, assigned_substation, p1, crs,
-                                   line_bc, resolution)
+            grid_direct_connection(geo_df, assigned_substation,
+                                   connecting_point, crs, line_bc, resolution)
     else:
         print('Cluster too far from the main grid to be connected, a'
               ' microgrid solution is suggested')
@@ -124,33 +114,33 @@ def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
     return connection, connection_cost, connection_length
 
 
-def grid_direct_connection(mesh, gdf_cluster_pop, substation_designata,
-                          Proj_coords, paycheck, resolution):
+def grid_direct_connection(geo_df, connecting_point, assigned_substation,
+                           crs, line_bc, resolution):
     print(
         'Only few points to electrify, no internal cluster grid necessary. Connecting to the nearest substation')
-    Pointsub = Point(substation_designata['X'], substation_designata['Y'])
-    idsub = int(substation_designata['ID'].values)
-    if len(gdf_cluster_pop.ID) == 1:
-        Pointgrid = Point(float(gdf_cluster_pop['X']),
-                          float(gdf_cluster_pop['Y']))
-        idgrid = int(gdf_cluster_pop['ID'].values)
+    Pointsub = Point(assigned_substation['X'], assigned_substation['Y'])
+    idsub = int(assigned_substation['ID'].values)
+    if len(connecting_point.ID) == 1:
+        Pointgrid = Point(float(connecting_point['X']),
+                          float(connecting_point['Y']))
+        idgrid = int(connecting_point['ID'].values)
         dist = Pointsub.distance(Pointgrid)
     elif len(
-            gdf_cluster_pop.ID) > 0:  # checks if there's more than 1 point, connected the closest one
+            connecting_point.ID) > 0:  # checks if there's more than 1 point, connected the closest one
         d_point = {}
         d_dist = {}
-        for i in range(0, len(gdf_cluster_pop.ID)):
-            d_point[i] = Point(float(gdf_cluster_pop.X.values[i]),
-                               float(gdf_cluster_pop.Y.values[i]))
+        for i in range(0, len(connecting_point.ID)):
+            d_point[i] = Point(float(connecting_point.X.values[i]),
+                               float(connecting_point.Y.values[i]))
             d_dist[i] = Pointsub.distance(d_point[i])
         if d_dist[1] > d_dist[0]:
             Pointgrid = d_point[0]
             dist = d_dist[0]
-            idgrid = int(gdf_cluster_pop.ID.values[0])
+            idgrid = int(connecting_point.ID.values[0])
         else:
             Pointgrid = d_point[1]
             dist = d_dist[1]
-            idgrid = int(gdf_cluster_pop.ID.values[1])
+            idgrid = int(connecting_point.ID.values[1])
     if dist < 1000:
         extension = dist
     elif dist < 2000:
@@ -164,7 +154,7 @@ def grid_direct_connection(mesh, gdf_cluster_pop, substation_designata,
     ymax = max(Pointsub.y, Pointgrid.y)
     bubble = box(minx=xmin - extension, maxx=xmax + extension,
                  miny=ymin - extension, maxy=ymax + extension)
-    df_box = mesh[mesh.within(bubble)]
+    df_box = geo_df[geo_df.within(bubble)]
     df_box.index = pd.Series(range(0, len(df_box['ID'])))
 
     solocoord2 = {'x': df_box['X'], 'y': df_box['Y']}
@@ -180,7 +170,7 @@ def grid_direct_connection(mesh, gdf_cluster_pop, substation_designata,
         Distance_3D_box = pd.DataFrame(
             cdist(Battlefield3.values, Battlefield3.values, 'euclidean'),
             index=Battlefield3.index, columns=Battlefield3.index)
-        Weight_matrix = weight_matrix(df_box, Distance_3D_box, paycheck)
+        Weight_matrix = weight_matrix(df_box, Distance_3D_box, line_bc)
         print('3D distance matrix has been created')
         # min_length = Distance_2D_box[Distance_2D_box > 0].min()
         diag_length = resolution * 1.5
@@ -205,7 +195,7 @@ def grid_direct_connection(mesh, gdf_cluster_pop, substation_designata,
         # Analisi del path
         r = 0  # Giusto un contatore
         PathID = []
-        Digievoluzione = gpd.GeoDataFrame(crs=from_epsg(Proj_coords))
+        Digievoluzione = gpd.GeoDataFrame(crs=from_epsg(crs))
         Digievoluzione['id'] = pd.Series(range(1, Steps))
         Digievoluzione['x1'] = pd.Series(range(1, Steps))
         Digievoluzione['x2'] = pd.Series(range(1, Steps))
