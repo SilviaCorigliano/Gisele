@@ -89,32 +89,22 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
 
 def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
                           line_bc, resolution, crs):
-    # c_nodes = list(c_grid['ID1'].values) + list(
-    #     c_grid['ID2'].values)
-    # c_nodes = list(dict.fromkeys(c_nodes))
-    # c_nodes_df = gpd.GeoDataFrame(crs=geo_df.crs)
-    # for i in c_nodes:
-    #     c_nodes_df = c_nodes_df.append(
-    #         geo_df[geo_df['ID'] == i], sort=False)
-    # c_nodes_df.reset_index(drop=True, inplace=True)
 
-    c_nodes_df = line_to_points(c_grid, geo_df)
+    nodes = line_to_points(c_grid, geo_df)
 
     assigned_substation = assigned_substation.assign(
-        nearest_gridpoint=assigned_substation.apply(nearest, df=c_nodes_df,
-                                                    src_column='ID', axis=1))
+        connecting_point=assigned_substation.apply(nearest, df=nodes,
+                                                   src_column='ID', axis=1))
 
-    # ------------------------------------------------------------------------
-    point_sub = Point(assigned_substation['X'], assigned_substation['Y'])
-    id_grid = int(assigned_substation['nearest_gridpoint'].values)
-    point_grid = Point(float(geo_df[geo_df['ID'] == id_grid].X),
-                      float(geo_df[geo_df['ID'] == id_grid].Y))
-    dist = point_sub.distance(point_grid)
-    p1 = geo_df[geo_df['ID'] == id_grid]
+    connecting_point = geo_df[
+        geo_df['ID'] == int(assigned_substation['connecting_point'].values)]
+    dist = assigned_substation.unary_union.distance(connecting_point.
+                                                    unary_union)
+
     if dist < 30000:
         connection, connection_cost, connection_length = \
-            grid_direct_connection(geo_df, assigned_substation, p1, crs,
-                                   line_bc, resolution)
+            grid_direct_connection(geo_df, assigned_substation,
+                                   connecting_point, crs, line_bc, resolution)
     else:
         print('Cluster too far from the main grid to be connected, a'
               ' microgrid solution is suggested')
@@ -124,33 +114,12 @@ def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
     return connection, connection_cost, connection_length
 
 
-def grid_direct_connection(mesh, gdf_cluster_pop, substation_designata,
-                          Proj_coords, paycheck, resolution):
-    print(
-        'Only few points to electrify, no internal cluster grid necessary. Connecting to the nearest substation')
-    Pointsub = Point(substation_designata['X'], substation_designata['Y'])
-    idsub = int(substation_designata['ID'].values)
-    if len(gdf_cluster_pop.ID) == 1:
-        Pointgrid = Point(float(gdf_cluster_pop['X']),
-                          float(gdf_cluster_pop['Y']))
-        idgrid = int(gdf_cluster_pop['ID'].values)
-        dist = Pointsub.distance(Pointgrid)
-    elif len(
-            gdf_cluster_pop.ID) > 0:  # checks if there's more than 1 point, connected the closest one
-        d_point = {}
-        d_dist = {}
-        for i in range(0, len(gdf_cluster_pop.ID)):
-            d_point[i] = Point(float(gdf_cluster_pop.X.values[i]),
-                               float(gdf_cluster_pop.Y.values[i]))
-            d_dist[i] = Pointsub.distance(d_point[i])
-        if d_dist[1] > d_dist[0]:
-            Pointgrid = d_point[0]
-            dist = d_dist[0]
-            idgrid = int(gdf_cluster_pop.ID.values[0])
-        else:
-            Pointgrid = d_point[1]
-            dist = d_dist[1]
-            idgrid = int(gdf_cluster_pop.ID.values[1])
+def grid_direct_connection(geo_df, connecting_point, assigned_substation,
+                           crs, line_bc, resolution):
+    print('Running Dijkstra.. ')
+
+    dist = assigned_substation.unary_union.distance\
+        (connecting_point.unary_union)
     if dist < 1000:
         extension = dist
     elif dist < 2000:
@@ -158,67 +127,53 @@ def grid_direct_connection(mesh, gdf_cluster_pop, substation_designata,
     else:
         extension = dist / 4
 
-    xmin = min(Pointsub.x, Pointgrid.x)
-    xmax = max(Pointsub.x, Pointgrid.x)
-    ymin = min(Pointsub.y, Pointgrid.y)
-    ymax = max(Pointsub.y, Pointgrid.y)
+    xmin = min(float(assigned_substation.X), float(connecting_point.X))
+    xmax = max(float(assigned_substation.X), float(connecting_point.X))
+    ymin = min(float(assigned_substation.Y), float(connecting_point.Y))
+    ymax = max(float(assigned_substation.Y), float(connecting_point.Y))
+
     bubble = box(minx=xmin - extension, maxx=xmax + extension,
                  miny=ymin - extension, maxy=ymax + extension)
-    df_box = mesh[mesh.within(bubble)]
+    df_box = geo_df[geo_df.within(bubble)]
     df_box.index = pd.Series(range(0, len(df_box['ID'])))
 
-    solocoord2 = {'x': df_box['X'], 'y': df_box['Y']}
-    solocoord3 = {'x': df_box['X'], 'y': df_box['Y'], 'z': df_box['Elevation']}
-    Battlefield2 = pd.DataFrame(data=solocoord2)
-    Battlefield2.index = df_box['ID']
-    Battlefield3 = pd.DataFrame(data=solocoord3)
-    Battlefield3.index = df_box['ID']
-    print('Checkpoint 2')
+    dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
+    dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
+    print('3D distance matrix has been created')
+    if np.any(dist_2d_matrix):
 
-    Distance_2D_box = distance_matrix(Battlefield2, Battlefield2)
-    if np.any(Distance_2D_box):
-        Distance_3D_box = pd.DataFrame(
-            cdist(Battlefield3.values, Battlefield3.values, 'euclidean'),
-            index=Battlefield3.index, columns=Battlefield3.index)
-        Weight_matrix = weight_matrix(df_box, Distance_3D_box, paycheck)
-        print('3D distance matrix has been created')
-        # min_length = Distance_2D_box[Distance_2D_box > 0].min()
-        diag_length = resolution * 1.5
+        weighted_matrix = weight_matrix(df_box, dist_3d_matrix, line_bc)
+        length_limit = resolution * 1.5
+        edges_matrix = weighted_matrix
+        edges_matrix[dist_2d_matrix > math.ceil(length_limit)] = 0
+        edges_matrix_sparse = sparse.csr_matrix(edges_matrix)
 
-        # Definition of weighted connections matrix
-        Edges_matrix = Weight_matrix
-        # Edges_matrix[Distance_2D_box > math.ceil(diag_length)] = 999999999
-        Edges_matrix[Distance_2D_box > math.ceil(diag_length)] = 0
-        Edges_matrix_sparse = sparse.csr_matrix(Edges_matrix)
-        print('Checkpoint 4: Edges matrix completed')
-        # Graph = nx.from_numpy_matrix(Edges_matrix.to_numpy())
-        Graph = nx.from_scipy_sparse_matrix(Edges_matrix_sparse)
-        #    Graph.remove_edges_from(np.where(Edges_matrix.to_numpy() == 999999999))
-        source = df_box.loc[df_box['ID'].values == idsub, :]
-        target = df_box.loc[df_box['ID'].values == idgrid, :]
-        source = source.index[0]
-        target = target.index[0]
-        print('Checkpoint 5')
-        # Lancio Dijkstra e ottengo il percorso ottimale per connettere 'source' a 'target'
-        path = nx.dijkstra_path(Graph, source, target, weight='weight')
-        Steps = len(path)
+        graph = nx.from_scipy_sparse_matrix(edges_matrix_sparse)
+        source = df_box.loc[df_box['ID'] == int(assigned_substation['ID']), :]
+        source = int(source.index.values)
+        target = df_box.loc[df_box['ID'] == int(connecting_point['ID']), :]
+        target = int(target.index.values)
+
+        path = nx.dijkstra_path(graph, source, target, weight='weight')
+
+        steps = len(path)
         # Analisi del path
         r = 0  # Giusto un contatore
         PathID = []
-        Digievoluzione = gpd.GeoDataFrame(crs=from_epsg(Proj_coords))
-        Digievoluzione['id'] = pd.Series(range(1, Steps))
-        Digievoluzione['x1'] = pd.Series(range(1, Steps))
-        Digievoluzione['x2'] = pd.Series(range(1, Steps))
-        Digievoluzione['y1'] = pd.Series(range(1, Steps))
-        Digievoluzione['y2'] = pd.Series(range(1, Steps))
-        Digievoluzione['ID1'] = pd.Series(range(1, Steps))
-        Digievoluzione['ID2'] = pd.Series(range(1, Steps))
-        Digievoluzione['Weight'] = pd.Series(range(1, Steps))
+        Digievoluzione = gpd.GeoDataFrame(crs=from_epsg(crs))
+        Digievoluzione['id'] = pd.Series(range(1, steps))
+        Digievoluzione['x1'] = pd.Series(range(1, steps))
+        Digievoluzione['x2'] = pd.Series(range(1, steps))
+        Digievoluzione['y1'] = pd.Series(range(1, steps))
+        Digievoluzione['y2'] = pd.Series(range(1, steps))
+        Digievoluzione['ID1'] = pd.Series(range(1, steps))
+        Digievoluzione['ID2'] = pd.Series(range(1, steps))
+        Digievoluzione['Weight'] = pd.Series(range(1, steps))
         Digievoluzione['geometry'] = None
         Digievoluzione['geometry'].stype = gpd.geoseries.GeoSeries
         print('Checkpoint 6:')
 
-        for h in range(0, Steps - 1):
+        for h in range(0, steps - 1):
             con = [min(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']),
                    max(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID'])]
             # if con not in connections:
@@ -237,7 +192,7 @@ def grid_direct_connection(mesh, gdf_cluster_pop, substation_designata,
             Digievoluzione.at[r, ['y2']] = df_box.loc[path[h + 1], ['Y']]
             Digievoluzione.at[r, 'ID1'] = df_box.loc[path[h], 'ID']
             Digievoluzione.at[r, 'ID2'] = df_box.loc[path[h + 1], 'ID']
-            Digievoluzione.at[r, 'Weight'] = Edges_matrix.loc[
+            Digievoluzione.at[r, 'Weight'] = edges_matrix.loc[
                 df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']]
             # connections.append(con)
             r += 1
@@ -255,7 +210,7 @@ def grid_direct_connection(mesh, gdf_cluster_pop, substation_designata,
         total_length = cordone_ombelicale['line_length'].sum(axis=0)
 
         return cordone_ombelicale, total_cost, total_length
-    elif not np.any(Distance_2D_box):
+    elif not np.any(dist_2d_matrix):
         cordone_ombelicale = gpd.GeoDataFrame()
         total_cost = 0
         total_length = 0
