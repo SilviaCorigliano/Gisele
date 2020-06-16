@@ -14,7 +14,7 @@ from scipy import sparse
 from Codes import Steinerman, Spiderman
 
 
-def substation_assignment(cluster_n, geo_df, gdf_cluster_pop, substations,
+def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
                           clusters_list, limit_hv, limit_mv, crs):
     print('Assigning to the nearest substation..')
 
@@ -35,20 +35,28 @@ def substation_assignment(cluster_n, geo_df, gdf_cluster_pop, substations,
                                      axis=1))
 
     sub_in_df = gpd.GeoDataFrame(crs=from_epsg(crs))
+
     for i, row in substations.iterrows():
         sub_in_df = sub_in_df.append(
             geo_df[geo_df['ID'] == row['nearest_id']], sort=False)
     sub_in_df.reset_index(drop=True, inplace=True)
 
-    dist = distance_3d(gdf_cluster_pop, sub_in_df, 'X', 'Y', 'Elevation')
+    grid_points = gpd.GeoDataFrame(crs=from_epsg(crs))
+    for i in np.unique(c_grid_points):
+        grid_points = grid_points.append(
+            geo_df[geo_df['ID'] == i], sort=False)
+
+    dist = distance_3d(grid_points, sub_in_df, 'X', 'Y', 'Elevation')
 
     assigned_substation = sub_in_df[sub_in_df['ID'] == dist.min().idxmin()]
+    connection_point = grid_points[grid_points['ID'] ==
+                                   dist.min(axis=1).idxmin()]
     connection_type = substations[substations['nearest_id']
                                   == dist.min().idxmin()].Type.values[0]
 
     print('Substation assignment complete.')
 
-    return assigned_substation, connection_type
+    return assigned_substation, connection_point, connection_type
 
 
 def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
@@ -59,10 +67,10 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
         c_grid_cost = 0
         c_grid_length = 0
 
-    elif points_to_electrify < 1000:
-        c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman.\
+    elif points_to_electrify < resolution:
+        c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
             Steinerman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
-        c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman.\
+        c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
             Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
 
         if c_grid_cost1 <= c_grid_cost2:
@@ -79,36 +87,16 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
             c_grid_cost = c_grid_cost2
             c_grid_points = c_grid_points2
 
-    elif points_to_electrify >= 1000:
-        print("Too many points to use Steiner")
-        c_grid, c_grid_cost, c_grid_length, c_grid_points = Spiderman.\
+    elif points_to_electrify >= resolution:
+        print("Too many points to use Steiner, running Spiderman.")
+        c_grid, c_grid_cost, c_grid_length, c_grid_points = Spiderman. \
             Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
 
     return c_grid, c_grid_cost, c_grid_length, c_grid_points
 
 
-def substation_connection(c_grid, assigned_substation, c_grid_points, geo_df,
-                          line_bc, resolution, crs):
-
-    nodes = line_to_points(c_grid, geo_df)
-
-    assigned_substation = assigned_substation.assign(
-        connecting_point=assigned_substation.apply(nearest, df=nodes,
-                                                   src_column='ID', axis=1))
-
-    connecting_point = geo_df[
-        geo_df['ID'] == int(assigned_substation['connecting_point'].values)]
-
-    connection, connection_cost, connection_length = \
-        dijkstra_connection(geo_df, assigned_substation, connecting_point,
-                            crs, line_bc, resolution)
-
-    return connection, connection_cost, connection_length
-
-
-def dijkstra_connection(geo_df, connecting_point, assigned_substation, crs,
-                        line_bc, resolution):
-
+def dijkstra_connection(geo_df, connecting_point, assigned_substation,
+                        c_grid_points, line_bc, resolution):
     dist = assigned_substation.unary_union.distance(connecting_point.
                                                     unary_union)
     if dist > 50 * resolution:
@@ -145,8 +133,15 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation, crs,
         edges_matrix = weight_matrix(df_box, dist_3d_matrix, line_bc)
         length_limit = resolution * 1.5
         edges_matrix[dist_2d_matrix > math.ceil(length_limit)] = 0
-        edges_matrix_sparse = sparse.csr_matrix(edges_matrix)
 
+        #  reduces the weights of edges already present in the cluster grid
+        for i in c_grid_points:
+            if i[0] in edges_matrix.index.values and \
+                    i[1] in edges_matrix.index.values:
+                edges_matrix.loc[i[0], i[1]] = 0.001
+                edges_matrix.loc[i[1], i[0]] = 0.001
+
+        edges_matrix_sparse = sparse.csr_matrix(edges_matrix)
         graph = nx.from_scipy_sparse_matrix(edges_matrix_sparse)
         source = df_box.loc[df_box['ID'] == int(assigned_substation['ID']), :]
         source = int(source.index.values)
@@ -158,26 +153,32 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation, crs,
 
         # Creating the shapefile
         row = 0
-        connection = gpd.GeoDataFrame(index=range(0, steps-1),
+        connection = gpd.GeoDataFrame(index=range(0, steps - 1),
                                       columns=['ID1', 'ID2', 'Cost',
-                                               'geometry'], crs=from_epsg(crs))
+                                               'geometry'], crs=geo_df.crs)
 
         for h in range(0, steps - 1):
+            id_pair = [
+                min(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']),
+                max(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID'])]
+            if id_pair not in c_grid_points:
+                connection.at[row, 'geometry'] = LineString(
+                    [(df_box.loc[path[h], 'X'],
+                      df_box.loc[path[h], 'Y'],
+                      df_box.loc[path[h], 'Elevation']),
+                     (df_box.loc[path[h + 1], 'X'],
+                      df_box.loc[path[h + 1], 'Y'],
+                      df_box.loc[path[h + 1], 'Elevation'])])
 
-            connection.at[row, 'geometry'] = LineString(
-                [(df_box.loc[path[h], 'X'], df_box.loc[path[h], 'Y'],
-                    df_box.loc[path[h], 'Elevation']),
-                 (df_box.loc[path[h + 1], 'X'], df_box.loc[path[h + 1], 'Y'],
-                    df_box.loc[path[h + 1], 'Elevation'])])
-
-            # int here is necessary to use the command .to_file
-            connection.at[row, 'ID1'] = int(df_box.loc[path[h], 'ID'])
-            connection.at[row, 'ID2'] = int(df_box.loc[path[h + 1], 'ID'])
-            connection.at[row, 'Cost'] = edges_matrix.loc[
-                df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']]
-            row += 1
-
-        connection['Length'] = connection['geometry'].length
+                # int here is necessary to use the command .to_file
+                connection.at[row, 'ID1'] = int(df_box.loc[path[h], 'ID'])
+                connection.at[row, 'ID2'] = int(df_box.loc[path[h + 1], 'ID'])
+                connection.at[row, 'Cost'] = int(edges_matrix.loc[
+                    df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']])
+                row += 1
+            else:
+                connection.drop(connection.tail(1).index, inplace=True)
+        connection['Length'] = connection.length.astype(int)
         connection_cost = int(connection['Cost'].sum(axis=0))
         connection_length = connection['Length'].sum(axis=0)
 
@@ -212,6 +213,7 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
     os.chdir(r'Output//Grids')
 
     for cluster_n in clusters_list[0]:
+
         gdf_cluster = geo_df_clustered[
             geo_df_clustered['clusters'] == cluster_n]
         gdf_cluster_pop = gdf_cluster[
@@ -226,20 +228,19 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
                   + str(len(clusters_list[0])))
             l()
 
-            assigned_substation, connection_type = \
-                substation_assignment(cluster_n, geo_df, gdf_cluster_pop,
-                                      substations, clusters_list, limit_hv,
-                                      limit_mv, crs)
-            grid_resume.loc[cluster_n, 'ConnectionType'] = connection_type
-
             c_grid, c_grid_cost, c_grid_length, c_grid_points = \
                 cluster_grid(geo_df, gdf_cluster_pop, crs, resolution,
                              line_bc, points_to_electrify)
 
+            assigned_substation, connecting_point, connection_type = \
+                substation_assignment(cluster_n, geo_df, c_grid_points,
+                                      substations, clusters_list, limit_hv,
+                                      limit_mv, crs)
+
             connection, connection_cost, connection_length = \
-                substation_connection(c_grid, assigned_substation,
-                                      c_grid_points,
-                                      geo_df, line_bc, resolution, crs)
+                dijkstra_connection(geo_df, assigned_substation,
+                                    connecting_point,
+                                    c_grid_points, line_bc, resolution)
 
             fileout = 'Grid_' + str(cluster_n) + '.shp'
             c_grid.to_file(fileout)
@@ -252,6 +253,7 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
                 connection_merged = gpd.GeoDataFrame(pd.concat(
                     [connection_merged, connection], sort=True))
 
+            grid_resume.at[cluster_n, 'ConnectionType'] = connection_type
             grid_resume.at[cluster_n, 'Grid_Length'] = c_grid_length / 1000
             grid_resume.at[cluster_n, 'Grid_Cost'] = c_grid_cost / 1000
             grid_resume.at[
@@ -277,7 +279,7 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
 
 
 def connection_optimization(gdf_clusters, geodf_in, grid_resume, proj_coords,
-                      resolution, paycheck):
+                            resolution, paycheck):
     os.chdir(r'Output//Grids')
     new_connection_merged = pd.DataFrame()
     grid_resume = pd.read_csv('grid_resume.csv')
@@ -413,4 +415,3 @@ def connection_optimization(gdf_clusters, geodf_in, grid_resume, proj_coords,
     new_connection_merged.crs = geodf_in.crs
     new_connection_merged.to_file('total_connections_opt')
     return grid_resume
-

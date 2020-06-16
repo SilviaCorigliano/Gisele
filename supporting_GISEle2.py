@@ -96,6 +96,7 @@ def line_to_points(line, df):
 
     return nodes_in_df
 
+
 def load():
     print("8.Load creation")
     s()
