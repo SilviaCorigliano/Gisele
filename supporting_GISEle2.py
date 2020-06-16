@@ -70,17 +70,17 @@ def distance_3d(df1, df2, x, y, z):
     return value
 
 
-def weight_matrix(gdf, distance_3D, paycheck):
+def weight_matrix(gdf, dist_3d_matrix, paycheck):
 
     # Altitude distance in meters
     weight = gdf['Weight'].values
-    N = gdf['X'].size
-    weight_columns = np.repeat(weight[:, np.newaxis], N, 1)
-    weight_rows = np.repeat(weight[np.newaxis, :], N, 0)
+    n = gdf['X'].size
+    weight_columns = np.repeat(weight[:, np.newaxis], n, 1)
+    weight_rows = np.repeat(weight[np.newaxis, :], n, 0)
     total_weight = (weight_columns + weight_rows) / 2
 
     # 3D distance
-    value = (distance_3D * total_weight) * paycheck / 1000
+    value = (dist_3d_matrix * total_weight) * paycheck / 1000
 
     return value
 

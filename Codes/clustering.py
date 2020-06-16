@@ -18,7 +18,7 @@ def sensitivity(pop_points, geo_df):
         "First, provide a RANGE for these parameters and also the number of "
         "SPANS between the range values.")
 
-    check = "y"
+    check = "n"
     while check == "y":
         s()
         eps = input("Provide the limits for the NEIGHBOURHOOD parameter \n"
@@ -45,11 +45,13 @@ def sensitivity(pop_points, geo_df):
             else:
                 pts_ = int(pts[0] + (pts[1] - pts[0]) / spans * (i - 1))
             span_pts.append(pts_)
+
         tab_area = pd.DataFrame(index=span_eps, columns=span_pts)
         tab_people = pd.DataFrame(index=span_eps, columns=span_pts)
         tab_people_area = pd.DataFrame(index=span_eps, columns=span_pts)
         tab_cluster = pd.DataFrame(index=span_eps, columns=span_pts)
         total_people = int(geo_df['Population'].sum(axis=0))
+
         for eps in span_eps:
             for pts in span_pts:
                 db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean'). \
