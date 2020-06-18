@@ -50,9 +50,9 @@ if step == 1:
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
-    grid_optimized = grid.connection_optimization(geo_df_clustered, geo_df,
-                                                  grid_resume, crs, resolution,
-                                                  line_bc)
+    grid_optimized = grid.connection_optimization(geo_df, grid_resume,
+                                                  resolution, line_bc,
+                                                  limit_hv, limit_mv)
     '-------------------------------------------------------------------------'
 
     "4.Load creation"
@@ -92,9 +92,9 @@ elif step == 2:
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
-    grid_optimized = grid.connection_optimization(geo_df_clustered, geo_df,
-                                                  grid_resume, crs, resolution,
-                                                  line_bc)
+    grid_optimized = grid.connection_optimization(geo_df, grid_resume,
+                                                  resolution, line_bc,
+                                                  limit_hv, limit_mv)
 
 elif step == 3:
     '-------------------------------------------------------------------------'
@@ -114,10 +114,9 @@ elif step == 3:
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
-    grid_optimized = grid.connection_optimization(geo_df_clustered, geo_df,
-                                                  grid_resume, crs, resolution,
-                                                  line_bc)
-
+    grid_optimized = grid.connection_optimization(geo_df, grid_resume,
+                                                  resolution, line_bc,
+                                                  limit_hv, limit_mv)
 elif step == 4:
     '-------------------------------------------------------------------------'
     "4.Load creation"
