@@ -6,6 +6,7 @@ import numpy as np
 from shapely.ops import nearest_points
 from scipy.spatial import distance_matrix
 from scipy.spatial.distance import cdist
+from shapely.geometry import Point, box, LineString
 
 # sys.path.insert(0, 'Codes')  # necessary for native GISEle Packages
 # native GISEle Packages
@@ -87,7 +88,7 @@ def weight_matrix(gdf, dist_3d_matrix, paycheck):
 
 def line_to_points(line, df):
 
-    nodes = list(line['ID1'].values) + list(line['ID2'].values)
+    nodes = list(line.ID1.astype(int)) + list(line.ID2.astype(int))
     nodes = list(dict.fromkeys(nodes))
     nodes_in_df = gpd.GeoDataFrame(crs=df.crs)
     for i in nodes:
@@ -95,6 +96,55 @@ def line_to_points(line, df):
     nodes_in_df.reset_index(drop=True, inplace=True)
 
     return nodes_in_df
+
+
+def create_box(limits, df):
+
+    x_min = min(limits.X)
+    x_max = max(limits.X)
+    y_min = min(limits.Y)
+    y_max = max(limits.Y)
+
+    dist = Point(x_min, y_min).distance(Point(x_max, y_max))
+    if dist < 1000:
+        extension = dist
+    elif dist < 2000:
+        extension = dist / 2
+    else:
+        extension = dist / 4
+
+    bubble = box(minx=x_min - extension, maxx=x_max + extension,
+                 miny=y_min - extension, maxy=y_max + extension)
+    df_box = df[df.within(bubble)]
+    df_box.index = pd.Series(range(0, len(df_box['ID'])))
+
+    return df_box
+
+
+def edges_to_line(path, df, edges_matrix):
+    steps = len(path)
+    line = gpd.GeoDataFrame(index=range(0, steps),
+                            columns=['ID1', 'ID2', 'Cost', 'geometry'],
+                            crs=df.crs)
+    line_points = []
+    for h in range(0, steps):
+
+        line.at[h, 'geometry'] = LineString(
+            [(df.loc[path[h][0], 'X'],
+              df.loc[path[h][0], 'Y']),
+             (df.loc[path[h][1], 'X'],
+              df.loc[path[h][1], 'Y'])])
+
+        # int here is necessary to use the command .to_file
+        line.at[h, 'ID1'] = int(df.loc[path[h][0], 'ID'])
+        line.at[h, 'ID2'] = int(df.loc[path[h][1], 'ID'])
+        line.at[h, 'Cost'] = int(edges_matrix.loc[
+                                         df.loc[path[h][0], 'ID'],
+                                         df.loc[
+                                             path[h][1], 'ID']])
+        line_points.append(list(df.loc[path[h], 'ID']))
+    line.drop(line[line['Cost'] == 0].index, inplace=True)
+    return line, line_points
 
 
 def load():

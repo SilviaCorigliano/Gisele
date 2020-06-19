@@ -146,7 +146,7 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
 
     elif points_to_electrify < resolution:
         c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
-            Steinerman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
+            steiner(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
         c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
             Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
 
@@ -183,22 +183,8 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation,
         connection = gpd.GeoDataFrame()
         return connection, connection_cost, connection_length
 
-    if dist < 1000:
-        extension = dist
-    elif dist < 2000:
-        extension = dist / 2
-    else:
-        extension = dist / 4
-
-    xmin = min(float(assigned_substation.X), float(connecting_point.X))
-    xmax = max(float(assigned_substation.X), float(connecting_point.X))
-    ymin = min(float(assigned_substation.Y), float(connecting_point.Y))
-    ymax = max(float(assigned_substation.Y), float(connecting_point.Y))
-
-    bubble = box(minx=xmin - extension, maxx=xmax + extension,
-                 miny=ymin - extension, maxy=ymax + extension)
-    df_box = geo_df[geo_df.within(bubble)]
-    df_box.index = pd.Series(range(0, len(df_box['ID'])))
+    df_box = create_box(pd.concat([assigned_substation, connecting_point]),
+                        geo_df)
 
     dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
     dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
@@ -225,36 +211,16 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation,
 
         path = nx.dijkstra_path(graph, source, target, weight='weight')
         steps = len(path)
+        new_path = []
+        for i in range(0, steps-1):
+            new_path.append(path[i+1])
+
+        path = list(zip(path, new_path))
 
         # Creating the shapefile
-        row = 0
-        connection = gpd.GeoDataFrame(index=range(0, steps - 1),
-                                      columns=['ID1', 'ID2', 'Cost',
-                                               'geometry'], crs=geo_df.crs)
 
-        for h in range(0, steps - 1):
-            id_pair = [
-                min(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID']),
-                max(df_box.loc[path[h], 'ID'], df_box.loc[path[h + 1], 'ID'])]
-            if id_pair not in c_grid_points:
-                connection.at[row, 'geometry'] = LineString(
-                    [(df_box.loc[path[h], 'X'],
-                      df_box.loc[path[h], 'Y'],
-                      df_box.loc[path[h], 'Elevation']),
-                     (df_box.loc[path[h + 1], 'X'],
-                      df_box.loc[path[h + 1], 'Y'],
-                      df_box.loc[path[h + 1], 'Elevation'])])
+        connection, pts = edges_to_line(path, df_box, edges_matrix)
 
-                # int here is necessary to use the command .to_file
-                connection.at[row, 'ID1'] = int(df_box.loc[path[h], 'ID'])
-                connection.at[row, 'ID2'] = int(df_box.loc[path[h + 1], 'ID'])
-                connection.at[row, 'Cost'] = int(edges_matrix.loc[
-                                                     df_box.loc[path[h], 'ID'],
-                                                     df_box.loc[
-                                                         path[h + 1], 'ID']])
-                row += 1
-            else:
-                connection.drop(connection.tail(1).index, inplace=True)
         connection['Length'] = connection.length.astype(int)
         connection_cost = int(connection['Cost'].sum(axis=0))
         connection_length = connection['Length'].sum(axis=0)
@@ -281,7 +247,8 @@ def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
         for i in grid_resume.Cluster:
             optimized = False
             grid_i = gpd.read_file("Grid_" + str(i) + ".shp")
-            c_grid_points = list(zip(grid_i.ID1, grid_i.ID2))
+            c_grid_points_i = list(zip(grid_i.ID1.astype(int),
+                                       grid_i.ID2.astype(int)))
             grid_i = line_to_points(grid_i, geo_df)
             print('Evaluating if there is a better connection for cluster '
                   + str(i))
@@ -299,8 +266,9 @@ def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
                     continue
 
                 grid_j = gpd.read_file("Grid_" + str(j) + ".shp")
-                grid_parts = c_grid_points
-                grid_parts.append(list(zip(grid_j.ID1, grid_j.ID2)))
+                c_grid_points = c_grid_points_i
+                c_grid_points.append(list(zip(grid_j.ID1.astype(int),
+                                              grid_j.ID2.astype(int))))
                 grid_j = line_to_points(grid_j, geo_df)
 
                 dist_2d = pd.DataFrame(distance_2d(grid_i, grid_j, 'X', 'Y'),
@@ -317,7 +285,7 @@ def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
                     continue
 
                 connection, connection_cost, connection_length = \
-                    dijkstra_connection(geo_df, p1, p2, grid_parts, line_bc,
+                    dijkstra_connection(geo_df, p1, p2, c_grid_points, line_bc,
                                         resolution)
 
                 dist.Cost[j] = connection_cost
