@@ -49,7 +49,7 @@ def steiner(geo_df, gdf_cluster_pop, crs, line_bc, resolution):
 
     final_time = time.time()
     total_time = final_time - start_time
-    print("Cluster grid created\nThe total time required by the Steiner's "
-          "tree algorithm was: " + str(round(total_time, 4)) + " seconds")
+    print("The total time required by the Steiner's tree algorithm was: "
+          + str(round(total_time, 4)) + " seconds")
 
     return c_grid, c_grid_cost, c_grid_length, c_grid_points

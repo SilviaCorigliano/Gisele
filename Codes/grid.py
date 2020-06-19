@@ -52,6 +52,7 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
             c_grid, c_grid_cost, c_grid_length, c_grid_points = \
                 cluster_grid(geo_df, gdf_cluster_pop, crs, resolution,
                              line_bc, points_to_electrify)
+            print("Cluster grid created")
 
             print('Assigning to the nearest substation.. ')
             assigned_substation, connecting_point, connection_type = \
@@ -64,6 +65,7 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
                 dijkstra_connection(geo_df, assigned_substation,
                                     connecting_point,
                                     c_grid_points, line_bc, resolution)
+            print("Substation connection created")
 
             c_grid.to_file('Grid_' + str(cluster_n) + '.shp')
             total_grid = gpd.GeoDataFrame(
@@ -147,25 +149,27 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
     elif points_to_electrify < resolution:
         c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
             steiner(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
+        block_print()
         c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
             Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
+        enable_print()
 
         if c_grid_cost1 <= c_grid_cost2:
-            print(" Steiner Wins!")
+            print("Steiner algorithm has the better cost")
             c_grid = c_grid1
             c_grid_length = c_grid_length1
             c_grid_cost = c_grid_cost1
             c_grid_points = c_grid_points1
 
         elif c_grid_cost1 > c_grid_cost2:
-            print(" Steiner Loses!")
+            print("Spider algorithm has the better cost")
             c_grid = c_grid2
             c_grid_length = c_grid_length2
             c_grid_cost = c_grid_cost2
             c_grid_points = c_grid_points2
 
     elif points_to_electrify >= resolution:
-        print("Too many points to use Steiner, running Spiderman.")
+        print("Too many points to use Steiner, running Spider.")
         c_grid, c_grid_cost, c_grid_length, c_grid_points = Spiderman. \
             Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
 
@@ -253,7 +257,7 @@ def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
             print('Evaluating if there is a better connection for cluster '
                   + str(i))
 
-            dist = pd.DataFrame(index=grid_resume.index,
+            exam = pd.DataFrame(index=grid_resume.index,
                                 columns=['Distance', 'Cost'], dtype=int)
             if grid_resume.loc[i, 'Connection Cost'] == 0:
                 check.loc[i, 'Check'] = True
@@ -261,8 +265,8 @@ def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
             for j in grid_resume.Cluster:
 
                 if i == j:
-                    dist.Distance[j] = 9999999
-                    dist.Cost[j] = 99999999
+                    exam.Distance[j] = 9999999
+                    exam.Cost[j] = 99999999
                     continue
 
                 grid_j = gpd.read_file("Grid_" + str(j) + ".shp")
@@ -280,16 +284,16 @@ def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
                 # if the distance between clusters too high, skip
                 if dist_2d.min().min() / 1000 > \
                         1.2 * (grid_resume.loc[i, 'Connection Length']):
-                    dist.Distance[j] = 9999999
-                    dist.Cost[j] = 99999999
+                    exam.Distance[j] = 9999999
+                    exam.Cost[j] = 99999999
                     continue
 
                 connection, connection_cost, connection_length = \
                     dijkstra_connection(geo_df, p1, p2, c_grid_points, line_bc,
                                         resolution)
 
-                dist.Cost[j] = connection_cost
-                dist.Distance[j] = connection_length
+                exam.Cost[j] = connection_cost
+                exam.Distance[j] = connection_length
 
                 if grid_resume.loc[j, 'Connection Type'] == 'MV' and \
                         grid_resume.loc[i, 'Load'] + \
@@ -301,7 +305,7 @@ def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
                         grid_resume.loc[j, 'Load'] > limit_mv:
                     continue
 
-                if min(dist.Cost) == connection_cost and check.loc[j, 'Check']\
+                if min(exam.Cost) == connection_cost and check.loc[j, 'Check']\
                     and connection_cost / 1000 < \
                         grid_resume.loc[i, 'Connection Cost']:
                     optimized = True
@@ -310,10 +314,10 @@ def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
             if optimized:
                 best_connection.to_file('NewConnection_' + str(i) + '.shp')
                 grid_resume.loc[
-                    i, 'Connection Length'] = min(dist.Distance) / 1000
-                grid_resume.loc[i, 'Connection Cost'] = min(dist.Cost) / 1000
+                    i, 'Connection Length'] = min(exam.Distance) / 1000
+                grid_resume.loc[i, 'Connection Cost'] = min(exam.Cost) / 1000
                 grid_resume.loc[i, 'Connection Type'] = \
-                    grid_resume.loc[dist['Cost'].idxmin(), 'Connection Type']
+                    grid_resume.loc[exam['Cost'].idxmin(), 'Connection Type']
                 print('A new connection for Cluster ' + str(
                     i) + ' was successfully created')
                 total_connections_opt = gpd.GeoDataFrame(
