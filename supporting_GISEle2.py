@@ -138,10 +138,8 @@ def edges_to_line(path, df, edges_matrix):
         # int here is necessary to use the command .to_file
         line.at[h, 'ID1'] = int(df.loc[path[h][0], 'ID'])
         line.at[h, 'ID2'] = int(df.loc[path[h][1], 'ID'])
-        line.at[h, 'Cost'] = int(edges_matrix.loc[
-                                         df.loc[path[h][0], 'ID'],
-                                         df.loc[
-                                             path[h][1], 'ID']])
+        line.at[h, 'Cost'] = int(edges_matrix.loc[df.loc[path[h][0], 'ID'],
+                                                  df.loc[path[h][1], 'ID']])
         line_points.append(list(df.loc[path[h], 'ID']))
     line.drop(line[line['Cost'] == 0].index, inplace=True)
     return line, line_points

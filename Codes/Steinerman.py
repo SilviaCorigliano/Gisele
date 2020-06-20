@@ -1,21 +1,14 @@
 import pandas as pd
 import geopandas as gpd
-import numpy as np
 import networkx as nx
 import time
 import math
 from scipy import sparse
-from fiona.crs import from_epsg
-from scipy.spatial import distance_matrix
-from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import minimum_spanning_tree
 from supporting_GISEle2 import*
 from Codes.Steiner_tree_code import*
-from shapely.geometry import Point, LineString, Polygon, box
-from scipy.spatial.distance import cdist
 
 
-def steiner(geo_df, gdf_cluster_pop, crs, line_bc, resolution):
+def steiner(geo_df, gdf_cluster_pop, line_bc, resolution):
     print("Running the Steiner's tree algorithm..")
 
     start_time = time.time()
@@ -32,7 +25,7 @@ def steiner(geo_df, gdf_cluster_pop, crs, line_bc, resolution):
     graph = nx.from_scipy_sparse_matrix(edges_matrix_sparse)
 
     # taking all cluster points inside the box (terminal nodes)
-    gdf_cluster_in_box = gpd.GeoDataFrame(crs=from_epsg(crs))
+    gdf_cluster_in_box = gpd.GeoDataFrame(crs=geo_df.crs)
     for i in gdf_cluster_pop.ID:
         point = df_box.loc[df_box['ID'] == i]
         gdf_cluster_in_box = pd.concat([gdf_cluster_in_box, point], sort=True)

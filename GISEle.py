@@ -46,7 +46,7 @@ if step == 1:
     '-------------------------------------------------------------------------'
     "3.Grid creation"
 
-    grid_resume = grid.routing(geo_df_clustered, geo_df, crs, clusters_list,
+    grid_resume = grid.routing(geo_df_clustered, geo_df, clusters_list,
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
@@ -88,7 +88,7 @@ elif step == 2:
         clustering.analysis(pop_points, geo_df, pop_load)
     '-------------------------------------------------------------------------'
     "3.Grid creation"
-    grid_resume = grid.routing(geo_df_clustered, geo_df, crs, clusters_list,
+    grid_resume = grid.routing(geo_df_clustered, geo_df, clusters_list,
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
@@ -110,7 +110,7 @@ elif step == 3:
     '-------------------------------------------------------------------------'
     "3. Grid creation"
 
-    grid_resume = grid.routing(geo_df_clustered, geo_df, crs, clusters_list,
+    grid_resume = grid.routing(geo_df_clustered, geo_df, clusters_list,
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 

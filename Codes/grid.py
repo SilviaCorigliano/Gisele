@@ -1,20 +1,13 @@
 import os
-import math
 import pandas as pd
 import numpy as np
 import geopandas as gpd
-import networkx as nx
-from fiona.crs import from_epsg
 from supporting_GISEle2 import *
-from shapely.geometry import Point, box, LineString
-from shapely.ops import nearest_points
-from scipy.spatial import distance_matrix
-from scipy.spatial.distance import cdist
-from scipy import sparse
-from Codes import Steinerman, Spiderman
+from shapely.geometry import Point
+from Codes import Steinerman, Spiderman, dijkstra
 
 
-def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
+def routing(geo_df_clustered, geo_df, clusters_list, resolution,
             pop_threshold, input_sub, line_bc, limit_hv, limit_mv):
     s()
     print("3. Grid Creation")
@@ -29,7 +22,7 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
     substations = pd.read_csv(input_sub + '.csv')
     geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
     substations = gpd.GeoDataFrame(substations, geometry=geometry,
-                                   crs=from_epsg(crs))
+                                   crs=geo_df.crs)
     os.chdir(r'..')
     os.chdir(r'Output//Grids')
 
@@ -50,7 +43,7 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
             l()
 
             c_grid, c_grid_cost, c_grid_length, c_grid_points = \
-                cluster_grid(geo_df, gdf_cluster_pop, crs, resolution,
+                cluster_grid(geo_df, gdf_cluster_pop, resolution,
                              line_bc, points_to_electrify)
             print("Cluster grid created")
 
@@ -58,13 +51,13 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
             assigned_substation, connecting_point, connection_type = \
                 substation_assignment(cluster_n, geo_df, c_grid_points,
                                       substations, clusters_list, limit_hv,
-                                      limit_mv, crs)
+                                      limit_mv)
 
             print('Connecting to the substation.. ')
             connection, connection_cost, connection_length = \
-                dijkstra_connection(geo_df, assigned_substation,
-                                    connecting_point,
-                                    c_grid_points, line_bc, resolution)
+                dijkstra.dijkstra_connection(geo_df, assigned_substation,
+                                             connecting_point, c_grid_points,
+                                             line_bc, resolution)
             print("Substation connection created")
 
             c_grid.to_file('Grid_' + str(cluster_n) + '.shp')
@@ -101,7 +94,7 @@ def routing(geo_df_clustered, geo_df, crs, clusters_list, resolution,
 
 
 def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
-                          clusters_list, limit_hv, limit_mv, crs):
+                          clusters_list, limit_hv, limit_mv):
 
     if clusters_list.loc[cluster_n, 'Load'] > limit_hv:
         substations = substations[substations['Type'] == 'HV']
@@ -114,14 +107,14 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
         nearest_id=substations.apply(nearest, df=geo_df, src_column='ID',
                                      axis=1))
 
-    sub_in_df = gpd.GeoDataFrame(crs=from_epsg(crs))
+    sub_in_df = gpd.GeoDataFrame(crs=geo_df.crs)
 
     for i, row in substations.iterrows():
         sub_in_df = sub_in_df.append(
             geo_df[geo_df['ID'] == row['nearest_id']], sort=False)
     sub_in_df.reset_index(drop=True, inplace=True)
 
-    grid_points = gpd.GeoDataFrame(crs=from_epsg(crs))
+    grid_points = gpd.GeoDataFrame(crs=geo_df.crs)
     for i in np.unique(c_grid_points):
         grid_points = grid_points.append(
             geo_df[geo_df['ID'] == i], sort=False)
@@ -139,7 +132,7 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
     return assigned_substation, connection_point, connection_type
 
 
-def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
+def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
                  points_to_electrify):
     if points_to_electrify < 3:
         c_grid = gdf_cluster_pop
@@ -147,12 +140,12 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
         c_grid_length = 0
 
     elif points_to_electrify < resolution:
-        c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
-            steiner(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
-        block_print()
+
         c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
-            Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
-        enable_print()
+            spider(geo_df, gdf_cluster_pop, line_bc, resolution)
+
+        c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
+            steiner(geo_df, gdf_cluster_pop, line_bc, resolution)
 
         if c_grid_cost1 <= c_grid_cost2:
             print("Steiner algorithm has the better cost")
@@ -171,70 +164,9 @@ def cluster_grid(geo_df, gdf_cluster_pop, crs, resolution, line_bc,
     elif points_to_electrify >= resolution:
         print("Too many points to use Steiner, running Spider.")
         c_grid, c_grid_cost, c_grid_length, c_grid_points = Spiderman. \
-            Spiderman(geo_df, gdf_cluster_pop, crs, line_bc, resolution)
+            spider(geo_df, gdf_cluster_pop, line_bc, resolution)
 
     return c_grid, c_grid_cost, c_grid_length, c_grid_points
-
-
-def dijkstra_connection(geo_df, connecting_point, assigned_substation,
-                        c_grid_points, line_bc, resolution):
-    dist = assigned_substation.unary_union.distance(connecting_point.
-                                                    unary_union)
-    if dist > 50 * resolution:
-        print('Connection distance too long to use Dijkstra')
-        connection_cost = 999999
-        connection_length = 0
-        connection = gpd.GeoDataFrame()
-        return connection, connection_cost, connection_length
-
-    df_box = create_box(pd.concat([assigned_substation, connecting_point]),
-                        geo_df)
-
-    dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
-    dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
-
-    if np.any(dist_2d_matrix):
-
-        edges_matrix = weight_matrix(df_box, dist_3d_matrix, line_bc)
-        length_limit = resolution * 1.5
-        edges_matrix[dist_2d_matrix > math.ceil(length_limit)] = 0
-
-        #  reduces the weights of edges already present in the cluster grid
-        for i in c_grid_points:
-            if i[0] in edges_matrix.index.values and \
-                    i[1] in edges_matrix.index.values:
-                edges_matrix.loc[i[0], i[1]] = 0.001
-                edges_matrix.loc[i[1], i[0]] = 0.001
-
-        edges_matrix_sparse = sparse.csr_matrix(edges_matrix)
-        graph = nx.from_scipy_sparse_matrix(edges_matrix_sparse)
-        source = df_box.loc[df_box['ID'] == int(assigned_substation['ID']), :]
-        source = int(source.index.values)
-        target = df_box.loc[df_box['ID'] == int(connecting_point['ID']), :]
-        target = int(target.index.values)
-
-        path = nx.dijkstra_path(graph, source, target, weight='weight')
-        steps = len(path)
-        new_path = []
-        for i in range(0, steps-1):
-            new_path.append(path[i+1])
-
-        path = list(zip(path, new_path))
-
-        # Creating the shapefile
-
-        connection, pts = edges_to_line(path, df_box, edges_matrix)
-
-        connection['Length'] = connection.length.astype(int)
-        connection_cost = int(connection['Cost'].sum(axis=0))
-        connection_length = connection['Length'].sum(axis=0)
-
-        return connection, connection_cost, connection_length
-    elif not np.any(dist_2d_matrix):
-        connection = gpd.GeoDataFrame()
-        connection_cost = 0
-        connection_length = 0
-    return connection, connection_cost, connection_length
 
 
 def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
@@ -289,8 +221,8 @@ def connection_optimization(geo_df, grid_resume, resolution, line_bc, limit_hv,
                     continue
 
                 connection, connection_cost, connection_length = \
-                    dijkstra_connection(geo_df, p1, p2, c_grid_points, line_bc,
-                                        resolution)
+                    dijkstra.dijkstra_connection(geo_df, p1, p2, c_grid_points,
+                                                 line_bc, resolution)
 
                 exam.Cost[j] = connection_cost
                 exam.Distance[j] = connection_length
