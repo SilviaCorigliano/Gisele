@@ -142,6 +142,7 @@ def edges_to_line(path, df, edges_matrix):
                                                   df.loc[path[h][1], 'ID']])
         line_points.append(list(df.loc[path[h], 'ID']))
     line.drop(line[line['Cost'] == 0].index, inplace=True)
+    line.Cost = line.Cost.astype(int)
     return line, line_points
 
 
