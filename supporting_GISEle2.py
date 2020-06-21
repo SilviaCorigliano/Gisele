@@ -106,12 +106,12 @@ def create_box(limits, df):
     y_max = max(limits.Y)
 
     dist = Point(x_min, y_min).distance(Point(x_max, y_max))
-    if dist < 1000:
+    if dist < 5000:
+        extension = dist*2
+    elif dist < 15000:
         extension = dist
-    elif dist < 2000:
-        extension = dist / 2
     else:
-        extension = dist / 4
+        extension = dist/8
 
     bubble = box(minx=x_min - extension, maxx=x_max + extension,
                  miny=y_min - extension, maxy=y_max + extension)

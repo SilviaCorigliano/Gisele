@@ -8,7 +8,7 @@ from Codes import Steinerman, Spiderman, dijkstra
 
 
 def routing(geo_df_clustered, geo_df, clusters_list, resolution,
-            pop_threshold, input_sub, line_bc, limit_hv, limit_mv):
+            pop_thresh, input_sub, line_bc, limit_hv, limit_mv):
     s()
     print("3. Grid Creation")
     s()
@@ -31,7 +31,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
         gdf_cluster = geo_df_clustered[
             geo_df_clustered['Cluster'] == cluster_n]
         gdf_cluster_pop = gdf_cluster[
-            gdf_cluster['Population'] >= pop_threshold]
+            gdf_cluster['Population'] >= pop_thresh]
 
         points_to_electrify = int(len(gdf_cluster_pop))
 
@@ -139,7 +139,7 @@ def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
         c_grid_cost = 0
         c_grid_length = 0
 
-    elif points_to_electrify < resolution:
+    elif points_to_electrify < resolution/5:
 
         c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
             spider(geo_df, gdf_cluster_pop, line_bc, resolution)
@@ -161,7 +161,7 @@ def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
             c_grid_cost = c_grid_cost2
             c_grid_points = c_grid_points2
 
-    elif points_to_electrify >= resolution:
+    elif points_to_electrify >= resolution/5:
         print("Too many points to use Steiner, running Spider.")
         c_grid, c_grid_cost, c_grid_length, c_grid_points = Spiderman. \
             spider(geo_df, gdf_cluster_pop, line_bc, resolution)
