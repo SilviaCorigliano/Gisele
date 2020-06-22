@@ -27,7 +27,7 @@ def import_csv_file(step):
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
             pop_thresh, line_bc, limit_hv, limit_mv
-    elif step == 2 or step == 3:
+    elif step == 2 or step == 3 or step == 4:
         os.chdir(r'..//')
         os.chdir(r'Output//Datasets')
         df_weighted = pd.read_csv(input_csv + '_weighted.csv')
@@ -40,7 +40,7 @@ def import_csv_file(step):
         df_weighted.drop_duplicates(['ID'], keep='last', inplace=True)
         print("Input files successfully imported.")
         os.chdir(r'..//..')
-        if step == 3:
+        if step > 2:
             l()
             print("Importing Clusters..")
             os.chdir(r'Output//Clusters')
