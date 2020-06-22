@@ -18,7 +18,7 @@ def sensitivity(pop_points, geo_df):
         "First, provide a RANGE for these parameters and also the number of "
         "SPANS between the range values.")
 
-    check = "y"
+    check = "n"
     while check == "y":
         s()
         eps = input("Provide the limits for the NEIGHBOURHOOD parameter \n"
@@ -45,11 +45,13 @@ def sensitivity(pop_points, geo_df):
             else:
                 pts_ = int(pts[0] + (pts[1] - pts[0]) / spans * (i - 1))
             span_pts.append(pts_)
+
         tab_area = pd.DataFrame(index=span_eps, columns=span_pts)
         tab_people = pd.DataFrame(index=span_eps, columns=span_pts)
         tab_people_area = pd.DataFrame(index=span_eps, columns=span_pts)
         tab_cluster = pd.DataFrame(index=span_eps, columns=span_pts)
         total_people = int(geo_df['Population'].sum(axis=0))
+
         for eps in span_eps:
             for pts in span_pts:
                 db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean'). \
@@ -109,32 +111,33 @@ def analysis(pop_points, geo_df, pop_load):
     print('Choose the final combination of NEIGHBOURHOOD and MINIMUM POINTS')
     l()
     # eps = float(input("Chosen NEIGHBOURHOOD: "))
-    eps = 1500
-    # eps = 3100
-    # pts = 20
+    # eps = 1500
+    eps = 3100
+    pts = 20
     s()
-    pts = 500
+    # pts = 500
     # pts = int(input("Chosen MINIMUM POINTS: "))
     s()
     db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean').fit(
         pop_points, sample_weight=geo_df['Population'])
     labels = db.labels_
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)  # ignore noise
-    clusters_list = np.arange(n_clusters)
+    clusters_list = pd.DataFrame(index=np.arange(n_clusters),
+                                 columns=['Cluster', 'Population', 'Load'])
+    clusters_list.loc[:, 'Cluster'] = np.arange(n_clusters)
     print('Initial number of clusters: %d' % n_clusters)
-    # print('Estimated number of noise points: %d' % list(labels).count(-1))
 
     check = "y"
     while check == "y":
         geo_df_clustered = geo_df
-        geo_df_clustered['clusters'] = labels
+        geo_df_clustered['Cluster'] = labels
         gdf_clustered_clean = geo_df_clustered[
-            geo_df_clustered['clusters'] != -1]
+            geo_df_clustered['Cluster'] != -1]
 
         fig = go.Figure()
-        for cluster_n in clusters_list:
+        for cluster_n in clusters_list.Cluster:
             plot_cluster = gdf_clustered_clean[gdf_clustered_clean
-                                               ['clusters'] == cluster_n]
+                                               ['Cluster'] == cluster_n]
             plot_cluster = plot_cluster.to_crs(epsg=4326)
             plot_cluster.X = plot_cluster.geometry.x
             plot_cluster.Y = plot_cluster.geometry.y
@@ -148,7 +151,7 @@ def analysis(pop_points, geo_df, pop_load):
                     color=cluster_n,
                     opacity=0.9
                 ),
-                text=plot_cluster.clusters,
+                text=plot_cluster.Cluster,
                 hoverinfo='text',
                 below="''"
             ))
@@ -166,7 +169,7 @@ def analysis(pop_points, geo_df, pop_load):
         if check == "n":
             break
         print('The current clusters available for merging are:'
-              '\n' + str(clusters_list))
+              '\n' + str(list(clusters_list.Cluster)))
         s()
         merge1 = int(input('Select a base cluster that you want to merge: '))
         merge2 = input('Which clusters would you like to merge into the '
@@ -174,16 +177,15 @@ def analysis(pop_points, geo_df, pop_load):
         merge2 = sorted(list(map(int, merge2.split(','))))
         s()
         for i in merge2:
-            clusters_list = np.delete(clusters_list,
-                                      np.where(clusters_list == i))
+            clusters_list = clusters_list.drop(index=i)
             labels[labels == i] = merge1
 
-    clusters_list = np.tile(clusters_list, (3, 1))
-    for i in clusters_list[0]:
-        pop_i = sum(geo_df_clustered.loc
-                    [geo_df_clustered['clusters'] == i, 'Population'])
-        clusters_list[1, np.where(clusters_list[0] == i)] = pop_i
-        clusters_list[2, np.where(clusters_list[0] == i)] = pop_i * pop_load
+    for i in clusters_list.Cluster:
+        clusters_list.loc[i, 'Population'] = \
+            round(sum(geo_df_clustered.loc[geo_df_clustered
+                                           ['Cluster'] == i, 'Population']))
+        clusters_list.loc[i, 'Load'] = \
+            round(clusters_list.loc[i, 'Population'] * pop_load, 2)
 
     os.chdir(r'Output//Clusters')
     geo_df_clustered.to_file("geo_df_clustered.shp")

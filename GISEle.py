@@ -46,13 +46,13 @@ if step == 1:
     '-------------------------------------------------------------------------'
     "3.Grid creation"
 
-    grid_resume = grid.routing(geo_df_clustered, geo_df, crs, clusters_list,
+    grid_resume = grid.routing(geo_df_clustered, geo_df, clusters_list,
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
-    grid_optimized = grid.connection_optimization(geo_df_clustered, geo_df,
-                                                  grid_resume, crs, resolution,
-                                                  line_bc)
+    grid_optimized = grid.connection_optimization(geo_df, grid_resume,
+                                                  resolution, line_bc,
+                                                  limit_hv, limit_mv)
     '-------------------------------------------------------------------------'
 
     "4.Load creation"
@@ -88,13 +88,13 @@ elif step == 2:
         clustering.analysis(pop_points, geo_df, pop_load)
     '-------------------------------------------------------------------------'
     "3.Grid creation"
-    grid_resume = grid.routing(geo_df_clustered, geo_df, crs, clusters_list,
+    grid_resume = grid.routing(geo_df_clustered, geo_df, clusters_list,
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
-    grid_optimized = grid.connection_optimization(geo_df_clustered, geo_df,
-                                                  grid_resume, crs, resolution,
-                                                  line_bc)
+    grid_optimized = grid.connection_optimization(geo_df, grid_resume,
+                                                  resolution, line_bc,
+                                                  limit_hv, limit_mv)
 
 elif step == 3:
     '-------------------------------------------------------------------------'
@@ -110,14 +110,13 @@ elif step == 3:
     '-------------------------------------------------------------------------'
     "3. Grid creation"
 
-    grid_resume = grid.routing(geo_df_clustered, geo_df, crs, clusters_list,
+    grid_resume = grid.routing(geo_df_clustered, geo_df, clusters_list,
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
-    grid_optimized = grid.connection_optimization(geo_df_clustered, geo_df,
-                                                  grid_resume, crs, resolution,
-                                                  line_bc)
-
+    grid_optimized = grid.connection_optimization(geo_df, grid_resume,
+                                                  resolution, line_bc,
+                                                  limit_hv, limit_mv)
 elif step == 4:
     '-------------------------------------------------------------------------'
     "4.Load creation"

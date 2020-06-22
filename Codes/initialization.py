@@ -1,6 +1,5 @@
 import os
 import math
-import numpy as np
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
@@ -46,17 +45,19 @@ def import_csv_file(step):
             print("Importing Clusters..")
             os.chdir(r'Output//Clusters')
             geo_df_clustered = gpd.read_file("geo_df_clustered.shp")
-            clusters_list = np.unique(geo_df_clustered['clusters'])
-            clusters_list = np.delete(clusters_list, np.where(
-                clusters_list == -1))  # removes the noises
-            clusters_list = np.tile(clusters_list, (3, 1))
-            for i in clusters_list[0]:
-                pop_i = sum(geo_df_clustered.loc
-                            [geo_df_clustered['clusters'] == i, 'Population'])
-                clusters_list[1, np.where(clusters_list[0] == i)] = pop_i
-                clusters_list[
-                    2, np.where(clusters_list[0] == i)] = pop_i * pop_load
+            clusters_list = pd.DataFrame(
+                index=geo_df_clustered.Cluster.unique(),
+                columns=['Cluster', 'Population', 'Load'])
 
+            clusters_list.loc[:, 'Cluster'] = geo_df_clustered.Cluster.unique()
+            clusters_list = clusters_list.drop(index=-1)
+            for i in clusters_list.Cluster:
+                clusters_list.loc[i, 'Population'] = \
+                    round(sum(geo_df_clustered.loc
+                              [geo_df_clustered['Cluster'] == i,
+                               'Population']))
+                clusters_list.loc[i, 'Load'] = \
+                    round(clusters_list.loc[i, 'Population'] * pop_load, 2)
             print("Clusters successfully imported")
             l()
             os.chdir(r'..//..')
