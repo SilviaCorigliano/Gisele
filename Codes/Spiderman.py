@@ -34,7 +34,7 @@ def spider(geo_df, gdf_cluster_pop, line_bc, resolution):
     print('Number of short lines: ', short_lines.__len__())
 
     if len(long_lines) != 0:
-        # Sort long_lines in ascending way
+
         long_lines = long_lines.sort_values(by='Length', ascending=True)
         long_lines = long_lines.reset_index(drop=True)
         for i, row in long_lines.iterrows():

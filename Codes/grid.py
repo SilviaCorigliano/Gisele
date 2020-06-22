@@ -127,7 +127,7 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
     connection_type = substations[substations['nearest_id']
                                   == dist.min().idxmin()].Type.values[0]
 
-    print('Substation assignment complete.')
+    print('Substation assignment complete')
 
     return assigned_substation, connection_point, connection_type
 

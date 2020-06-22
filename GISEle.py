@@ -8,7 +8,7 @@ configured accordingly, for more information check the README.
 """
 
 import supporting_GISEle2
-from Codes import initialization, clustering, grid
+from Codes import initialization, clustering, grid, chunk_technique
 
 "Introduction"
 supporting_GISEle2.l()
@@ -17,9 +17,10 @@ supporting_GISEle2.l()
 steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
          '2.Clustering',
          '3.Grid creation',
-         '4.Load creation',
-         '5.Generation sizing',
-         '6.Final results']
+         "4. Main branch and collateral's"
+         '5.Load creation',
+         '6.Generation sizing',
+         '7.Final results']
 print("\n".join(steps))
 supporting_GISEle2.s()
 # step = int(input('Which step do you want to select?: '))
@@ -117,7 +118,23 @@ elif step == 3:
     grid_optimized = grid.connection_optimization(geo_df, grid_resume,
                                                   resolution, line_bc,
                                                   limit_hv, limit_mv)
+
+
 elif step == 4:
+
+    df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
+        pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
+        clusters_list, = initialization.import_csv_file(step)
+
+    geo_df, pop_points = initialization. \
+        creating_geodataframe(df_weighted, crs, unit, input_csv, step)
+
+    grid_resume = chunk_technique.routing(geo_df_clustered, geo_df, clusters_list,
+                               resolution, pop_thresh, input_sub, line_bc,
+                               limit_hv, limit_mv)
+
+
+elif step == 5:
     '-------------------------------------------------------------------------'
     "4.Load creation"
 
