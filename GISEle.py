@@ -8,7 +8,7 @@ configured accordingly, for more information check the README.
 """
 
 import supporting_GISEle2
-from Codes import initialization, clustering, grid, branches
+from Codes import initialization, clustering, grid, branches, optimization
 
 "Introduction"
 supporting_GISEle2.l()
@@ -17,14 +17,14 @@ supporting_GISEle2.l()
 steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
          '2.Clustering',
          '3.Grid creation',
-         "4. Main branch and collateral's"
+         "4.Main branch and collateral's",
          '5.Load creation',
          '6.Generation sizing',
          '7.Final results']
 print("\n".join(steps))
 supporting_GISEle2.s()
-# step = int(input('Which step do you want to select?: '))
-step = 4
+step = int(input('Which step do you want to select?: '))
+# step = 4
 if step == 1:
     '-------------------------------------------------------------------------'
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
@@ -51,9 +51,8 @@ if step == 1:
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
-    grid_optimized = grid.connection_optimization(geo_df, grid_resume,
-                                                  resolution, line_bc,
-                                                  limit_hv, limit_mv)
+    grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
+                                             line_bc, limit_hv, limit_mv, step)
     '-------------------------------------------------------------------------'
 
     "4.Load creation"
@@ -93,9 +92,8 @@ elif step == 2:
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
-    grid_optimized = grid.connection_optimization(geo_df, grid_resume,
-                                                  resolution, line_bc,
-                                                  limit_hv, limit_mv)
+    grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
+                                             line_bc, limit_hv, limit_mv, step)
 
 elif step == 3:
     '-------------------------------------------------------------------------'
@@ -115,9 +113,8 @@ elif step == 3:
                                resolution, pop_thresh, input_sub, line_bc,
                                limit_hv, limit_mv)
 
-    grid_optimized = grid.connection_optimization(geo_df, grid_resume,
-                                                  resolution, line_bc,
-                                                  limit_hv, limit_mv)
+    grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
+                                             line_bc, limit_hv, limit_mv, step)
 
 
 elif step == 4:
@@ -135,6 +132,8 @@ elif step == 4:
                                    input_sub, line_bc, limit_hv, limit_mv,
                                    pop_load)
 
+    grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
+                                             line_bc, limit_hv, limit_mv, step)
 elif step == 5:
     '-------------------------------------------------------------------------'
     "4.Load creation"
