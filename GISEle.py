@@ -23,8 +23,8 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
          '7.Final results']
 print("\n".join(steps))
 supporting_GISEle2.s()
-step = int(input('Which step do you want to select?: '))
-# step = 4
+# step = int(input('Which step do you want to select?: '))
+step = 4
 if step == 1:
     '-------------------------------------------------------------------------'
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
@@ -52,7 +52,8 @@ if step == 1:
                                limit_hv, limit_mv)
 
     grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
-                                             line_bc, limit_hv, limit_mv, step)
+                                              line_bc, limit_hv, limit_mv,
+                                              step)
     '-------------------------------------------------------------------------'
 
     "4.Load creation"
@@ -93,7 +94,8 @@ elif step == 2:
                                limit_hv, limit_mv)
 
     grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
-                                             line_bc, limit_hv, limit_mv, step)
+                                              line_bc, limit_hv, limit_mv,
+                                              step)
 
 elif step == 3:
     '-------------------------------------------------------------------------'
@@ -114,7 +116,8 @@ elif step == 3:
                                limit_hv, limit_mv)
 
     grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
-                                             line_bc, limit_hv, limit_mv, step)
+                                              line_bc, limit_hv, limit_mv,
+                                              step)
 
 
 elif step == 4:
@@ -133,7 +136,8 @@ elif step == 4:
                                    pop_load)
 
     grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
-                                             line_bc, limit_hv, limit_mv, step)
+                                              line_bc, limit_hv, limit_mv,
+                                              step)
 elif step == 5:
     '-------------------------------------------------------------------------'
     "4.Load creation"

@@ -71,7 +71,7 @@ def distance_3d(df1, df2, x, y, z):
     return value
 
 
-def weight_matrix(gdf, dist_3d_matrix, paycheck):
+def weight_matrix(gdf, dist_3d_matrix, line_bc):
 
     # Altitude distance in meters
     weight = gdf['Weight'].values
@@ -81,7 +81,7 @@ def weight_matrix(gdf, dist_3d_matrix, paycheck):
     total_weight = (weight_columns + weight_rows) / 2
 
     # 3D distance
-    value = (dist_3d_matrix * total_weight) * paycheck / 1000
+    value = (dist_3d_matrix * total_weight) * line_bc / 1000
 
     return value
 

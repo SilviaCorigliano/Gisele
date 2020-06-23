@@ -4,20 +4,28 @@ import pandas as pd
 import networkx as nx
 from scipy import sparse
 from supporting_GISEle2 import *
-from Codes import dijkstra
+from Codes import dijkstra, Steinerman
 
 
-def spider(geo_df, gdf_cluster_pop, line_bc, resolution):
+def spider(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
+
+    if branch_points is None:
+        branch_points = []
+
     print('Running spider algorithm..')
     start_time = time.time()
 
     gdf_cluster_pop.index = pd.Series(range(0, len(gdf_cluster_pop['ID'])))
     dist_3d_matrix = distance_3d(gdf_cluster_pop, gdf_cluster_pop, 'X', 'Y',
                                  'Elevation')
-    dist_2d_matrix = distance_2d(gdf_cluster_pop, gdf_cluster_pop, 'X', 'Y')
     edges_matrix = weight_matrix(gdf_cluster_pop, dist_3d_matrix, line_bc)
-    length_limit = 99999999
-    edges_matrix[dist_2d_matrix > math.ceil(length_limit)] = 0
+
+    for i in branch_points:
+        if i[0] in edges_matrix.index.values and \
+                i[1] in edges_matrix.index.values:
+            edges_matrix.loc[i[0], i[1]] = 0.001
+            edges_matrix.loc[i[1], i[0]] = 0.001
+
     edges_matrix_sparse = sparse.csr_matrix(edges_matrix)
     graph = nx.from_scipy_sparse_matrix(edges_matrix_sparse)
 
@@ -46,6 +54,11 @@ def spider(geo_df, gdf_cluster_pop, line_bc, resolution):
                 dijkstra.dijkstra_connection(geo_df, point_1, point_2,
                                              c_grid_points, line_bc,
                                              resolution)
+
+            # line_box = create_box(pd.concat([point_1, point_2], sort=True),
+            #                       gdf_cluster_pop)
+            # segment, segment_cost, segment_length = \
+            #     Steinerman.steiner(geo_df, line_box, line_bc, resolution)
 
             short_lines = pd.concat([short_lines, segment], sort=True)
             short_lines = short_lines.reset_index(drop=True)

@@ -8,7 +8,9 @@ from Codes import dijkstra, Steinerman
 def routing(geo_df_clustered, geo_df, clusters_list, resolution,
             pop_thresh, pop_thresh_lr, input_sub, line_bc, limit_hv, limit_mv,
             pop_load):
-
+    s()
+    print("4. Main Branch and Collateral's")
+    s()
     line_bc_col = line_bc / 3
     grid_resume = pd.DataFrame(index=clusters_list.Cluster,
                                columns=['Branch Length',
@@ -68,7 +70,7 @@ def main_branch(gdf_zoomed, geo_df_clustered, clusters_list, resolution,
               + str(len(clusters_list.Cluster)))
         l()
         if points_to_electrify > 1:
-
+            #  cluster gdf is given instead of total gdf to force mb inside
             branch, branch_cost, branch_length, branch_points = Steinerman. \
                 steiner(gdf_cluster_only, gdf_zoomed_pop, line_bc, resolution)
 
@@ -141,14 +143,10 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
         branch = gpd.read_file("Branch_" + str(i) + ".shp")
         branch_points = list(zip(branch.ID1.astype(int),
                                  branch.ID2.astype(int)))
-        nodes = list(branch.ID1.astype(int)) + list(branch.ID2.astype(int))
-        nodes = list(dict.fromkeys(nodes))
-
-        for n in nodes:
-            geo_df.loc[geo_df['ID'] == n, 'Weight'] = 0.0001
 
         col, col_cost, col_length, col_points = \
-            Steinerman.steiner(geo_df, gdf_clusters_pop, line_bc, resolution)
+            Steinerman.steiner(geo_df, gdf_clusters_pop, line_bc, resolution,
+                               branch_points)
 
         col = collateral_sizing(geo_df_clustered, col, pop_load)
 

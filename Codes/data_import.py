@@ -12,14 +12,12 @@ project_life = 25'''
 
 def import_pv_data(lat, long, project_life):
 
-
     token = '556d9ea27f35f2e26ac9ce1552a3f702e35a8596  '
     api_base = 'https://www.renewables.ninja/api/'
 
     s = requests.session()
     # Send token header with each request
     s.headers = {'Authorization': 'Token ' + token}
-
 
     data = []
 
@@ -62,15 +60,13 @@ def import_pv_data(lat, long, project_life):
     df_final = pd.concat(data)
 
     print(df_final)
-    #pv_ref = pd.read_csv('pv.csv')
+    # pv_ref = pd.read_csv('pv.csv')
     df_final.to_csv('pv.csv')
 
     print("Solar Data imported")
 
 
 def import_wind_data(lat, long, project_life):
-
-
 
     token = '40ef709a6becd58c69de1f09cb2d5b61ceb6686e '
     api_base = 'https://www.renewables.ninja/api/'
@@ -118,13 +114,10 @@ def import_wind_data(lat, long, project_life):
 
     df_final = pd.concat(data)
 
-
     print(df_final)
     df_final.to_csv('wind.csv')
 
     print("Wind Data imported")
 
-#import_pv_data(lat, long, project_life)
-#import_wind_data(lat, long, project_life)
-
-
+# import_pv_data(lat, long, project_life)
+# import_wind_data(lat, long, project_life)
