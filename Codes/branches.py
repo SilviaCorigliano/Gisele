@@ -6,12 +6,12 @@ from Codes import dijkstra, Steinerman
 
 
 def routing(geo_df_clustered, geo_df, clusters_list, resolution,
-            pop_thresh, pop_thresh_lr, input_sub, line_bc, limit_hv, limit_mv,
-            pop_load):
+            pop_thresh, input_sub, line_bc, limit_hv, limit_mv,
+            pop_load, input_csv_lr, pop_thresh_lr, line_bc_col, full_ele='no'):
     s()
     print("4. Main Branch and Collateral's")
     s()
-    line_bc_col = line_bc / 3
+
     grid_resume = pd.DataFrame(index=clusters_list.Cluster,
                                columns=['Branch Length',
                                         'Branch Cost',
@@ -20,17 +20,14 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
                                         'Connection Type', 'Link Length',
                                         'Link Cost'])
     grid_resume = clusters_list.join(grid_resume)
-    # grid_resume['Cluster'] = clusters_list['Cluster']
-    # grid_resume['Cluster Load'] = clusters_list['Load']
 
     #  IMPORTING THE LOWER RESOLUTION GRID
     os.chdir(r'Input//')
-    zoom = pd.read_csv('Cavalcante-Brazil-32723-4000.csv')
-    geometry = [Point(xy) for xy in zip(zoom['X'], zoom['Y'])]
-    gdf_zoomed = gpd.GeoDataFrame(zoom, geometry=geometry, crs=geo_df.crs)
+    csv_lr = pd.read_csv(input_csv_lr + '.csv')
+    geometry = [Point(xy) for xy in zip(csv_lr['X'], csv_lr['Y'])]
+    gdf_zoomed = gpd.GeoDataFrame(csv_lr, geometry=geometry, crs=geo_df.crs)
 
     #  IMPORTING SUBSTATIONS
-
     substations = pd.read_csv(input_sub + '.csv')
     geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
     substations = gpd.GeoDataFrame(substations, geometry=geometry,
@@ -47,8 +44,9 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
                                              line_bc_col, limit_hv, limit_mv,
                                              grid_resume, pop_load)
 
-    links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
-          grid_resume)
+    if full_ele == 'yes':
+        links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
+              grid_resume)
 
     return grid_resume
 
@@ -217,8 +215,6 @@ def links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
     l()
     print('Connecting all the people outside the clustered area..')
     l()
-
-    # all_collateral.reset_index(inplace=True, drop=True)
 
     gdf_clusters_out = geo_df_clustered[geo_df_clustered['Cluster'] == -1]
     gdf_clusters_out = gdf_clusters_out[gdf_clusters_out['Population'] >= 1]

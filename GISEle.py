@@ -124,16 +124,16 @@ elif step == 4:
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
         pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
-        clusters_list, = initialization.import_csv_file(step)
+        clusters_list, input_csv_lr, pop_thresh_lr, line_bc_col, full_ele = \
+        initialization.import_csv_file(step)
 
     geo_df, pop_points = initialization. \
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
 
-    pop_thresh_lr = 30
     grid_resume = branches.routing(geo_df_clustered, geo_df, clusters_list,
-                                   resolution, pop_thresh, pop_thresh_lr,
-                                   input_sub, line_bc, limit_hv, limit_mv,
-                                   pop_load)
+                                   resolution, pop_thresh, input_sub, line_bc,
+                                   limit_hv, limit_mv, pop_load, input_csv_lr,
+                                   pop_thresh_lr, line_bc_col, full_ele)
 
     grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
                                               line_bc, limit_hv, limit_mv,
