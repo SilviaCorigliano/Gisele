@@ -4,13 +4,12 @@ Created on Mon Feb 25 16:17:44 2019
 
 @author: Silvia
 """
-
-#steiner tree functions
 from itertools import combinations, chain
 from networkx.utils import pairwise, not_implemented_for
 import networkx as nx
 
 __all__ = ['metric_closure', 'steiner_tree']
+
 
 def metric_closure(G, weight='weight'):
     """  Return the metric closure of a graph.

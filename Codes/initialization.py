@@ -27,7 +27,7 @@ def import_csv_file(step):
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
             pop_thresh, line_bc, limit_hv, limit_mv
-    elif step == 2 or step == 3:
+    elif step > 1:
         os.chdir(r'..//')
         os.chdir(r'Output//Datasets')
         df_weighted = pd.read_csv(input_csv + '_weighted.csv')
@@ -40,7 +40,7 @@ def import_csv_file(step):
         df_weighted.drop_duplicates(['ID'], keep='last', inplace=True)
         print("Input files successfully imported.")
         os.chdir(r'..//..')
-        if step == 3:
+        if step > 2:
             l()
             print("Importing Clusters..")
             os.chdir(r'Output//Clusters')
@@ -61,9 +61,20 @@ def import_csv_file(step):
             print("Clusters successfully imported")
             l()
             os.chdir(r'..//..')
+            if step == 4:
+                input_csv_lr = config[10, 1]
+                pop_thresh_lr = float(config[11, 1])
+                line_bc_col = float(config[12, 1])
+                full_ele = config[13, 1]
+                return df_weighted, input_sub, input_csv, crs, resolution, \
+                    unit, pop_load, pop_thresh, line_bc, limit_hv, \
+                    limit_mv, geo_df_clustered, clusters_list, \
+                    input_csv_lr, pop_thresh_lr, line_bc_col, full_ele
+
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
                 pop_load, pop_thresh, line_bc, limit_hv, limit_mv, \
                 geo_df_clustered, clusters_list
+
         return df_weighted, input_sub, input_csv, crs, resolution, unit, \
             pop_load, pop_thresh, line_bc, limit_hv, limit_mv
 
