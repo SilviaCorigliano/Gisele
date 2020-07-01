@@ -32,6 +32,8 @@ def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
             exam = pd.DataFrame(index=grid_resume.index,
                                 columns=['Distance', 'Cost'], dtype=int)
             if grid_resume.loc[i, 'Connection Cost'] == 0:
+                print('No better connection for Cluster ' + str(
+                    i) + '. Keeping the substation connection ')
                 check.loc[i, 'Check'] = True
                 continue
             for j in grid_resume.Cluster:
@@ -84,7 +86,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
                     best_connection = connection
 
             if optimized:
-                best_connection.to_file('NewConnection_' + str(i) + '.shp')
+                best_connection.to_file('Connection_' + str(i) + '.shp')
                 grid_resume.loc[
                     i, 'Connection Length'] = min(exam.Distance) / 1000
                 grid_resume.loc[i, 'Connection Cost'] = min(exam.Cost) / 1000

@@ -47,13 +47,17 @@ if step == 1:
     '-------------------------------------------------------------------------'
     "3.Grid creation"
 
-    grid_resume = grid.routing(geo_df_clustered, geo_df, clusters_list,
-                               resolution, pop_thresh, input_sub, line_bc,
-                               limit_hv, limit_mv)
+    grid_resume, substations = grid.routing(geo_df_clustered, geo_df,
+                                            clusters_list, resolution,
+                                            pop_thresh, input_sub, line_bc,
+                                            limit_hv, limit_mv)
 
-    grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
-                                              line_bc, limit_hv, limit_mv,
-                                              step)
+    grid_resume_opt = optimization.connections(geo_df, grid_resume, resolution,
+                                               line_bc, limit_hv, limit_mv,
+                                               step)
+
+    results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
+                  substations)
     '-------------------------------------------------------------------------'
     "5.Microgrid sizing"
 
@@ -89,14 +93,17 @@ elif step == 2:
         clustering.analysis(pop_points, geo_df, pop_load)
     '-------------------------------------------------------------------------'
     "3.Grid creation"
-    grid_resume = grid.routing(geo_df_clustered, geo_df, clusters_list,
-                               resolution, pop_thresh, input_sub, line_bc,
-                               limit_hv, limit_mv)
+    grid_resume, substations = grid.routing(geo_df_clustered, geo_df,
+                                            clusters_list, resolution,
+                                            pop_thresh, input_sub, line_bc,
+                                            limit_hv, limit_mv)
 
-    grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
-                                              line_bc, limit_hv, limit_mv,
-                                              step)
-    results.graph()
+    grid_resume_opt = optimization.connections(geo_df, grid_resume, resolution,
+                                               line_bc, limit_hv, limit_mv,
+                                               step)
+
+    results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
+                  substations)
 elif step == 3:
     '-------------------------------------------------------------------------'
     "1. Importing and Creating the GeoDataFrame"
@@ -111,15 +118,17 @@ elif step == 3:
     '-------------------------------------------------------------------------'
     "3. Grid creation"
 
-    grid_resume = grid.routing(geo_df_clustered, geo_df, clusters_list,
-                               resolution, pop_thresh, input_sub, line_bc,
-                               limit_hv, limit_mv)
+    grid_resume, substations = grid.routing(geo_df_clustered, geo_df,
+                                            clusters_list, resolution,
+                                            pop_thresh, input_sub, line_bc,
+                                            limit_hv, limit_mv)
 
-    grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
-                                              line_bc, limit_hv, limit_mv,
-                                              step)
+    grid_resume_opt = optimization.connections(geo_df, grid_resume, resolution,
+                                               line_bc, limit_hv, limit_mv,
+                                               step)
 
-
+    results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
+                  substations)
 elif step == 4:
 
     '-------------------------------------------------------------------------'

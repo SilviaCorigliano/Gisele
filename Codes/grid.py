@@ -64,7 +64,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
                 pd.concat([total_grid, c_grid], sort=True))
 
             if not connection.empty:
-                connection.to_file('connection_' + str(cluster_n) + '.shp')
+                connection.to_file('Connection_' + str(cluster_n) + '.shp')
                 total_connection = gpd.GeoDataFrame(pd.concat(
                     [total_connection, connection], sort=True))
 
@@ -88,7 +88,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     total_grid.crs = total_connection.crs = geo_df.crs
     total_grid.to_file('all_cluster_grids')
     total_connection.to_file('all_connections')
-    return grid_resume
+    return grid_resume, substations
 
 
 def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
