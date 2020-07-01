@@ -57,7 +57,7 @@ def spider(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
 
             # line_box = create_box(pd.concat([point_1, point_2], sort=True),
             #                       gdf_cluster_pop)
-            # segment, segment_cost, segment_length = \
+            # segment, segment_cost, segment_length, seg_points = \
             #     Steinerman.steiner(geo_df, line_box, line_bc, resolution)
 
             short_lines = pd.concat([short_lines, segment], sort=True)
