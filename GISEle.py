@@ -3,12 +3,13 @@ GIS For Electrification (GISEle)
 Developed by the Energy Department of Politecnico di Milano
 Running Code
 
-In order to run the following algorithm please check if the Input file is
+In order to run the following algorithm please check if the Input files are
 configured accordingly, for more information check the README.
 """
 
 import supporting_GISEle2
-from Codes import initialization, clustering, grid, branches, optimization
+from Codes import initialization, clustering, grid, branches, optimization, \
+    results
 
 "Introduction"
 supporting_GISEle2.l()
@@ -23,7 +24,7 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
 print("\n".join(steps))
 supporting_GISEle2.s()
 # step = int(input('Which step do you want to select?: '))
-step = 5
+step = 3
 if step == 1:
     '-------------------------------------------------------------------------'
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
@@ -95,7 +96,7 @@ elif step == 2:
     grid_optimized = optimization.connections(geo_df, grid_resume, resolution,
                                               line_bc, limit_hv, limit_mv,
                                               step)
-
+    results.graph()
 elif step == 3:
     '-------------------------------------------------------------------------'
     "1. Importing and Creating the GeoDataFrame"
