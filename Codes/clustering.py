@@ -111,11 +111,11 @@ def analysis(pop_points, geo_df, pop_load):
     print('Choose the final combination of NEIGHBOURHOOD and MINIMUM POINTS')
     l()
     # eps = float(input("Chosen NEIGHBOURHOOD: "))
-    eps = 1500
-    # eps = 3100
-    # pts = 20
+    # eps = 1500
+    eps = 3100
+    pts = 20
     s()
-    pts = 500
+    # pts = 500
     # pts = int(input("Chosen MINIMUM POINTS: "))
     s()
     db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean').fit(

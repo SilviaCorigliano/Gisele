@@ -1,5 +1,5 @@
 import os
-
+import pandas as pd
 from matplotlib.pyplot import plot
 import geopandas as gpd
 import plotly.graph_objs as go
@@ -7,12 +7,13 @@ from plotly.offline import plot
 
 
 def graph(df, clusters_list, step, grid_resume_opt, substations):
-    print('Plotting results.....')
-    # os.chdir(r'Output//Clusters')
+    print('Plotting results..')
 
-    os.chdir(r'Output//Grids')
     if step == 4:
         os.chdir(r'Output//Main Branch')
+    else:
+        os.chdir(r'Output//Grids')
+
     substations = substations.to_crs(epsg=4326)
     df = df.to_crs(epsg=4326)
     clusters = df[df['Cluster'] != -1]
@@ -36,9 +37,9 @@ def graph(df, clusters_list, step, grid_resume_opt, substations):
                                    lon=clusters.geometry.x,
                                    mode='markers',
                                    marker=go.scattermapbox.Marker(
-                                       size=8,
+                                       size=10,
                                        color=clusters.Cluster,
-                                       opacity=0.9
+                                       opacity=0.8
                                    ),
                                    text=clusters.Cluster,
                                    hoverinfo='text',
@@ -52,7 +53,7 @@ def graph(df, clusters_list, step, grid_resume_opt, substations):
                                    marker=go.scattermapbox.Marker(
                                        size=12,
                                        color='black',
-                                       opacity=1,
+                                       opacity=0.8,
                                    ),
                                    text=substations.Type,
                                    hoverinfo='text',
@@ -60,105 +61,60 @@ def graph(df, clusters_list, step, grid_resume_opt, substations):
                                    ))
 
     for cluster_n in clusters_list.Cluster:
-        grid = gpd.read_file('Grid_' + str(cluster_n) + '.shp')
-        grid = grid.to_crs(epsg=4326)
-        grid_nodes = list(zip(grid.ID1.astype(int), grid.ID2.astype(int)))
 
-        for i in grid_nodes:
-            fig.add_trace(go.Scattermapbox(
-                lat=[df[df['ID'] == i[0]].geometry.y.values[0],
-                     df[df['ID'] == i[1]].geometry.y.values[0]],
-                lon=[df[df['ID'] == i[0]].geometry.x.values[0],
-                     df[df['ID'] == i[1]].geometry.x.values[0]],
-                mode='lines',
-                marker=go.scattermapbox.Marker(
-                    size=5,
-                    color='rgb(0, 0, 0)',
-                    opacity=0.9
-                ),
-                text='Grid ' + str(cluster_n),
-                hoverinfo='text',
-                below="''",
-                legendgroup='Grid ' + str(cluster_n),
-                showlegend=False
-            ))
+        if step == 4:
+            line_break('Branch_', cluster_n, fig, 'red')
+            if grid_resume_opt.loc[cluster_n, 'Branch Length'] != 0:
+                line_break('Collateral_', cluster_n, fig, 'black')
 
-        fig.add_trace(go.Scattermapbox(name='Grid ' + str(cluster_n),
-                                       lat=[df[df['ID'] == i[
-                                           0]].geometry.y.values[0], df[
-                                                df['ID'] == i[
-                                                    1]].geometry.y.values[0]],
-                                       lon=[df[df['ID'] == i[
-                                           0]].geometry.x.values[0], df[
-                                                df['ID'] == i[
-                                                    1]].geometry.x.values[0]],
-                                       mode='lines',
-                                       marker=go.scattermapbox.Marker(
-                                           size=5,
-                                           color='rgb(0, 0, 0)',
-                                           opacity=0.9
-                                       ),
-                                       text='Grid ' + str(cluster_n),
-                                       hoverinfo='text',
-                                       below="''",
-                                       legendgroup='Grid_' + str(cluster_n),
-                                       ))
+        else:
+            line_break('Grid_', cluster_n, fig, 'black')
 
         if grid_resume_opt.loc[cluster_n, 'Connection Length'] == 0:
             continue
-
-        connection = gpd.read_file('Connection_' + str(cluster_n) + '.shp')
-        connection = connection.to_crs(epsg=4326)
-        connection_nodes = list(
-            zip(connection.ID1.astype(int), connection.ID2.astype(int)))
-
-        for i in connection_nodes:
-            fig.add_trace(go.Scattermapbox(
-                lat=[df[df['ID'] == i[0]].geometry.y.values[0],
-                     df[df['ID'] == i[1]].geometry.y.values[0]],
-                lon=[df[df['ID'] == i[0]].geometry.x.values[0],
-                     df[df['ID'] == i[1]].geometry.x.values[0]],
-                mode='lines',
-                marker=go.scattermapbox.Marker(
-                    size=5,
-                    color='blue',
-                    opacity=0.9
-                ),
-                text='Connection ' + str(cluster_n),
-                hoverinfo='text',
-                below="''",
-                legendgroup='Connection ' + str(cluster_n),
-                showlegend=False
-            ))
-
-        fig.add_trace(go.Scattermapbox(name='Connection ' + str(cluster_n),
-                                       lat=[df[df['ID'] == i[
-                                           0]].geometry.y.values[0], df[
-                                                df['ID'] == i[
-                                                    1]].geometry.y.values[0]],
-                                       lon=[df[df['ID'] == i[
-                                           0]].geometry.x.values[0], df[
-                                                df['ID'] == i[
-                                                    1]].geometry.x.values[0]],
-                                       mode='lines',
-                                       marker=go.scattermapbox.Marker(
-                                           size=5,
-                                           color='blue',
-                                           opacity=0.9
-                                       ),
-                                       text='Connection ' + str(cluster_n),
-                                       hoverinfo='text',
-                                       below="''",
-                                       legendgroup='Connection '
-                                                   + str(cluster_n),
-                                       ))
+        line_break('Connection_', cluster_n, fig, 'blue')
 
     fig.update_layout(mapbox_style="carto-positron",
                       mapbox_zoom=8.5)
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
-                      mapbox_center={"lat": -17.19, "lon": 36.45})
+                      mapbox_center={"lat": df.geometry.y[0],
+                                     "lon": df.geometry.x[0]})
     fig.update_layout(clickmode='event+select')
     fig.update_layout(showlegend=True)
+
     plot(fig)
+    print('Results successfully plotted')
+
+    return
+
+
+def line_break(file, cluster_n, fig, color):
+
+    lines = gpd.read_file(file + str(cluster_n) + '.shp')
+    lines = lines.to_crs(epsg=4326)
+    coordinates = pd.DataFrame(columns=['x', 'y'], dtype='int64')
+    count = 0
+    for i in lines.iterrows():
+        coordinates.loc[count, 'x'] = i[1].geometry.xy[0][0]
+        coordinates.loc[count, 'y'] = i[1].geometry.xy[1][0]
+        count += 1
+        coordinates.loc[count, 'x'] = i[1].geometry.xy[0][1]
+        coordinates.loc[count, 'y'] = i[1].geometry.xy[1][1]
+        coordinates = coordinates.append(pd.Series(), ignore_index=True)
+        count += 2
+
+    fig.add_trace(go.Scattermapbox(name=file + str(cluster_n),
+                                   lat=list(coordinates.y),
+                                   lon=list(coordinates.x),
+                                   mode='lines',
+                                   marker=go.scattermapbox.Marker(
+                                       size=5,
+                                       color=color,
+                                       opacity=1
+                                   ),
+                                   text=file + str(cluster_n),
+                                   hoverinfo='text',
+                                   below="''"
+                                   ))
 
     return
