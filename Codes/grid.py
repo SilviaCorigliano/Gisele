@@ -27,7 +27,6 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     os.chdir(r'Output//Grids')
 
     for cluster_n in clusters_list.Cluster:
-
         gdf_cluster = geo_df_clustered[
             geo_df_clustered['Cluster'] == cluster_n]
         gdf_cluster_pop = gdf_cluster[
@@ -44,7 +43,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
 
             c_grid, c_grid_cost, c_grid_length, c_grid_points = \
                 cluster_grid(geo_df, gdf_cluster_pop, resolution,
-                             line_bc, n_terminal_nodes)
+                             line_bc, n_terminal_nodes, gdf_cluster)
             print("Cluster grid created")
 
             print('Assigning to the nearest substation.. ')
@@ -65,7 +64,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
                 pd.concat([total_grid, c_grid], sort=True))
 
             if not connection.empty:
-                connection.to_file('connection_' + str(cluster_n) + '.shp')
+                connection.to_file('Connection_' + str(cluster_n) + '.shp')
                 total_connection = gpd.GeoDataFrame(pd.concat(
                     [total_connection, connection], sort=True))
 
@@ -89,7 +88,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     total_grid.crs = total_connection.crs = geo_df.crs
     total_grid.to_file('all_cluster_grids')
     total_connection.to_file('all_connections')
-    return grid_resume
+    return grid_resume, substations
 
 
 def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
@@ -132,14 +131,14 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
 
 
 def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
-                 n_terminal_nodes):
+                 n_terminal_nodes, gdf_cluster):
 
     c_grid = gdf_cluster_pop
     c_grid_cost = 0
     c_grid_length = 0
     c_grid_points = []
 
-    if n_terminal_nodes < resolution/5:
+    if n_terminal_nodes < resolution/5 and gdf_cluster.length.size < 1500:
 
         c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
             spider(geo_df, gdf_cluster_pop, line_bc, resolution)
@@ -161,7 +160,7 @@ def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
             c_grid_cost = c_grid_cost2
             c_grid_points = c_grid_points2
 
-    elif n_terminal_nodes >= resolution/5:
+    elif n_terminal_nodes >= resolution/5 and gdf_cluster.length.size < 1500:
         print("Too many points to use Steiner, running Spider.")
         c_grid, c_grid_cost, c_grid_length, c_grid_points = Spiderman. \
             spider(geo_df, gdf_cluster_pop, line_bc, resolution)

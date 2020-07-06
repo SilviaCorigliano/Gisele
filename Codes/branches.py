@@ -48,7 +48,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
         links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
               grid_resume)
 
-    return grid_resume
+    return grid_resume, substations
 
 
 def main_branch(gdf_zoomed, geo_df_clustered, clusters_list, resolution,

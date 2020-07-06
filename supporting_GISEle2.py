@@ -155,8 +155,10 @@ def load(clusters_list):
     input_profile = pd.read_csv('Load Profile.csv')
     for column in load_profile:
         load_profile.loc[:, column] = \
-            (input_profile * clusters_list.loc[column, 'Load']).values
+            (input_profile.loc[:, 'Hourly Factor']
+             * clusters_list.loc[column, 'Load']).values
 
+    print("Load profile created")
     return load_profile
 
 

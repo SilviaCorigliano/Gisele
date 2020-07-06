@@ -8,9 +8,9 @@ from Codes import dijkstra
 def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
                 step):
     if step == 4:
-        name = 'Branch_'
+        file = 'Branch_'
     else:
-        name = 'Grid_'
+        file = 'Grid_'
 
     total_connections_opt = pd.DataFrame()
     check = pd.DataFrame(index=grid_resume.Cluster, columns=['Check'])
@@ -22,7 +22,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
     while not check.all().values:
         for i in grid_resume.Cluster:
             optimized = False
-            grid_i = gpd.read_file(name + str(i) + ".shp")
+            grid_i = gpd.read_file(file + str(i) + ".shp")
             c_grid_points_i = list(zip(grid_i.ID1.astype(int),
                                        grid_i.ID2.astype(int)))
             grid_i = line_to_points(grid_i, geo_df)
@@ -32,6 +32,8 @@ def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
             exam = pd.DataFrame(index=grid_resume.index,
                                 columns=['Distance', 'Cost'], dtype=int)
             if grid_resume.loc[i, 'Connection Cost'] == 0:
+                print('No better connection for Cluster ' + str(
+                    i) + '. Keeping the substation connection ')
                 check.loc[i, 'Check'] = True
                 continue
             for j in grid_resume.Cluster:
@@ -41,7 +43,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
                     exam.Cost[j] = 99999999
                     continue
 
-                grid_j = gpd.read_file(name + str(j) + ".shp")
+                grid_j = gpd.read_file(file + str(j) + ".shp")
                 c_grid_points = c_grid_points_i
                 c_grid_points.append(list(zip(grid_j.ID1.astype(int),
                                               grid_j.ID2.astype(int))))
@@ -84,7 +86,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
                     best_connection = connection
 
             if optimized:
-                best_connection.to_file('NewConnection_' + str(i) + '.shp')
+                best_connection.to_file('Connection_' + str(i) + '.shp')
                 grid_resume.loc[
                     i, 'Connection Length'] = min(exam.Distance) / 1000
                 grid_resume.loc[i, 'Connection Cost'] = min(exam.Cost) / 1000
