@@ -84,6 +84,7 @@ def graph(df, clusters_list, step, grid_resume_opt, substations):
 
     plot(fig)
     print('Results successfully plotted')
+    os.chdir(r'..//..')
 
     return
 

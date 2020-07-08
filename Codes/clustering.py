@@ -18,7 +18,7 @@ def sensitivity(pop_points, geo_df):
         "First, provide a RANGE for these parameters and also the number of "
         "SPANS between the range values.")
 
-    check = "n"
+    check = "y"
     while check == "y":
         s()
         eps = input("Provide the limits for the NEIGHBOURHOOD parameter \n"
@@ -94,12 +94,12 @@ def sensitivity(pop_points, geo_df):
         check = str(input("Would you like to run another sensitivity "
                           "analysis with a more precise interval? (y/n): "))
         s()
-    # os.chdir(r'Output//Clusters//Sensitivity')
-    # tab_cluster.to_csv("n_clusters.csv")
-    # tab_people.to_csv("%_peop.csv")
-    # tab_area.to_csv("%_area.csv")
-    # tab_people_area.to_csv("people_area.csv")
-    # os.chdir(r'..//..//..')
+    os.chdir(r'Output//Clusters//Sensitivity')
+    tab_cluster.to_csv("n_clusters.csv")
+    tab_people.to_csv("%_peop.csv")
+    tab_area.to_csv("%_area.csv")
+    tab_people_area.to_csv("people_area.csv")
+    os.chdir(r'..//..//..')
     print("Clustering sensitivity process completed.\n"
           "You can check the tables in the Output folder.")
     l()
@@ -110,13 +110,13 @@ def sensitivity(pop_points, geo_df):
 def analysis(pop_points, geo_df, pop_load):
     print('Choose the final combination of NEIGHBOURHOOD and MINIMUM POINTS')
     l()
-    # eps = float(input("Chosen NEIGHBOURHOOD: "))
+    eps = float(input("Chosen NEIGHBOURHOOD: "))
     # eps = 1500
-    eps = 3100
-    pts = 20
+    # eps = 3100
+    # pts = 20
     s()
     # pts = 500
-    # pts = int(input("Chosen MINIMUM POINTS: "))
+    pts = int(input("Chosen MINIMUM POINTS: "))
     s()
     db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean').fit(
         pop_points, sample_weight=geo_df['Population'])

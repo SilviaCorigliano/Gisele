@@ -1,5 +1,6 @@
 import os
 import sys
+import requests
 import pandas as pd
 import geopandas as gpd
 import numpy as np
@@ -89,7 +90,7 @@ def weight_matrix(gdf, dist_3d_matrix, line_bc):
 def line_to_points(line, df):
     nodes = list(line.ID1.astype(int)) + list(line.ID2.astype(int))
     nodes = list(dict.fromkeys(nodes))
-    nodes_in_df = gpd.GeoDataFrame(crs=df.crs)
+    nodes_in_df = gpd.GeoDataFrame(crs=df.crs, geometry=[])
     for i in nodes:
         nodes_in_df = nodes_in_df.append(df[df['ID'] == i], sort=False)
     nodes_in_df.reset_index(drop=True, inplace=True)
@@ -168,6 +169,39 @@ def sizing(load_profile, clusters_list):
     mg_npc = pd.DataFrame(clusters_list)
 
     return mg_energy, mg_npc
+
+
+def download_url(url, out_path, chunk_size=128):
+    """
+    Download zip file from specified url and save it into a defined folder
+    Note: check chunk_size parameter
+    """
+    r = requests.get(url, stream=True)
+    with open(out_path, 'wb') as fd:
+        for chunk in r.iter_content(chunk_size=chunk_size):
+            fd.write(chunk)
+
+
+def download_tif(area, crs, scale, image, out_path):
+    """
+    Download data from Earth Engine
+    :param area: GeoDataFrame with the polygon of interest area
+    :param crs: str with crs of the project
+    :param scale: int with pixel size in meters
+    :param image: image from the wanted database in Earth Image
+    :param out_path: str with output path
+    :return:
+    """
+    min_x, min_y, max_x, max_y = area.geometry.total_bounds
+    path = image.getDownloadUrl({
+        'scale': scale,
+        'crs': 'EPSG:' + str(crs),
+        'region': [[min_x, min_y], [min_x, max_y], [max_x, min_y],
+                   [max_x, max_y]]
+    })
+    print(path)
+    download_url(path, out_path)
+    return
 
 
 def final_results(clusters_list, total_energy, grid_resume, mg_npc):
