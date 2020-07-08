@@ -33,7 +33,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     substations = gpd.GeoDataFrame(substations, geometry=geometry,
                                    crs=geo_df.crs)
     os.chdir(r'..')
-    os.chdir(r'Output//Main Branch')
+    os.chdir(r'Output//Branches')
 
     grid_resume = main_branch(gdf_zoomed, geo_df_clustered, clusters_list,
                               resolution, pop_thresh_lr, line_bc, grid_resume)
