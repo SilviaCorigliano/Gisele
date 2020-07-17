@@ -105,14 +105,14 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
         nearest_id=substations.apply(nearest, df=geo_df, src_column='ID',
                                      axis=1))
 
-    sub_in_df = gpd.GeoDataFrame(crs=geo_df.crs)
+    sub_in_df = gpd.GeoDataFrame(crs=geo_df.crs, geometry=[])
 
     for i, row in substations.iterrows():
         sub_in_df = sub_in_df.append(
             geo_df[geo_df['ID'] == row['nearest_id']], sort=False)
     sub_in_df.reset_index(drop=True, inplace=True)
 
-    grid_points = gpd.GeoDataFrame(crs=geo_df.crs)
+    grid_points = gpd.GeoDataFrame(crs=geo_df.crs, geometry=[])
     for i in np.unique(c_grid_points):
         grid_points = grid_points.append(
             geo_df[geo_df['ID'] == i], sort=False)
@@ -160,7 +160,7 @@ def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
             c_grid_cost = c_grid_cost2
             c_grid_points = c_grid_points2
 
-    elif n_terminal_nodes >= resolution/5 and gdf_cluster.length.size < 1500:
+    else:
         print("Too many points to use Steiner, running Spider.")
         c_grid, c_grid_cost, c_grid_length, c_grid_points = Spiderman. \
             spider(geo_df, gdf_cluster_pop, line_bc, resolution)

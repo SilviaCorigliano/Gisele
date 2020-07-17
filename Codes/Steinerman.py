@@ -36,7 +36,7 @@ def steiner(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
     graph = nx.from_scipy_sparse_matrix(edges_matrix_sparse)
 
     # taking all cluster points inside the box (terminal nodes)
-    gdf_cluster_in_box = gpd.GeoDataFrame(crs=geo_df.crs)
+    gdf_cluster_in_box = gpd.GeoDataFrame(crs=geo_df.crs, geometry=[])
     for i in gdf_cluster_pop.ID:
         point = df_box.loc[df_box['ID'] == i]
         gdf_cluster_in_box = pd.concat([gdf_cluster_in_box, point], sort=True)

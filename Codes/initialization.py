@@ -3,25 +3,34 @@ import math
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
-from fiona.crs import from_epsg
 from supporting_GISEle2 import l, s
+from Codes import collecting, processing
 
 
 def import_csv_file(step):
     print("Importing parameters and input files..")
     os.chdir(r'Input//')
     config = pd.read_csv('Configuration.csv').values
-    input_csv = config[0, 1]
-    input_sub = config[1, 1]
-    crs = config[2, 1]
-    resolution = float(config[3, 1])
-    unit = config[4, 1]
-    pop_load = float(config[5, 1])
-    pop_thresh = float(config[6, 1])
-    line_bc = float(config[7, 1])
-    limit_hv = float(config[8, 1])
-    limit_mv = float(config[9, 1])
+    data_import = config[0, 1]
+    input_csv = config[1, 1]
+    input_sub = config[2, 1]
+    crs = int(config[3, 1])
+    resolution = float(config[4, 1])
+    unit = config[5, 1]
+    pop_load = float(config[6, 1])
+    pop_thresh = float(config[7, 1])
+    line_bc = float(config[8, 1])
+    limit_hv = float(config[9, 1])
+    limit_mv = float(config[10, 1])
+
     if step == 1:
+        if data_import == 'yes':
+            os.chdir('..')
+            study_area = collecting.data_gathering(crs)
+            df = processing.create_mesh(study_area, crs, resolution)
+            return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
+                pop_thresh, line_bc, limit_hv, limit_mv
+
         df = pd.read_csv(input_csv + '.csv', sep=',')
         print("Input files successfully imported.")
         os.chdir(r'..//')
@@ -62,10 +71,10 @@ def import_csv_file(step):
             l()
             os.chdir(r'..//..')
             if step == 4:
-                input_csv_lr = config[10, 1]
-                pop_thresh_lr = float(config[11, 1])
-                line_bc_col = float(config[12, 1])
-                full_ele = config[13, 1]
+                input_csv_lr = config[11, 1]
+                pop_thresh_lr = float(config[12, 1])
+                line_bc_col = float(config[13, 1])
+                full_ele = config[14, 1]
                 return df_weighted, input_sub, input_csv, crs, resolution, \
                     unit, pop_load, pop_thresh, line_bc, limit_hv, \
                     limit_mv, geo_df_clustered, clusters_list, \
@@ -97,9 +106,14 @@ def weighting(df):
         # Slope conditions
         df_weighted.loc[index, 'Weight'] = row.Weight + math.exp(
             0.01732867951 * row.Slope)
-        # Land cover
-        df_weighted.loc[index, 'Weight'] += landcover_csv.WeightGLC[
-            landcover_csv.iloc[:, 0] == row.Land_cover].values[0]
+        # Land cover using the column Other or GLC to compute the weight
+        option = 'GLC'  # user choice for the land cover data weighting
+        if option == 'GLC':
+            df_weighted.loc[index, 'Weight'] += landcover_csv.WeightGLC[
+                landcover_csv.iloc[:, 0] == row.Land_cover].values[0]
+        if option == 'other':
+            df_weighted.loc[index, 'Weight'] += landcover_csv.WeightOther[
+                landcover_csv.iloc[:, 2] == row.Land_cover].values[0]
         # Road distance conditions
         if row.Road_dist < 100:
             df_weighted.loc[index, 'Weight'] = 1
@@ -108,11 +122,6 @@ def weighting(df):
         else:
             df_weighted.loc[index, 'Weight'] += 5
 
-    df_weighted.drop_duplicates(['ID'], keep='last', inplace=True)
-    df_weighted = df_weighted.drop(
-        ['Slope', 'Land_cover', 'River_flow', 'NAME', 'Road_dist'],
-        axis=1)
-    # another cleaning
     valid_fields = ['ID', 'X', 'Y', 'Population', 'Elevation', 'Weight']
     blacklist = []
     for x in df_weighted.columns:
@@ -129,7 +138,7 @@ def creating_geodataframe(df_weighted, crs, unit, input_csv, step):
     print("Creating the GeoDataFrame..")
     geometry = [Point(xy) for xy in zip(df_weighted['X'], df_weighted['Y'])]
     geo_df = gpd.GeoDataFrame(df_weighted, geometry=geometry,
-                              crs=from_epsg(crs))
+                              crs=int(crs))
 
     # - Check crs conformity for the clustering procedure
     if unit == '0':
