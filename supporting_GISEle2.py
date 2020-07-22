@@ -5,6 +5,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import shapely.ops
+import iso8601
 from scipy.spatial import distance_matrix
 from scipy.spatial.distance import cdist
 from shapely.geometry import Point, box, LineString
@@ -181,9 +182,9 @@ def shift_timezone(df, shift):
         df = pd.concat([add_hours, df], ignore_index=True)
         df.drop(df.tail(shift).index, inplace=True)
     elif shift < 0:
-        remove_hours = df.head(shift)
+        remove_hours = df.head(abs(shift))
         df = pd.concat([df, remove_hours], ignore_index=True)
-        df.drop(df.head(shift).index, inplace=True)
+        df.drop(df.head(abs(shift)).index, inplace=True)
     return df
 
 
@@ -206,7 +207,12 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         tilt_angle = abs(all_angles.loc[abs(all_angles['lat'] - lat).idxmin(),
                                         'opt_tilt'])
         pv_prod = import_pv_data(lat, lon, tilt_angle)
-        time_shift = pv_prod.local_time[0].hour
+        utc = pv_prod.local_time[0]
+        if type(utc) is pd.Timestamp:
+            time_shift = utc
+        else:
+            utc = iso8601.parse_date(utc)
+            time_shift = int(utc.tzinfo.tzname(utc).split(':')[0])
         pv_avg = pv_prod.groupby([pv_prod.index.month,
                                   pv_prod.index.hour]).mean()
         pv_avg = pv_avg.append([pv_avg] * (years - 1), ignore_index=True)
