@@ -8,6 +8,8 @@ import shapely.ops
 from scipy.spatial import distance_matrix
 from scipy.spatial.distance import cdist
 from shapely.geometry import Point, box, LineString
+from Codes.michele.Michele_run import start
+from Codes.data_import import import_pv_data, import_wind_data
 
 
 # sys.path.insert(0, 'Codes')  # necessary for native GISEle Packages
@@ -151,24 +153,87 @@ def load(clusters_list):
 
     os.chdir(r'Input//')
     print("Creating load profile for each cluster..")
-    load_profile = pd.DataFrame(index=range(0, 24),
-                                columns=clusters_list.Cluster)
+    daily_profile = pd.DataFrame(index=range(1, 25),
+                                 columns=clusters_list.Cluster)
     input_profile = pd.read_csv('Load Profile.csv')
-    for column in load_profile:
-        load_profile.loc[:, column] = \
+    for column in daily_profile:
+        daily_profile.loc[:, column] = \
             (input_profile.loc[:, 'Hourly Factor']
              * clusters_list.loc[column, 'Load']).values
 
+    load_profile = daily_profile.append([daily_profile]*11, ignore_index=True)
+    years = int(input('How many years are being evaluated?: '))
+    demand_growth = float(input('What is the yearly demand growth [0-1]? '))
+
+    for i in range(years - 1):
+        load_profile = load_profile.\
+            append([daily_profile.multiply(1 + demand_growth)]*12,
+                   ignore_index=True)
+    os.chdir('..')
     print("Load profile created")
-    return load_profile
+    return load_profile, years
 
 
-def sizing(load_profile, clusters_list):
+def shift_timezone(df, shift):
 
-    mg_energy = pd.DataFrame(load_profile)
-    mg_npc = pd.DataFrame(clusters_list)
+    if shift > 0:
+        add_hours = df.tail(shift)
+        df = pd.concat([add_hours, df], ignore_index=True)
+        df.drop(df.tail(shift).index, inplace=True)
+    elif shift < 0:
+        remove_hours = df.head(shift)
+        df = pd.concat([df, remove_hours], ignore_index=True)
+        df.drop(df.head(shift).index, inplace=True)
+    return df
 
-    return mg_energy, mg_npc
+
+def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
+    geo_df_clustered = geo_df_clustered.to_crs(4326)
+    mg = pd.DataFrame(index=clusters_list.index,
+                      columns=['PV', 'Wind', 'Diesel', 'BESS', 'Inverter',
+                               'Investment Cost', 'OM Cost', 'Replace Cost'])
+    for cluster_n in clusters_list.Cluster:
+
+        l()
+        print('Creating the optimal Microgrid for Cluster ' + str(cluster_n))
+        l()
+        load_profile_cluster = load_profile.loc[:, cluster_n]
+        lat = geo_df_clustered[geo_df_clustered['Cluster']
+                               == cluster_n].geometry.y.values[0]
+        lon = geo_df_clustered[geo_df_clustered['Cluster']
+                               == cluster_n].geometry.x.values[0]
+
+        pv_prod = import_pv_data(lat, lon)
+        time_shift = pv_prod.local_time[0].hour
+        pv_avg = pv_prod.groupby([pv_prod.index.month,
+                                  pv_prod.index.hour]).mean()
+        pv_avg = pv_avg.append([pv_avg] * (years - 1), ignore_index=True)
+        pv_avg.reset_index(drop=True, inplace=True)
+        pv_avg = shift_timezone(pv_avg, time_shift)
+
+        wt_prod = import_wind_data(lat, lon, wt)
+        wt_avg = wt_prod.groupby([wt_prod.index.month,
+                                  wt_prod.index.hour]).mean()
+        wt_avg = wt_avg.append([wt_avg] * (years - 1), ignore_index=True)
+        wt_avg.reset_index(drop=True, inplace=True)
+        wt_avg = shift_timezone(wt_avg, time_shift)
+
+        inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
+            rep_cost, om_cost, salvage_value = start(load_profile_cluster,
+                                                     pv_avg, wt_avg)
+
+        mg.loc[cluster_n, 'PV'] = inst_pv
+        mg.loc[cluster_n, 'Wind'] = inst_wind
+        mg.loc[cluster_n, 'Diesel'] = inst_dg
+        mg.loc[cluster_n, 'BESS'] = inst_bess
+        mg.loc[cluster_n, 'Inverter'] = inst_inv
+        mg.loc[cluster_n, 'Investment Cost'] = init_cost
+        mg.loc[cluster_n, 'OM Cost'] = om_cost
+        mg.loc[cluster_n, 'Replace Cost'] = rep_cost
+        print(mg)
+    mg.to_csv('Output/Microgrid.csv', index_label='Cluster')
+    print(mg)
+    return mg
 
 
 def download_url(url, out_path, chunk_size=128):

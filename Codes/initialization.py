@@ -22,6 +22,7 @@ def import_csv_file(step):
     line_bc = float(config[8, 1])
     limit_hv = float(config[9, 1])
     limit_mv = float(config[10, 1])
+    wt = config[15, 1]
 
     if step == 1:
         if data_import == 'yes':
@@ -29,13 +30,13 @@ def import_csv_file(step):
             study_area = collecting.data_gathering(crs)
             df = processing.create_mesh(study_area, crs, resolution)
             return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-                pop_thresh, line_bc, limit_hv, limit_mv
+                pop_thresh, line_bc, limit_hv, limit_mv, wt
 
         df = pd.read_csv(input_csv + '.csv', sep=',')
         print("Input files successfully imported.")
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-            pop_thresh, line_bc, limit_hv, limit_mv
+            pop_thresh, line_bc, limit_hv, limit_mv, wt
     elif step > 1:
         os.chdir(r'..//')
         os.chdir(r'Output//Datasets')
@@ -78,14 +79,14 @@ def import_csv_file(step):
                 return df_weighted, input_sub, input_csv, crs, resolution, \
                     unit, pop_load, pop_thresh, line_bc, limit_hv, \
                     limit_mv, geo_df_clustered, clusters_list, \
-                    input_csv_lr, pop_thresh_lr, line_bc_col, full_ele
+                    input_csv_lr, pop_thresh_lr, line_bc_col, full_ele, wt
 
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
                 pop_load, pop_thresh, line_bc, limit_hv, limit_mv, \
-                geo_df_clustered, clusters_list
+                geo_df_clustered, clusters_list, wt
 
         return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-            pop_load, pop_thresh, line_bc, limit_hv, limit_mv
+            pop_load, pop_thresh, line_bc, limit_hv, limit_mv, wt
 
 
 def weighting(df):

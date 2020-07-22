@@ -23,14 +23,14 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
          '6.Final results']
 print("\n".join(steps))
 supporting_GISEle2.s()
-step = int(input('Which step do you want to select?: '))
-# step = 1
+# step = int(input('Which step do you want to select?: '))
+step = 5
 if step == 1:
     '-------------------------------------------------------------------------'
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
 
     df, input_sub, input_csv, crs, resolution, unit, pop_load, pop_thresh, \
-        line_bc, limit_hv, limit_mv = initialization.import_csv_file(step)
+        line_bc, limit_hv, limit_mv, wt = initialization.import_csv_file(step)
 
     df_weighted = initialization.weighting(df)
 
@@ -59,16 +59,14 @@ if step == 1:
     results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
                   substations)
     '-------------------------------------------------------------------------'
-    "5.Microgrid sizing"
+    "4.Microgrid sizing"
+    load_profile, years = supporting_GISEle2.load(clusters_list)
 
-    load_profile = supporting_GISEle2.load(clusters_list)
-
-    # total_energy, mg_NPC = supporting_GISEle2.sizing(loads_list,
-    #                                                  clusters_list,
-    #                                                  houses_list, house_ref)
+    mg = supporting_GISEle2.sizing(load_profile, clusters_list,
+                                   geo_df_clustered, wt, years)
 
     '-------------------------------------------------------------------------'
-    "6.Final results"
+    "5.Final results"
 
     # final_LCOEs = supporting_GISEle2.final_results(clusters_list,
     #                                                total_energy,
@@ -79,7 +77,7 @@ elif step == 2:
     "1. Importing and Creating the GeoDataFrame"
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
-        pop_thresh, line_bc, limit_hv, limit_mv = \
+        pop_thresh, line_bc, limit_hv, limit_mv, wt = \
         initialization.import_csv_file(step)
 
     geo_df, pop_points = initialization. \
@@ -104,13 +102,22 @@ elif step == 2:
 
     results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
                   substations)
+
+    '-------------------------------------------------------------------------'
+    "4.Microgrid sizing"
+    load_profile, years = supporting_GISEle2.load(clusters_list)
+
+    mg = supporting_GISEle2.sizing(load_profile, clusters_list,
+                                   geo_df_clustered, wt, years)
+
+
 elif step == 3:
     '-------------------------------------------------------------------------'
     "1. Importing and Creating the GeoDataFrame"
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
         pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
-        clusters_list, = initialization.import_csv_file(step)
+        clusters_list, wt = initialization.import_csv_file(step)
 
     geo_df, pop_points = initialization. \
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
@@ -129,6 +136,12 @@ elif step == 3:
 
     results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
                   substations)
+    '-------------------------------------------------------------------------'
+    "5.Microgrid sizing"
+    load_profile, years = supporting_GISEle2.load(clusters_list)
+
+    mg = supporting_GISEle2.sizing(load_profile, clusters_list,
+                                   geo_df_clustered, wt, years)
 elif step == 4:
 
     '-------------------------------------------------------------------------'
@@ -136,8 +149,8 @@ elif step == 4:
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
         pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
-        clusters_list, input_csv_lr, pop_thresh_lr, line_bc_col, full_ele = \
-        initialization.import_csv_file(step)
+        clusters_list, input_csv_lr, pop_thresh_lr, line_bc_col, \
+        full_ele, wt = initialization.import_csv_file(step)
 
     geo_df, pop_points = initialization. \
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
@@ -157,20 +170,27 @@ elif step == 4:
 
     results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
                   substations)
+
+    '-------------------------------------------------------------------------'
+    "5.Microgrid sizing"
+    load_profile, years = supporting_GISEle2.load(clusters_list)
+
+    mg = supporting_GISEle2.sizing(load_profile, clusters_list,
+                                   geo_df_clustered, wt, years)
+
 elif step == 5:
     '-------------------------------------------------------------------------'
     "1. Importing and Creating the GeoDataFrame"
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
         pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
-        clusters_list, = initialization.import_csv_file(step)
+        clusters_list, wt = initialization.import_csv_file(step)
 
     '-------------------------------------------------------------------------'
     "5.Microgrid sizing"
-    load_profile = supporting_GISEle2.load(clusters_list)
+    load_profile, years = supporting_GISEle2.load(clusters_list)
 
-    # total_energy, mg_NPC = supporting_GISEle2.sizing(loads_list,
-    #                                                  clusters_list,
-    #                                                  houses_list, house_ref)
+    mg = supporting_GISEle2.sizing(load_profile, clusters_list,
+                                   geo_df_clustered, wt, years)
 
     '-------------------------------------------------------------------------'
     "6.Final results"
