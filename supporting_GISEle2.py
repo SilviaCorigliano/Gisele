@@ -202,8 +202,10 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
                                == cluster_n].geometry.y.values[0]
         lon = geo_df_clustered[geo_df_clustered['Cluster']
                                == cluster_n].geometry.x.values[0]
-
-        pv_prod = import_pv_data(lat, lon)
+        all_angles = pd.read_csv('Input/TiltAngles.csv')
+        tilt_angle = abs(all_angles.loc[abs(all_angles['lat'] - lat).idxmin(),
+                                        'opt_tilt'])
+        pv_prod = import_pv_data(lat, lon, tilt_angle)
         time_shift = pv_prod.local_time[0].hour
         pv_avg = pv_prod.groupby([pv_prod.index.month,
                                   pv_prod.index.hour]).mean()
