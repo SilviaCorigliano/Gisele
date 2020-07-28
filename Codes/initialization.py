@@ -10,7 +10,7 @@ from Codes import collecting, processing
 def import_csv_file(step):
     print("Importing parameters and input files..")
     os.chdir(r'Input//')
-    config = pd.read_csv('Configuration3.csv').values
+    config = pd.read_csv('Configuration.csv').values
     data_import = config[0, 1]
     input_csv = config[1, 1]
     input_sub = config[2, 1]

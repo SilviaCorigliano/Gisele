@@ -151,7 +151,8 @@ def load(clusters_list):
     l()
     print("5. Microgrid Sizing")
     l()
-
+    data_michele = pd.read_table("Codes/michele/Inputs/data.dat", sep="=",
+                                 header=None)
     os.chdir(r'Input//')
     print("Creating load profile for each cluster..")
     daily_profile = pd.DataFrame(index=range(1, 25),
@@ -161,18 +162,21 @@ def load(clusters_list):
         daily_profile.loc[:, column] = \
             (input_profile.loc[:, 'Hourly Factor']
              * clusters_list.loc[column, 'Load']).values
-
+    total_energy = daily_profile.append([daily_profile] * 364,
+                                        ignore_index=True)
     load_profile = daily_profile.append([daily_profile]*11, ignore_index=True)
-    years = int(input('How many years are being evaluated?: '))
-    demand_growth = float(input('What is the yearly demand growth [0-1]? '))
-
+    years = int(data_michele.loc[1, 1].split(';')[0])
+    demand_growth = float(data_michele.loc[87, 1].split(';')[0])
+    daily_profile_new = daily_profile
     for i in range(years - 1):
-        load_profile = load_profile.\
-            append([daily_profile.multiply(1 + demand_growth)]*12,
-                   ignore_index=True)
+        daily_profile_new = daily_profile_new.multiply(1 + demand_growth)
+        load_profile = load_profile.append([daily_profile_new]*12,
+                                           ignore_index=True)
+        total_energy = total_energy.append([daily_profile_new]*365,
+                                           ignore_index=True)
     os.chdir('..')
     print("Load profile created")
-    return load_profile, years
+    return load_profile, years, total_energy
 
 
 def shift_timezone(df, shift):
@@ -192,7 +196,9 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
     geo_df_clustered = geo_df_clustered.to_crs(4326)
     mg = pd.DataFrame(index=clusters_list.index,
                       columns=['PV', 'Wind', 'Diesel', 'BESS', 'Inverter',
-                               'Investment Cost', 'OM Cost', 'Replace Cost'])
+                               'Investment Cost', 'OM Cost', 'Replace Cost',
+                               'Total Cost', 'Energy Produced',
+                               'Energy Consumed'])
     for cluster_n in clusters_list.Cluster:
 
         l()
@@ -209,7 +215,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         pv_prod = import_pv_data(lat, lon, tilt_angle)
         utc = pv_prod.local_time[0]
         if type(utc) is pd.Timestamp:
-            time_shift = utc
+            time_shift = utc.hour
         else:
             utc = iso8601.parse_date(utc)
             time_shift = int(utc.tzinfo.tzname(utc).split(':')[0])
@@ -227,8 +233,8 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         wt_avg = shift_timezone(wt_avg, time_shift)
 
         inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
-            rep_cost, om_cost, salvage_value = start(load_profile_cluster,
-                                                     pv_avg, wt_avg)
+            rep_cost, om_cost, salvage_value, gen_energy, load_energy = \
+            start(load_profile_cluster, pv_avg, wt_avg)
 
         mg.loc[cluster_n, 'PV'] = inst_pv
         mg.loc[cluster_n, 'Wind'] = inst_wind
@@ -238,8 +244,11 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'Investment Cost'] = init_cost
         mg.loc[cluster_n, 'OM Cost'] = om_cost
         mg.loc[cluster_n, 'Replace Cost'] = rep_cost
+        mg.loc[cluster_n, 'Total Cost'] = rep_cost + om_cost + init_cost
+        mg.loc[cluster_n, 'Energy Produced'] = gen_energy
+        mg.loc[cluster_n, 'Energy Consumed'] = load_energy
         print(mg)
-    mg.to_csv('Output/Microgrid.csv', index_label='Cluster')
+    mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
     print(mg)
     return mg
 

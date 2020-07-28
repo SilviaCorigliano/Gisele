@@ -138,10 +138,19 @@ elif step == 3:
                   substations)
     '-------------------------------------------------------------------------'
     "5.Microgrid sizing"
-    load_profile, years = supporting_GISEle2.load(clusters_list)
+    load_profile, years, total_energy = supporting_GISEle2.load(clusters_list)
 
     mg = supporting_GISEle2.sizing(load_profile, clusters_list,
                                    geo_df_clustered, wt, years)
+
+    '-------------------------------------------------------------------------'
+    "6.Final results"
+
+    final_LCOEs = supporting_GISEle2.final_results(clusters_list,
+                                                   total_energy,
+                                                   grid_resume, mg)
+
+
 elif step == 4:
 
     '-------------------------------------------------------------------------'
@@ -187,7 +196,7 @@ elif step == 5:
 
     '-------------------------------------------------------------------------'
     "5.Microgrid sizing"
-    load_profile, years = supporting_GISEle2.load(clusters_list)
+    load_profile, years, total_energy = supporting_GISEle2.load(clusters_list)
 
     mg = supporting_GISEle2.sizing(load_profile, clusters_list,
                                    geo_df_clustered, wt, years)
@@ -197,4 +206,4 @@ elif step == 5:
 
     # final_LCOEs = supporting_GISEle2.final_results(clusters_list,
     #                                                total_energy,
-    #                                                grid_resume, mg_NPC)
+    #                                                grid_resume, mg)
