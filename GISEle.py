@@ -68,7 +68,7 @@ if step == 1:
     '-------------------------------------------------------------------------'
     "5.Final results"
 
-    # final_LCOEs = supporting_GISEle2.final_results(clusters_list,
+    # final_LCOEs = supporting_GISEle2.lcoe_analysis(clusters_list,
     #                                                total_energy,
     #                                                grid_resume, mg_NPC)
 
@@ -146,7 +146,7 @@ elif step == 3:
     '-------------------------------------------------------------------------'
     "6.Final results"
 
-    final_LCOEs = supporting_GISEle2.final_results(clusters_list,
+    final_LCOEs = supporting_GISEle2.lcoe_analysis(clusters_list,
                                                    total_energy,
                                                    grid_resume, mg)
 
@@ -192,7 +192,7 @@ elif step == 5:
     "1. Importing and Creating the GeoDataFrame"
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
         pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
-        clusters_list, wt = initialization.import_csv_file(step)
+        clusters_list, wt, grid_resume = initialization.import_csv_file(step)
 
     '-------------------------------------------------------------------------'
     "5.Microgrid sizing"
@@ -204,6 +204,6 @@ elif step == 5:
     '-------------------------------------------------------------------------'
     "6.Final results"
 
-    # final_LCOEs = supporting_GISEle2.final_results(clusters_list,
-    #                                                total_energy,
-    #                                                grid_resume, mg)
+    final_LCOEs = supporting_GISEle2.lcoe_analysis(clusters_list,
+                                                   total_energy,
+                                                   grid_resume, mg)

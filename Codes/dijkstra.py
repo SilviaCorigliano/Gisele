@@ -28,7 +28,7 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation,
 
     if np.any(dist_2d_matrix):
 
-        edges_matrix = weight_matrix(df_box, dist_3d_matrix, line_bc)
+        edges_matrix = cost_matrix(df_box, dist_3d_matrix, line_bc)
         length_limit = resolution * 1.5
         edges_matrix[dist_2d_matrix > math.ceil(length_limit)] = 0
 

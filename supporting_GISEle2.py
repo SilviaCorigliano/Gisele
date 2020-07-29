@@ -1,5 +1,12 @@
+"""
+GIS For Electrification (GISEle)
+Developed by the Energy Department of Politecnico di Milano
+Supporting Code
+
+Group of supporting functions used inside all the process of GISEle algorithm
+"""
+
 import os
-import sys
 import requests
 import pandas as pd
 import geopandas as gpd
@@ -13,30 +20,25 @@ from Codes.michele.Michele_run import start
 from Codes.data_import import import_pv_data, import_wind_data
 
 
-# sys.path.insert(0, 'Codes')  # necessary for native GISEle Packages
-# native GISEle Packages
-
-
-def block_print():
-    sys.stdout = open(os.devnull, 'w')
-
-
-def enable_print():
-    sys.stdout = sys.__stdout__
-
-
-# function for long separating lines
 def l():
+    """Print long separating lines."""
     print('-' * 100)
 
 
-# function for short separating lines
 def s():
+    """Print short separating lines."""
     print("-" * 40)
 
 
 def nearest(row, df, src_column=None):
-    """Find the nearest point and return the value from specified column."""
+    """
+    Find the nearest point and return the value from specified column.
+    :param row: Iterative row of the first dataframe
+    :param df: Second dataframe to be found the nearest value
+    :param src_column: Column of the second dataframe that will be returned
+    :return value: Value of the desired src_column of the second dataframe
+    """
+
     # Find the geometry that is closest
     nearest_p = df['geometry'] == shapely.ops.nearest_points(row['geometry'],
                                                              df.unary_union)[1]
@@ -46,7 +48,14 @@ def nearest(row, df, src_column=None):
 
 
 def distance_2d(df1, df2, x, y):
-    """Find the 2D distance matrix between two datasets of points."""
+    """
+    Find the 2D distance matrix between two datasets of points.
+    :param df1: first point dataframe
+    :param df2: second point dataframe
+    :param x: column representing the x coordinates (longitude)
+    :param y: column representing the y coordinates (latitude)
+    :return value: 2D Distance matrix between df1 and df2
+    """
 
     d1_coordinates = {'x': df1[x], 'y': df1[y]}
     df1_loc = pd.DataFrame(data=d1_coordinates)
@@ -61,7 +70,14 @@ def distance_2d(df1, df2, x, y):
 
 
 def distance_3d(df1, df2, x, y, z):
-    """Find the 3D euclidean distance matrix between two datasets of points."""
+    """
+    Find the 3D euclidean distance matrix between two datasets of points.
+    :param df1: first point dataframe
+    :param df2: second point dataframe
+    :param x: column representing the x coordinates (longitude)
+    :param y: column representing the y coordinates (latitude)
+    :return value: 3D Distance matrix between df1 and df2
+    """
 
     d1_coordinates = {'x': df1[x], 'y': df1[y], 'z': df1[z]}
     df1_loc = pd.DataFrame(data=d1_coordinates)
@@ -76,7 +92,15 @@ def distance_3d(df1, df2, x, y, z):
     return value
 
 
-def weight_matrix(gdf, dist_3d_matrix, line_bc):
+def cost_matrix(gdf, dist_3d_matrix, line_bc):
+    """
+    Creates the cost matrix in €/km by finding the average weight between
+    two points and then multiplying by the distance and the line base cost.
+    :param gdf: Geodataframe being analyzed
+    :param dist_3d_matrix: 3D distance matrix of all points
+    :param line_bc: line base cost for line deployment in €/km
+    :return value: Cost matrix of all the points present in the gdf
+    """
     # Altitude distance in meters
     weight = gdf['Weight'].values
     n = gdf['X'].size
@@ -91,6 +115,13 @@ def weight_matrix(gdf, dist_3d_matrix, line_bc):
 
 
 def line_to_points(line, df):
+    """
+    Finds all the points of a linestring geodataframe correspondent to a
+    point geodataframe.
+    :param line: Linestring geodataframe being analyzed
+    :param df: Point geodataframe where the linestring nodes will be referenced
+    :return nodes_in_df: Point geodataframe containing all nodes of linestring
+    """
     nodes = list(line.ID1.astype(int)) + list(line.ID2.astype(int))
     nodes = list(dict.fromkeys(nodes))
     nodes_in_df = gpd.GeoDataFrame(crs=df.crs, geometry=[])
@@ -102,6 +133,12 @@ def line_to_points(line, df):
 
 
 def create_box(limits, df):
+    """
+    Creates a delimiting box around a geodataframe.
+    :param limits: Linestring geodataframe being analyzed
+    :param df: Point geodataframe to be delimited
+    :return df_box: All points of df that are inside the delimited box
+    """
     x_min = min(limits.X)
     x_max = max(limits.X)
     y_min = min(limits.Y)
@@ -124,6 +161,15 @@ def create_box(limits, df):
 
 
 def edges_to_line(path, df, edges_matrix):
+    """
+    Transforms a list of NetworkX graph edges into a linestring geodataframe
+    based on a input point geodataframe
+    :param path: NetworkX graph edges sequence
+    :param df: Point geodataframe to be used as reference
+    :param edges_matrix: Matrix containing the cost to connect a pair of points
+    :return line: Linestring geodataframe containing point IDs and its cost
+    :return line_points: All points of df that are part of the linestring
+    """
     steps = len(path)
     line = gpd.GeoDataFrame(index=range(0, steps),
                             columns=['ID1', 'ID2', 'Cost', 'geometry'],
@@ -148,6 +194,18 @@ def edges_to_line(path, df, edges_matrix):
 
 
 def load(clusters_list):
+    """
+    Reads the input daily load profile from the input csv. Reads the number of
+    years of the project and the demand growth from the data.dat file of
+    Micehele. Then it multiplies the load profile by the Clusters' peak load
+    and append values to create yearly profile composed of 12 representative
+    days.
+    Cluster and then
+    :param clusters_list: NetworkX graph edges sequence
+    :return load_profile: Cluster load profile for the whole period
+    :return years: Number of years to consider in the microgrid sizing
+    :return total_energy: Total energy consumed in the whole period
+    """
     l()
     print("5. Microgrid Sizing")
     l()
@@ -162,17 +220,22 @@ def load(clusters_list):
         daily_profile.loc[:, column] = \
             (input_profile.loc[:, 'Hourly Factor']
              * clusters_list.loc[column, 'Load']).values
+
     total_energy = daily_profile.append([daily_profile] * 364,
                                         ignore_index=True)
-    load_profile = daily_profile.append([daily_profile]*11, ignore_index=True)
+    #  append 11 times since we are using 12 representative days in a year
+    load_profile = daily_profile.append([daily_profile] * 11,
+                                        ignore_index=True)
     years = int(data_michele.loc[1, 1].split(';')[0])
     demand_growth = float(data_michele.loc[87, 1].split(';')[0])
     daily_profile_new = daily_profile
-    for i in range(years - 1):
+    #  appending for all the years considering demand growth
+    for i in range((years - 1) * 4):
         daily_profile_new = daily_profile_new.multiply(1 + demand_growth)
-        load_profile = load_profile.append([daily_profile_new]*12,
-                                           ignore_index=True)
-        total_energy = total_energy.append([daily_profile_new]*365,
+        if i < (years - 1):
+            load_profile = load_profile.append([daily_profile_new] * 12,
+                                               ignore_index=True)
+        total_energy = total_energy.append([daily_profile_new] * 365,
                                            ignore_index=True)
     os.chdir('..')
     print("Load profile created")
@@ -180,7 +243,13 @@ def load(clusters_list):
 
 
 def shift_timezone(df, shift):
-
+    """
+    Move the values of a dataframe with DateTimeIndex to another UTC zone,
+    adding or removing hours.
+    :param df: Dataframe to be analyzed
+    :param shift: Amount of hours to be shifted
+    :return df: Input dataframe with values shifted in time
+    """
     if shift > 0:
         add_hours = df.tail(shift)
         df = pd.concat([add_hours, df], ignore_index=True)
@@ -193,12 +262,23 @@ def shift_timezone(df, shift):
 
 
 def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
+    """
+    Imports the solar and wind production from the RenewablesNinja api and then
+    Runs the optimization algorithm MicHEle to find the best microgrid
+    configuration for each Cluster.
+    :param load_profile: Load profile of all clusters during all years
+    :param clusters_list: List of clusters ID numbers
+    :param geo_df_clustered: Point geodataframe with Cluster identification
+    :param wt: Wind turbine model used for computing the wind velocity
+    :param years: Number of years the microgrid will operate (project lifetime)
+    :return mg: Dataframe containing the information of the Clusters' microgrid
+    """
     geo_df_clustered = geo_df_clustered.to_crs(4326)
     mg = pd.DataFrame(index=clusters_list.index,
                       columns=['PV', 'Wind', 'Diesel', 'BESS', 'Inverter',
                                'Investment Cost', 'OM Cost', 'Replace Cost',
                                'Total Cost', 'Energy Produced',
-                               'Energy Consumed'])
+                               'Energy Consumed', 'LCOE'])
     for cluster_n in clusters_list.Cluster:
 
         l()
@@ -233,7 +313,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         wt_avg = shift_timezone(wt_avg, time_shift)
 
         inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
-            rep_cost, om_cost, salvage_value, gen_energy, load_energy = \
+        rep_cost, om_cost, salvage_value, gen_energy, load_energy = \
             start(load_profile_cluster, pv_avg, wt_avg)
 
         mg.loc[cluster_n, 'PV'] = inst_pv
@@ -247,6 +327,8 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'Total Cost'] = rep_cost + om_cost + init_cost
         mg.loc[cluster_n, 'Energy Produced'] = gen_energy
         mg.loc[cluster_n, 'Energy Consumed'] = load_energy
+        mg.loc[cluster_n, 'LCOE'] = (
+                                                rep_cost + om_cost + init_cost) / gen_energy
         print(mg)
     mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
     print(mg)
@@ -286,45 +368,33 @@ def download_tif(area, crs, scale, image, out_path):
     return
 
 
-def final_results(clusters_list, total_energy, grid_resume, mg_npc):
+def lcoe_analysis(clusters_list, total_energy, grid_resume, mg):
 
-    os.chdir(r'..//..')
-
-    final_lcoe = pd.DataFrame(index=clusters_list,
-                              columns=['GRID_NPC [$]', 'MG_NPC [$]',
+    final_lcoe = pd.DataFrame(index=clusters_list.Cluster,
+                              columns=['Grid NPC [€]', 'MG NPC [€]',
                                        'Total Energy Consumption [kWh]',
-                                       'MG_LCOE [$/kWh]', 'GRID_LCOE [$/kWh]',
-                                       'Suggested Solution'])
+                                       'MG LCOE [€/kWh]', 'Grid LCOE [€/kWh]',
+                                       'Best Solution'])
 
-    print(total_energy)
-    s()
-    print(grid_resume)
-    s()
-    print(mg_npc)
-    s()
-
-    for i in clusters_list:
+    for i in clusters_list.Cluster:
         print(i)
         final_lcoe.at[i, 'Total Energy Consumption [kWh]'] = \
-            total_energy.loc[i, 'Total Energy Consumption [kWh]']
-        final_lcoe.at[i, 'GRID_NPC [$]'] = \
-            grid_resume.loc[i, 'Grid_Cost'] \
-            + grid_resume.loc[i, 'Connection_Cost']
+            total_energy.loc[:, i].sum().round(2)
+        final_lcoe.at[i, 'Grid NPC [€]'] = \
+            (grid_resume.loc[i, 'Grid Cost'] +
+             grid_resume.loc[i, 'Connection Cost']) * 1000
 
-        final_lcoe.at[i, 'MG_NPC [$]'] = mg_npc.loc[i, 'Total Cost [$]']
+        final_lcoe.at[i, 'MG NPC [€]'] = mg.loc[i, 'Total Cost'] * 1000
 
-        mg_lcoe = final_lcoe.loc[i, 'MG_NPC [$]'] / final_lcoe.loc[
-            i, 'Total Energy Consumption [kWh]']
+        final_lcoe.at[i, 'MG LCOE [€/kWh]'] = mg.loc[i, 'LCOE']
 
-        final_lcoe.at[i, 'MG_LCOE [$/kWh]'] = mg_lcoe
-
-        grid_lcoe = final_lcoe.loc[i, 'GRID_NPC [$]'] / final_lcoe.loc[
+        grid_lcoe = final_lcoe.loc[i, 'Grid NPC [€]'] / final_lcoe.loc[
             i, 'Total Energy Consumption [kWh]'] + 0.1428
 
-        final_lcoe.at[i, 'GRID_LCOE [$/kWh]'] = grid_lcoe
+        final_lcoe.at[i, 'Grid LCOE [€/kWh]'] = grid_lcoe
 
-        if mg_lcoe > grid_lcoe:
-            ratio = grid_lcoe / mg_lcoe
+        if mg.loc[i, 'LCOE'] > grid_lcoe:
+            ratio = grid_lcoe / mg.loc[i, 'LCOE']
             if ratio < 0.9:
                 proposal = 'GRID'
             else:
@@ -333,7 +403,7 @@ def final_results(clusters_list, total_energy, grid_resume, mg_npc):
                            'investigation is suggested'
 
         else:
-            ratio = mg_lcoe / grid_lcoe
+            ratio = mg.loc[i, 'LCOE'] / grid_lcoe
             if ratio < 0.9:
                 proposal = 'OFF-GRID'
             else:
@@ -345,9 +415,7 @@ def final_results(clusters_list, total_energy, grid_resume, mg_npc):
 
     l()
     print(final_lcoe)
-    l()
 
-    os.chdir(r'Output//Final_results')
-    final_lcoe.to_csv('final_LCOE.csv')
+    final_lcoe.to_csv('LCOE_Analysis.csv')
 
     return final_lcoe

@@ -18,7 +18,7 @@ def spider(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
     gdf_cluster_pop.index = pd.Series(range(0, len(gdf_cluster_pop['ID'])))
     dist_3d_matrix = distance_3d(gdf_cluster_pop, gdf_cluster_pop, 'X', 'Y',
                                  'Elevation')
-    edges_matrix = weight_matrix(gdf_cluster_pop, dist_3d_matrix, line_bc)
+    edges_matrix = cost_matrix(gdf_cluster_pop, dist_3d_matrix, line_bc)
 
     for i in branch_points:
         if i[0] in edges_matrix.index.values and \

@@ -1,3 +1,12 @@
+"""
+GIS For Electrification (GISEle)
+Developed by the Energy Department of Politecnico di Milano
+Initialization Code
+
+Code for importing input GIS files, perform the weighting strategy and creating
+the initial Point geodataframe.
+"""
+
 import os
 import math
 import pandas as pd
@@ -8,6 +17,13 @@ from Codes import collecting, processing
 
 
 def import_csv_file(step):
+    """
+    Imports all the parameters and information given by the user in the
+    Configuration.csv file. If starting from further steps than the first,
+    it reads and returns the output of previous steps.
+    :param step: From which part of GISEle the user is starting
+    :return: All parameters contained in the Configuration.csv
+    """
     print("Importing parameters and input files..")
     os.chdir(r'Input//')
     config = pd.read_csv('Configuration.csv').values
@@ -80,16 +96,23 @@ def import_csv_file(step):
                     unit, pop_load, pop_thresh, line_bc, limit_hv, \
                     limit_mv, geo_df_clustered, clusters_list, \
                     input_csv_lr, pop_thresh_lr, line_bc_col, full_ele, wt
-
-            return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-                pop_load, pop_thresh, line_bc, limit_hv, limit_mv, \
-                geo_df_clustered, clusters_list, wt
+            elif step == 5:
+                grid_resume = pd.read_csv('Output/Grids/grid_resume.csv')
+                return df_weighted, input_sub, input_csv, crs, resolution, \
+                    unit, pop_load, pop_thresh, line_bc, limit_hv, limit_mv, \
+                    geo_df_clustered, clusters_list, wt, grid_resume
 
         return df_weighted, input_sub, input_csv, crs, resolution, unit, \
             pop_load, pop_thresh, line_bc, limit_hv, limit_mv, wt
 
 
 def weighting(df):
+    """
+    Assign weights to all points of a dataframe according to the terrain
+    characteristics and the distance to the nearest road.
+    :param df: From which part of GISEle the user is starting
+    :return df_weighted: Point dataframe with weight attributes assigned
+    """
     df_weighted = df.dropna(subset=['Elevation'])
     df_weighted.reset_index(drop=True)
     df_weighted.Slope.fillna(value=0, inplace=True)
@@ -136,6 +159,17 @@ def weighting(df):
 
 
 def creating_geodataframe(df_weighted, crs, unit, input_csv, step):
+    """
+    Based on the input weighted dataframe, creates a geodataframe assigning to
+    it the Coordinate Reference System and a Point geometry
+    :param df_weighted: Input Point dataframe with weight attributes assigned
+    :param crs: Coordinate Reference System of the electrification project
+    :param unit: Type of CRS unit used if degree or meters
+    :param input_csv: Name of the input file for exporting the geodataframe
+    :param step: From which part of GISEle the user is starting
+    :return geo_df: Point geodataframe with weight, crs and geometry defined
+    :return pop_points: Dataframe containing only the coordinates of the points
+    """
     print("Creating the GeoDataFrame..")
     geometry = [Point(xy) for xy in zip(df_weighted['X'], df_weighted['Y'])]
     geo_df = gpd.GeoDataFrame(df_weighted, geometry=geometry,

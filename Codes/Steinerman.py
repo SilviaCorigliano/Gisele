@@ -22,7 +22,7 @@ def steiner(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
     dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
     dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
 
-    edges_matrix = weight_matrix(df_box, dist_3d_matrix, line_bc)
+    edges_matrix = cost_matrix(df_box, dist_3d_matrix, line_bc)
     length_limit = resolution * 1.5
     edges_matrix[dist_2d_matrix > math.ceil(length_limit)] = 0
 
@@ -95,7 +95,7 @@ def steiner(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
 #     Distmatrix = distance_matrix(df.values, df.values)
 #     Distmatrix[Distmatrix > 1.2 * diag_length] = 0
 #     # create weigth matrix with the function of Gisele
-#     Weight_matrix = weight_matrix(geo_df, Distmatrix)
+#     Weight_matrix = cost_matrix(geo_df, Distmatrix)
 #     Weight_matrix = np.array(Weight_matrix,
 #                              dtype=float)  # otherwise not working, creating an object
 #     Weight_matrix_sparse = sparse.csr_matrix(Weight_matrix)
