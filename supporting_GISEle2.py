@@ -204,7 +204,7 @@ def load(clusters_list):
     :param clusters_list: NetworkX graph edges sequence
     :return load_profile: Cluster load profile for the whole period
     :return years: Number of years to consider in the microgrid sizing
-    :return total_energy: Total energy consumed in the whole period
+    :return grid_energy: Total energy consumed in the whole period
     """
     l()
     print("5. Microgrid Sizing")
@@ -220,12 +220,13 @@ def load(clusters_list):
         daily_profile.loc[:, column] = \
             (input_profile.loc[:, 'Hourly Factor']
              * clusters_list.loc[column, 'Load']).values
-
-    total_energy = daily_profile.append([daily_profile] * 364,
+    rep_days = int(data_michele.loc[0, 1].split(';')[0])
+    grid_energy = daily_profile.append([daily_profile] * 364,
                                         ignore_index=True)
     #  append 11 times since we are using 12 representative days in a year
-    load_profile = daily_profile.append([daily_profile] * 11,
+    load_profile = daily_profile.append([daily_profile] * (rep_days - 1),
                                         ignore_index=True)
+
     years = int(data_michele.loc[1, 1].split(';')[0])
     demand_growth = float(data_michele.loc[87, 1].split(';')[0])
     daily_profile_new = daily_profile
@@ -233,12 +234,18 @@ def load(clusters_list):
     for i in range((years - 1) * 4):
         daily_profile_new = daily_profile_new.multiply(1 + demand_growth)
         if i < (years - 1):
-            load_profile = load_profile.append([daily_profile_new] * 12,
+            load_profile = load_profile.append([daily_profile_new] * rep_days,
                                                ignore_index=True)
-        total_energy = total_energy.append([daily_profile_new] * 365,
+        grid_energy = grid_energy.append([daily_profile_new] * 365,
                                            ignore_index=True)
+    total_energy = pd.DataFrame(index=clusters_list.Cluster,
+                                    columns=['Energy'])
+    for cluster in clusters_list.Cluster:
+        total_energy.loc[cluster, 'Energy'] = \
+            grid_energy.loc[:, cluster].sum().round(2)
     os.chdir('..')
     print("Load profile created")
+    total_energy.to_csv(r'Output/Microgrids/Grid_energy.csv')
     return load_profile, years, total_energy
 
 
@@ -371,51 +378,46 @@ def download_tif(area, crs, scale, image, out_path):
 def lcoe_analysis(clusters_list, total_energy, grid_resume, mg):
 
     final_lcoe = pd.DataFrame(index=clusters_list.Cluster,
-                              columns=['Grid NPC [€]', 'MG NPC [€]',
-                                       'Total Energy Consumption [kWh]',
-                                       'MG LCOE [€/kWh]', 'Grid LCOE [€/kWh]',
+                              columns=['Grid NPC [EUR]', 'MG NPC [EUR]',
+                                       'Grid Energy Consumption [kWh]',
+                                       'MG LCOE [EUR/kWh]', 'Grid LCOE [EUR/kWh]',
                                        'Best Solution'])
-
     for i in clusters_list.Cluster:
         print(i)
-        final_lcoe.at[i, 'Total Energy Consumption [kWh]'] = \
-            total_energy.loc[:, i].sum().round(2)
-        final_lcoe.at[i, 'Grid NPC [€]'] = \
+        final_lcoe.at[i, 'Grid Energy Consumption [kWh]'] = \
+            total_energy.loc[i, 'Energy']
+        final_lcoe.at[i, 'Grid NPC [EUR]'] = \
             (grid_resume.loc[i, 'Grid Cost'] +
              grid_resume.loc[i, 'Connection Cost']) * 1000
 
-        final_lcoe.at[i, 'MG NPC [€]'] = mg.loc[i, 'Total Cost'] * 1000
+        final_lcoe.at[i, 'MG NPC [EUR]'] = mg.loc[i, 'Total Cost'] * 1000
 
-        final_lcoe.at[i, 'MG LCOE [€/kWh]'] = mg.loc[i, 'LCOE']
+        final_lcoe.at[i, 'MG LCOE [EUR/kWh]'] = mg.loc[i, 'LCOE']
 
-        grid_lcoe = final_lcoe.loc[i, 'Grid NPC [€]'] / final_lcoe.loc[
-            i, 'Total Energy Consumption [kWh]'] + 0.1428
+        grid_lcoe = final_lcoe.loc[i, 'Grid NPC [EUR]'] / final_lcoe.loc[
+            i, 'Grid Energy Consumption [kWh]'] + 0.1428
 
-        final_lcoe.at[i, 'Grid LCOE [€/kWh]'] = grid_lcoe
+        final_lcoe.at[i, 'Grid LCOE [EUR/kWh]'] = grid_lcoe
 
         if mg.loc[i, 'LCOE'] > grid_lcoe:
             ratio = grid_lcoe / mg.loc[i, 'LCOE']
-            if ratio < 0.9:
+            if ratio < 0.95:
                 proposal = 'GRID'
             else:
-                proposal = 'Although the GRID option is cheaper, ' \
-                           'the two costs are very similar, so further ' \
-                           'investigation is suggested'
+                proposal = 'BOTH'
 
         else:
             ratio = mg.loc[i, 'LCOE'] / grid_lcoe
-            if ratio < 0.9:
+            if ratio < 0.95:
                 proposal = 'OFF-GRID'
             else:
-                proposal = 'Although the OFF-GRID option is cheaper, ' \
-                           'the two costs are very similar, so further ' \
-                           'investigation is suggested'
+                proposal = 'BOTH'
 
-        final_lcoe.at[i, 'Suggested Solution'] = proposal
+        final_lcoe.at[i, 'Best Solution'] = proposal
 
     l()
     print(final_lcoe)
 
-    final_lcoe.to_csv('LCOE_Analysis.csv')
+    final_lcoe.to_csv(r'Output/Microgrids/LCOE_Analysis.csv')
 
     return final_lcoe

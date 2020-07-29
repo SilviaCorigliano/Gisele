@@ -96,11 +96,16 @@ def import_csv_file(step):
                     unit, pop_load, pop_thresh, line_bc, limit_hv, \
                     limit_mv, geo_df_clustered, clusters_list, \
                     input_csv_lr, pop_thresh_lr, line_bc_col, full_ele, wt
+
             elif step == 5:
                 grid_resume = pd.read_csv('Output/Grids/grid_resume.csv')
-                return df_weighted, input_sub, input_csv, crs, resolution, \
-                    unit, pop_load, pop_thresh, line_bc, limit_hv, limit_mv, \
-                    geo_df_clustered, clusters_list, wt, grid_resume
+                return geo_df_clustered, clusters_list, wt, grid_resume
+
+            elif step == 6:
+                grid_resume = pd.read_csv('Output/Grids/grid_resume.csv')
+                mg = pd.read_csv('Output/Microgrids/microgrids.csv')
+                total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv')
+                return clusters_list, grid_resume, mg, total_energy
 
         return df_weighted, input_sub, input_csv, crs, resolution, unit, \
             pop_load, pop_thresh, line_bc, limit_hv, limit_mv, wt

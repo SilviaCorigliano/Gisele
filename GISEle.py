@@ -24,7 +24,7 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
 print("\n".join(steps))
 supporting_GISEle2.s()
 # step = int(input('Which step do you want to select?: '))
-step = 5
+step = 6
 if step == 1:
     '-------------------------------------------------------------------------'
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
@@ -190,9 +190,8 @@ elif step == 4:
 elif step == 5:
     '-------------------------------------------------------------------------'
     "1. Importing and Creating the GeoDataFrame"
-    df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
-        pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
-        clusters_list, wt, grid_resume = initialization.import_csv_file(step)
+    geo_df_clustered, clusters_list, wt, grid_resume = \
+        initialization.import_csv_file(step)
 
     '-------------------------------------------------------------------------'
     "5.Microgrid sizing"
@@ -203,6 +202,13 @@ elif step == 5:
 
     '-------------------------------------------------------------------------'
     "6.Final results"
+
+    final_LCOEs = supporting_GISEle2.lcoe_analysis(clusters_list,
+                                                   total_energy,
+                                                   grid_resume, mg)
+elif step == 6:
+    clusters_list, grid_resume, mg, total_energy = \
+        initialization.import_csv_file(step)
 
     final_LCOEs = supporting_GISEle2.lcoe_analysis(clusters_list,
                                                    total_energy,
