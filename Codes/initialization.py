@@ -39,6 +39,10 @@ def import_csv_file(step):
     limit_hv = float(config[9, 1])
     limit_mv = float(config[10, 1])
     wt = config[15, 1]
+    coe = float(config[16, 1])
+    grid_ir = float(config[17, 1])
+    grid_om = float(config[18, 1])
+    grid_lifetime = int(config[19, 1])
 
     if step == 1:
         if data_import == 'yes':
@@ -46,13 +50,15 @@ def import_csv_file(step):
             study_area = collecting.data_gathering(crs)
             df = processing.create_mesh(study_area, crs, resolution)
             return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-                pop_thresh, line_bc, limit_hv, limit_mv, wt
+                pop_thresh, line_bc, limit_hv, limit_mv, wt, coe, grid_ir, \
+                grid_om, grid_lifetime
 
         df = pd.read_csv(input_csv + '.csv', sep=',')
         print("Input files successfully imported.")
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-            pop_thresh, line_bc, limit_hv, limit_mv, wt
+            pop_thresh, line_bc, limit_hv, limit_mv, wt, coe, grid_ir, \
+            grid_om, grid_lifetime
     elif step > 1:
         os.chdir(r'..//')
         os.chdir(r'Output//Datasets')
@@ -66,49 +72,58 @@ def import_csv_file(step):
         df_weighted.drop_duplicates(['ID'], keep='last', inplace=True)
         print("Input files successfully imported.")
         os.chdir(r'..//..')
-        if step > 2:
-            l()
-            print("Importing Clusters..")
-            os.chdir(r'Output//Clusters')
-            geo_df_clustered = gpd.read_file("geo_df_clustered.shp")
-            clusters_list = pd.DataFrame(
-                index=geo_df_clustered.Cluster.unique(),
-                columns=['Cluster', 'Population', 'Load'])
+        if step == 2:
+            return df_weighted, input_sub, input_csv, crs, resolution, unit, \
+                   pop_load, pop_thresh, line_bc, limit_hv, limit_mv, wt, coe,\
+                   grid_ir, grid_om, grid_lifetime
+        l()
+        print("Importing Clusters..")
+        os.chdir(r'Output//Clusters')
+        geo_df_clustered = gpd.read_file("geo_df_clustered.shp")
+        clusters_list = pd.DataFrame(
+            index=geo_df_clustered.Cluster.unique(),
+            columns=['Cluster', 'Population', 'Load'])
 
-            clusters_list.loc[:, 'Cluster'] = geo_df_clustered.Cluster.unique()
-            clusters_list = clusters_list.drop(index=-1)
-            for i in clusters_list.Cluster:
-                clusters_list.loc[i, 'Population'] = \
-                    round(sum(geo_df_clustered.loc
-                              [geo_df_clustered['Cluster'] == i,
-                               'Population']))
-                clusters_list.loc[i, 'Load'] = \
-                    round(clusters_list.loc[i, 'Population'] * pop_load, 2)
-            print("Clusters successfully imported")
-            l()
-            os.chdir(r'..//..')
-            if step == 4:
-                input_csv_lr = config[11, 1]
-                pop_thresh_lr = float(config[12, 1])
-                line_bc_col = float(config[13, 1])
-                full_ele = config[14, 1]
-                return df_weighted, input_sub, input_csv, crs, resolution, \
-                    unit, pop_load, pop_thresh, line_bc, limit_hv, \
-                    limit_mv, geo_df_clustered, clusters_list, \
-                    input_csv_lr, pop_thresh_lr, line_bc_col, full_ele, wt
+        clusters_list.loc[:, 'Cluster'] = geo_df_clustered.Cluster.unique()
+        clusters_list = clusters_list.drop(index=-1)
+        for i in clusters_list.Cluster:
+            clusters_list.loc[i, 'Population'] = \
+                round(sum(geo_df_clustered.loc
+                          [geo_df_clustered['Cluster'] == i,
+                           'Population']))
+            clusters_list.loc[i, 'Load'] = \
+                round(clusters_list.loc[i, 'Population'] * pop_load, 2)
+        print("Clusters successfully imported")
+        l()
+        os.chdir(r'..//..')
+        if step == 3:
+            return df_weighted, input_sub, input_csv, crs, resolution, unit, \
+                   pop_load, pop_thresh, line_bc, limit_hv, limit_mv, \
+                   geo_df_clustered, clusters_list, wt
+        if step == 4:
+            input_csv_lr = config[11, 1]
+            pop_thresh_lr = float(config[12, 1])
+            line_bc_col = float(config[13, 1])
+            full_ele = config[14, 1]
+            return df_weighted, input_sub, input_csv, crs, resolution, \
+                unit, pop_load, pop_thresh, line_bc, limit_hv, \
+                limit_mv, geo_df_clustered, clusters_list, \
+                input_csv_lr, pop_thresh_lr, line_bc_col, full_ele, wt, \
+                coe, grid_ir, grid_om, grid_lifetime
 
-            elif step == 5:
-                grid_resume = pd.read_csv('Output/Grids/grid_resume.csv')
-                return geo_df_clustered, clusters_list, wt, grid_resume
+        if step == 5:
+            grid_resume = pd.read_csv('Output/Grids/grid_resume.csv')
+            return geo_df_clustered, clusters_list, wt, grid_resume, \
+                coe, grid_ir, grid_om, grid_lifetime
 
-            elif step == 6:
-                grid_resume = pd.read_csv('Output/Grids/grid_resume.csv')
-                mg = pd.read_csv('Output/Microgrids/microgrids.csv')
-                total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv')
-                return clusters_list, grid_resume, mg, total_energy
+        if step == 6:
+            grid_resume = pd.read_csv('Output/Grids/grid_resume.csv')
+            mg = pd.read_csv('Output/Microgrids/microgrids.csv')
+            total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv')
+            return clusters_list, grid_resume, mg, total_energy, \
+                coe, grid_ir, grid_om, grid_lifetime
 
-        return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-            pop_load, pop_thresh, line_bc, limit_hv, limit_mv, wt
+
 
 
 def weighting(df):

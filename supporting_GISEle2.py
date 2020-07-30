@@ -76,6 +76,7 @@ def distance_3d(df1, df2, x, y, z):
     :param df2: second point dataframe
     :param x: column representing the x coordinates (longitude)
     :param y: column representing the y coordinates (latitude)
+    :param z: column representing the z coordinates (Elevation)
     :return value: 3D Distance matrix between df1 and df2
     """
 
@@ -97,9 +98,9 @@ def cost_matrix(gdf, dist_3d_matrix, line_bc):
     Creates the cost matrix in €/km by finding the average weight between
     two points and then multiplying by the distance and the line base cost.
     :param gdf: Geodataframe being analyzed
-    :param dist_3d_matrix: 3D distance matrix of all points
-    :param line_bc: line base cost for line deployment in €/km
-    :return value: Cost matrix of all the points present in the gdf
+    :param dist_3d_matrix: 3D distance matrix of all points [meters]
+    :param line_bc: line base cost for line deployment [€/km]
+    :return value: Cost matrix of all the points present in the gdf [€]
     """
     # Altitude distance in meters
     weight = gdf['Weight'].values
@@ -193,18 +194,18 @@ def edges_to_line(path, df, edges_matrix):
     return line, line_points
 
 
-def load(clusters_list):
+def load(clusters_list, grid_lifetime):
     """
     Reads the input daily load profile from the input csv. Reads the number of
     years of the project and the demand growth from the data.dat file of
     Micehele. Then it multiplies the load profile by the Clusters' peak load
     and append values to create yearly profile composed of 12 representative
     days.
-    Cluster and then
-    :param clusters_list: NetworkX graph edges sequence
+    :param grid_lifetime: Number of years the grid will operate
+    :param clusters_list: List of clusters ID numbers
     :return load_profile: Cluster load profile for the whole period
-    :return years: Number of years to consider in the microgrid sizing
-    :return grid_energy: Total energy consumed in the whole period
+    :return years: Number of years the microgrid will operate
+    :return total_energy: Energy provided by the grid in its lifetime [kWh]
     """
     l()
     print("5. Microgrid Sizing")
@@ -222,7 +223,7 @@ def load(clusters_list):
              * clusters_list.loc[column, 'Load']).values
     rep_days = int(data_michele.loc[0, 1].split(';')[0])
     grid_energy = daily_profile.append([daily_profile] * 364,
-                                        ignore_index=True)
+                                       ignore_index=True)
     #  append 11 times since we are using 12 representative days in a year
     load_profile = daily_profile.append([daily_profile] * (rep_days - 1),
                                         ignore_index=True)
@@ -231,15 +232,15 @@ def load(clusters_list):
     demand_growth = float(data_michele.loc[87, 1].split(';')[0])
     daily_profile_new = daily_profile
     #  appending for all the years considering demand growth
-    for i in range((years - 1) * 4):
+    for i in range(grid_lifetime - 1):
         daily_profile_new = daily_profile_new.multiply(1 + demand_growth)
         if i < (years - 1):
             load_profile = load_profile.append([daily_profile_new] * rep_days,
                                                ignore_index=True)
         grid_energy = grid_energy.append([daily_profile_new] * 365,
-                                           ignore_index=True)
+                                         ignore_index=True)
     total_energy = pd.DataFrame(index=clusters_list.Cluster,
-                                    columns=['Energy'])
+                                columns=['Energy'])
     for cluster in clusters_list.Cluster:
         total_energy.loc[cluster, 'Energy'] = \
             grid_energy.loc[:, cluster].sum().round(2)
@@ -320,7 +321,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         wt_avg = shift_timezone(wt_avg, time_shift)
 
         inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
-        rep_cost, om_cost, salvage_value, gen_energy, load_energy = \
+            rep_cost, om_cost, salvage_value, gen_energy, load_energy = \
             start(load_profile_cluster, pv_avg, wt_avg)
 
         mg.loc[cluster_n, 'PV'] = inst_pv
@@ -334,8 +335,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'Total Cost'] = rep_cost + om_cost + init_cost
         mg.loc[cluster_n, 'Energy Produced'] = gen_energy
         mg.loc[cluster_n, 'Energy Consumed'] = load_energy
-        mg.loc[cluster_n, 'LCOE'] = (
-                                                rep_cost + om_cost + init_cost) / gen_energy
+        mg.loc[cluster_n, 'LCOE'] = (rep_cost + om_cost + init_cost)/gen_energy
         print(mg)
     mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
     print(mg)
@@ -375,27 +375,45 @@ def download_tif(area, crs, scale, image, out_path):
     return
 
 
-def lcoe_analysis(clusters_list, total_energy, grid_resume, mg):
+def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
+                  grid_ir, grid_om, grid_lifetime):
+    """
+     Computes the LCOE of the on-grid and off-grid and compares both of them
+     to find the best solution.
+     :param clusters_list: List of clusters ID numbers
+     :param total_energy: Energy provided by the grid in its lifetime [kWh]
+     :param grid_resume: Table summarizing grid and connection costs
+     :param mg: Table summarizing all the microgrids and its costs.
+     :param coe: Cost of electricity in the market [€]
+     :param grid_ir: Inflation rate for the grid investments [%]
+     :param grid_om: Operation and maintenance cost of grid [% of invest cost]
+     :param grid_lifetime: Number of years the grid will operate
+     :return final_lcoe: Table summary of all LCOEs and the proposed solution
+     """
 
     final_lcoe = pd.DataFrame(index=clusters_list.Cluster,
                               columns=['Grid NPC [EUR]', 'MG NPC [EUR]',
                                        'Grid Energy Consumption [kWh]',
-                                       'MG LCOE [EUR/kWh]', 'Grid LCOE [EUR/kWh]',
-                                       'Best Solution'])
+                                       'MG LCOE [EUR/kWh]',
+                                       'Grid LCOE [EUR/kWh]', 'Best Solution'])
     for i in clusters_list.Cluster:
         print(i)
         final_lcoe.at[i, 'Grid Energy Consumption [kWh]'] = \
             total_energy.loc[i, 'Energy']
+        total_grid_om = grid_om * grid_resume.loc[i, 'Grid Cost'] * 1000
+        total_grid_om = [total_grid_om]*grid_lifetime
+        total_grid_om = np.npv(grid_ir, total_grid_om)
         final_lcoe.at[i, 'Grid NPC [EUR]'] = \
             (grid_resume.loc[i, 'Grid Cost'] +
-             grid_resume.loc[i, 'Connection Cost']) * 1000
+             grid_resume.loc[i, 'Connection Cost']) * 1000 \
+            + total_grid_om
 
         final_lcoe.at[i, 'MG NPC [EUR]'] = mg.loc[i, 'Total Cost'] * 1000
 
         final_lcoe.at[i, 'MG LCOE [EUR/kWh]'] = mg.loc[i, 'LCOE']
 
         grid_lcoe = final_lcoe.loc[i, 'Grid NPC [EUR]'] / final_lcoe.loc[
-            i, 'Grid Energy Consumption [kWh]'] + 0.1428
+            i, 'Grid Energy Consumption [kWh]'] + coe
 
         final_lcoe.at[i, 'Grid LCOE [EUR/kWh]'] = grid_lcoe
 
