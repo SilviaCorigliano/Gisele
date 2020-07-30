@@ -337,8 +337,9 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'Energy Consumed'] = load_energy
         mg.loc[cluster_n, 'LCOE'] = (rep_cost + om_cost + init_cost)/gen_energy
         print(mg)
+
     mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
-    print(mg)
+
     return mg
 
 
@@ -384,7 +385,7 @@ def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
      :param total_energy: Energy provided by the grid in its lifetime [kWh]
      :param grid_resume: Table summarizing grid and connection costs
      :param mg: Table summarizing all the microgrids and its costs.
-     :param coe: Cost of electricity in the market [€]
+     :param coe: Cost of electricity in the market [€/kWh]
      :param grid_ir: Inflation rate for the grid investments [%]
      :param grid_om: Operation and maintenance cost of grid [% of invest cost]
      :param grid_lifetime: Number of years the grid will operate
@@ -400,9 +401,12 @@ def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
         print(i)
         final_lcoe.at[i, 'Grid Energy Consumption [kWh]'] = \
             total_energy.loc[i, 'Energy']
+
+        # finding the npv of the cost of O&M for the whole grid lifetime
         total_grid_om = grid_om * grid_resume.loc[i, 'Grid Cost'] * 1000
         total_grid_om = [total_grid_om]*grid_lifetime
         total_grid_om = np.npv(grid_ir, total_grid_om)
+
         final_lcoe.at[i, 'Grid NPC [EUR]'] = \
             (grid_resume.loc[i, 'Grid Cost'] +
              grid_resume.loc[i, 'Connection Cost']) * 1000 \

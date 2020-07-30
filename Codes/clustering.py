@@ -1,3 +1,13 @@
+"""
+GIS For Electrification (GISEle)
+Developed by the Energy Department of Politecnico di Milano
+Clustering Code
+
+Code for performing the sensitivity analysis in order to help the user to
+choose the two parameters MinPts and Eps (Neighbourhood), and then running the
+DBSCAN algorithm with the possibility of merging clusters.
+"""
+
 import os
 import pandas as pd
 import numpy as np
@@ -8,6 +18,13 @@ from supporting_GISEle2 import l, s
 
 
 def sensitivity(pop_points, geo_df):
+    """
+    Sensitivity analysis performed to help the user chose the clustering
+    parameters, from a range of values run the DBSCAN several times and exports
+    a table containing useful information.
+    :param pop_points: array containing the 3 coordinates of all points
+    :param geo_df: Input Geodataframe of points
+    """
     s()
     print("2.Clustering - Sensitivity Analysis")
     s()
@@ -108,14 +125,22 @@ def sensitivity(pop_points, geo_df):
 
 
 def analysis(pop_points, geo_df, pop_load):
+    """
+    Sensitivity analysis performed to help the user chose the clustering
+    parameters, from a range of values run the DBSCAN several times and exports
+    a table containing useful information.
+    :param pop_points: array containing the 3 coordinates of all points
+    :param geo_df: Input Geodataframe of points
+    :param pop_load: Estimated load per capita [kW/person]
+    :return geo_df_clustered: Input Geodataframe of points with every point
+            having a cluster assigned to it.
+            (Cluster attribute = -1 means points outside of clustered areas.)
+    :return clusters_list: List of all Clusters' ID
+    """
     print('Choose the final combination of NEIGHBOURHOOD and MINIMUM POINTS')
     l()
     eps = float(input("Chosen NEIGHBOURHOOD: "))
-    # eps = 1500
-    # eps = 3100
-    # pts = 20
     s()
-    # pts = 500
     pts = int(input("Chosen MINIMUM POINTS: "))
     s()
     db = DBSCAN(eps=eps, min_samples=pts, metric='euclidean').fit(

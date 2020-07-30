@@ -4,7 +4,7 @@ Developed by the Energy Department of Politecnico di Milano
 Running Code
 
 In order to run the following algorithm please check if the Input files are
-configured accordingly, for more information check the README.
+configured accordingly, for more information check the User Manual.
 """
 
 import supporting_GISEle2
@@ -70,10 +70,11 @@ if step == 1:
     '-------------------------------------------------------------------------'
     "6.LCOE Analysis"
 
-    # final_LCOEs = supporting_GISEle2.lcoe_analysis(clusters_list,
-    #                                                total_energy,
-    #                                                grid_resume, mg_NPC)
-
+    final_LCOEs = supporting_GISEle2.lcoe_analysis(clusters_list,
+                                                   total_energy,
+                                                   grid_resume, mg, coe,
+                                                   grid_ir, grid_om,
+                                                   grid_lifetime)
 elif step == 2:
     '-------------------------------------------------------------------------'
     "1. Importing and Creating the GeoDataFrame"
@@ -113,7 +114,14 @@ elif step == 2:
     mg = supporting_GISEle2.sizing(load_profile, clusters_list,
                                    geo_df_clustered, wt, years)
 
+    '-------------------------------------------------------------------------'
+    "6.LCOE Analysis"
 
+    final_LCOEs = supporting_GISEle2.lcoe_analysis(clusters_list,
+                                                   total_energy,
+                                                   grid_resume, mg, coe,
+                                                   grid_ir, grid_om,
+                                                   grid_lifetime)
 elif step == 3:
     '-------------------------------------------------------------------------'
     "1. Importing and Creating the GeoDataFrame"
