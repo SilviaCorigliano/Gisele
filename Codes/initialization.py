@@ -99,7 +99,8 @@ def import_csv_file(step):
         if step == 3:
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
                    pop_load, pop_thresh, line_bc, limit_hv, limit_mv, \
-                   geo_df_clustered, clusters_list, wt
+                   geo_df_clustered, clusters_list, wt, coe, grid_ir, \
+                   grid_om, grid_lifetime
         if step == 4:
             input_csv_lr = config[11, 1]
             pop_thresh_lr = float(config[12, 1])

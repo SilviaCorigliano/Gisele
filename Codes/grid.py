@@ -94,13 +94,14 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
 def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
                           clusters_list, limit_hv, limit_mv):
 
-    if clusters_list.loc[cluster_n, 'Load'] > limit_hv:
-        substations = substations[substations['Type'] == 'HV']
-    elif limit_mv < clusters_list.loc[cluster_n, 'Load'] < limit_hv:
-        substations = substations[substations['Type'] == 'MV']
-    elif clusters_list.loc[cluster_n, 'Load'] < limit_mv:
-        substations = substations[substations['Type'] != 'HV']
-
+    # if clusters_list.loc[cluster_n, 'Load'] > limit_hv:
+    #     substations = substations[substations['Type'] == 'HV']
+    # elif limit_mv < clusters_list.loc[cluster_n, 'Load'] < limit_hv:
+    #     substations = substations[substations['Type'] == 'MV']
+    # elif clusters_list.loc[cluster_n, 'Load'] < limit_mv:
+    #     substations = substations[substations['Type'] != 'HV']
+    substations = substations[substations['PowerAvailable']
+                              > clusters_list.loc[cluster_n, 'Load']]
     substations = substations.assign(
         nearest_id=substations.apply(nearest, df=geo_df, src_column='ID',
                                      axis=1))

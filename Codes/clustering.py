@@ -11,6 +11,7 @@ DBSCAN algorithm with the possibility of merging clusters.
 import os
 import pandas as pd
 import numpy as np
+import plotly.express as px
 from sklearn.cluster import DBSCAN
 import plotly.graph_objs as go
 from plotly.offline import plot
@@ -108,6 +109,49 @@ def sensitivity(pop_points, geo_df):
         print("People per area - columns MINIMUM POINTS - rows NEIGHBOURHOOD")
         print(tab_people_area)
         l()
+        plt_sens = pd.DataFrame(index=range(tab_people_area.size),
+                                columns=['Eps', 'MinPts', 'People per Area',
+                                         'Clustered People',
+                                         'Electrification Filter'],
+                                dtype=float)
+        count = 0
+        for i, row in tab_people_area.iterrows():
+            for j in row:
+                plt_sens.loc[count, 'Eps'] = i
+                plt_sens.loc[count, 'MinPts'] = int(row.index[row == j][0])
+                plt_sens.loc[count, 'People per Area'] = round(j, 4)
+                plt_sens.loc[count, 'Clustered People'] = \
+                    tab_people.loc[i, row.index[row == j]].values[0]
+                if plt_sens.loc[count, 'Clustered People'] > 95:
+                    plt_sens.loc[count, 'Electrification Filter'] = 'Over 95%'
+                    count += 1
+                    continue
+
+                if plt_sens.loc[count, 'Clustered People'] > 85:
+                    plt_sens.loc[count, 'Electrification Filter'] = '85-95%'
+                    count += 1
+                    continue
+                if plt_sens.loc[count, 'Clustered People'] > 75:
+                    plt_sens.loc[count, 'Electrification Filter'] = '75-85%'
+                    count += 1
+                    continue
+                else:
+                    plt_sens.loc[count, 'Electrification Filter'] = 'Under 75%'
+                    count += 1
+
+        fig = px.scatter_3d(plt_sens, x='Eps', y='MinPts',
+                            z='People per Area',
+                            color='Clustered People',
+                            symbol='Electrification Filter')
+        fig.update_layout(legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ))
+        fig.show()
+
         check = str(input("Would you like to run another sensitivity "
                           "analysis with a more precise interval? (y/n): "))
         s()
@@ -147,7 +191,7 @@ def analysis(pop_points, geo_df, pop_load):
         pop_points, sample_weight=geo_df['Population'])
     labels = db.labels_
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)  # ignore noise
-    clusters_list = pd.DataFrame(index=np.arange(n_clusters),
+    clusters_list = pd.DataFrame(index=range(n_clusters),
                                  columns=['Cluster', 'Population', 'Load'])
     clusters_list.loc[:, 'Cluster'] = np.arange(n_clusters)
     print('Initial number of clusters: %d' % n_clusters)
