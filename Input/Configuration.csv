@@ -8,8 +8,8 @@ unit,1
 pop_load,0.04
 pop_thresh,50
 line_bc,5000
-limit_HV,3000
-limit_MV,1000
+sub_cost_HV,1000000
+sub_cost_MV,100000
 input_csv_lr,Cavalcante-Brazil-32723-4000
 pop_thresh_lr,30
 line_bc_col,3333

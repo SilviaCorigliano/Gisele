@@ -170,9 +170,8 @@ def sensitivity(pop_points, geo_df):
 
 def analysis(pop_points, geo_df, pop_load):
     """
-    Sensitivity analysis performed to help the user chose the clustering
-    parameters, from a range of values run the DBSCAN several times and exports
-    a table containing useful information.
+    Running of the DBSCAN algorithm with specific parameters and the
+    possibility of merging clusters by the user.
     :param pop_points: array containing the 3 coordinates of all points
     :param geo_df: Input Geodataframe of points
     :param pop_load: Estimated load per capita [kW/person]

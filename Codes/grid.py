@@ -8,7 +8,7 @@ from Codes import Steinerman, Spiderman, dijkstra
 
 
 def routing(geo_df_clustered, geo_df, clusters_list, resolution,
-            pop_thresh, input_sub, line_bc, limit_hv, limit_mv):
+            pop_thresh, input_sub, line_bc, sub_cost_hv, sub_cost_mv):
     s()
     print("3. Grid Creation")
     s()
@@ -16,7 +16,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     grid_resume = pd.DataFrame(index=clusters_list.index,
                                columns=['Grid Length', 'Grid Cost',
                                         'Connection Length', 'Connection Cost',
-                                        'Connection Type'])
+                                        'Connection Type', 'Substation ID'])
 
     os.chdir(r'Input//')
     substations = pd.read_csv(input_sub + '.csv')
@@ -27,6 +27,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     os.chdir(r'Output//Grids')
 
     for cluster_n in clusters_list.Cluster:
+
         gdf_cluster = geo_df_clustered[
             geo_df_clustered['Cluster'] == cluster_n]
         gdf_cluster_pop = gdf_cluster[
@@ -46,17 +47,21 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
                              line_bc, n_terminal_nodes, gdf_cluster)
             print("Cluster grid created")
 
-            print('Assigning to the nearest substation.. ')
-            assigned_substation, connecting_point, connection_type = \
+            print('Assigning to the nearest 5 substations.. ')
+            assigned_substations, connecting_points = \
                 substation_assignment(cluster_n, geo_df, c_grid_points,
-                                      substations, clusters_list, limit_hv,
-                                      limit_mv)
+                                      substations, clusters_list)
 
             print('Connecting to the substation.. ')
-            connection, connection_cost, connection_length = \
-                dijkstra.dijkstra_connection(geo_df, assigned_substation,
-                                             connecting_point, c_grid_points,
-                                             line_bc, resolution)
+
+            connection, connection_cost, connection_length, connection_type, \
+                connection_id = substation_connection(geo_df, substations,
+                                                      assigned_substations,
+                                                      connecting_points,
+                                                      c_grid_points,
+                                                      line_bc, resolution,
+                                                      sub_cost_hv, sub_cost_mv)
+
             print("Substation connection created")
 
             c_grid.to_file('Grid_' + str(cluster_n) + '.shp')
@@ -69,6 +74,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
                     [total_connection, connection], sort=True))
 
             grid_resume.loc[cluster_n, 'Connection Type'] = connection_type
+            grid_resume.loc[cluster_n, 'Substation ID'] = connection_id
             grid_resume.loc[cluster_n, 'Grid Length'] = c_grid_length / 1000
             grid_resume.loc[cluster_n, 'Grid Cost'] = c_grid_cost / 1000
             grid_resume.loc[
@@ -92,14 +98,8 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
 
 
 def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
-                          clusters_list, limit_hv, limit_mv):
+                          clusters_list):
 
-    # if clusters_list.loc[cluster_n, 'Load'] > limit_hv:
-    #     substations = substations[substations['Type'] == 'HV']
-    # elif limit_mv < clusters_list.loc[cluster_n, 'Load'] < limit_hv:
-    #     substations = substations[substations['Type'] == 'MV']
-    # elif clusters_list.loc[cluster_n, 'Load'] < limit_mv:
-    #     substations = substations[substations['Type'] != 'HV']
     substations = substations[substations['PowerAvailable']
                               > clusters_list.loc[cluster_n, 'Load']]
     substations = substations.assign(
@@ -120,15 +120,23 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
 
     dist = distance_3d(grid_points, sub_in_df, 'X', 'Y', 'Elevation')
 
-    assigned_substation = sub_in_df[sub_in_df['ID'] == dist.min().idxmin()]
-    connection_point = grid_points[grid_points['ID'] ==
-                                   dist.min(axis=1).idxmin()]
-    connection_type = substations[substations['nearest_id']
-                                  == dist.min().idxmin()].Type.values[0]
+    assigned_substations = dist.min().nsmallest(5).index.values
+
+    connecting_points = dist.idxmin()
+    connecting_points = connecting_points[
+        connecting_points.index.isin(assigned_substations)].values
+
+    assigned_substations = \
+        sub_in_df[sub_in_df['ID'].isin(assigned_substations)]
+    sub_ids = substations[substations['nearest_id'].isin(
+        assigned_substations['ID'])].index.values
+    assigned_substations = \
+        assigned_substations.assign(sub_id=sub_ids)
+    assigned_substations.reset_index(drop=True, inplace=True)
 
     print('Substation assignment complete')
 
-    return assigned_substation, connection_point, connection_type
+    return assigned_substations, connecting_points
 
 
 def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
@@ -167,3 +175,38 @@ def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
             spider(geo_df, gdf_cluster_pop, line_bc, resolution)
 
     return c_grid, c_grid_cost, c_grid_length, c_grid_points
+
+
+def substation_connection(geo_df, substations, assigned_substations,
+                          connecting_point, c_grid_points, line_bc,
+                          resolution, sub_cost_hv, sub_cost_mv):
+
+    best_connection = pd.DataFrame()
+    best_connection_cost = 0
+    best_connection_length = 0
+    best_connection_type = []
+    connection_id = []
+
+    costs = np.full((1, len(assigned_substations)), 9999999)[0]
+    for row in assigned_substations.iterrows():
+        point = geo_df[geo_df['ID'] == connecting_point[row[0]]]
+        sub = geo_df[geo_df['ID'] == row[1].ID]
+
+        connection, connection_cost, connection_length = \
+            dijkstra.dijkstra_connection(geo_df, sub, point, c_grid_points,
+                                         line_bc, resolution)
+
+        if substations.loc[row[1]['sub_id'], 'Exist'] == 'no':
+            if substations.loc[row[1]['sub_id'], 'Type'] == 'HV':
+                connection_cost = connection_cost + sub_cost_hv
+            elif substations.loc[row[1]['sub_id'], 'Type'] == 'MV':
+                connection_cost = connection_cost + sub_cost_mv
+        costs[row[0]] = connection_cost
+        if min(costs) == connection_cost:
+            best_connection = connection
+            best_connection_cost = connection_cost
+            best_connection_length = connection_length
+            best_connection_type = substations.loc[row[1]['sub_id'], 'Type']
+            connection_id = row[1]['sub_id']
+    return best_connection, best_connection_cost, best_connection_length, \
+        best_connection_type, connection_id

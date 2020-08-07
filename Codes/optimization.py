@@ -5,12 +5,15 @@ from supporting_GISEle2 import line_to_points, distance_2d, l
 from Codes import dijkstra
 
 
-def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
-                step):
+def connections(geo_df, grid_resume, resolution, line_bc, step, input_sub):
     if step == 4:
         file = 'Branch_'
     else:
         file = 'Grid_'
+    os.chdir('../..')
+
+    substations = pd.read_csv(r'Input/' + input_sub + '.csv')
+    os.chdir(r'Output/Grids')
 
     total_connections_opt = pd.DataFrame()
     check = pd.DataFrame(index=grid_resume.Cluster, columns=['Check'])
@@ -57,7 +60,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
 
                 # if the distance between clusters too high, skip
                 if dist_2d.min().min() / 1000 > \
-                        1.2 * (grid_resume.loc[i, 'Connection Length']):
+                        2 * (grid_resume.loc[i, 'Connection Length']):
                     exam.Distance[j] = 9999999
                     exam.Cost[j] = 99999999
                     continue
@@ -66,17 +69,13 @@ def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
                     dijkstra.dijkstra_connection(geo_df, p1, p2, c_grid_points,
                                                  line_bc, resolution)
 
+                sub_id = grid_resume.loc[j, 'Substation ID']
+
                 exam.Cost[j] = connection_cost
                 exam.Distance[j] = connection_length
 
-                if grid_resume.loc[j, 'Connection Type'] == 'MV' and \
-                        grid_resume.loc[i, 'Load'] + \
-                        grid_resume.loc[j, 'Load'] > limit_hv:
-                    continue
-
-                if grid_resume.loc[j, 'Connection Type'] == 'LV' and \
-                        grid_resume.loc[i, 'Load'] + \
-                        grid_resume.loc[j, 'Load'] > limit_mv:
+                if grid_resume.loc[i, 'Load'] + grid_resume.loc[j, 'Load'] \
+                        > substations.loc[sub_id, 'PowerAvailable']:
                     continue
 
                 if min(exam.Cost) == connection_cost and check.loc[j, 'Check']\
@@ -92,6 +91,8 @@ def connections(geo_df, grid_resume, resolution, line_bc, limit_hv, limit_mv,
                 grid_resume.loc[i, 'Connection Cost'] = min(exam.Cost) / 1000
                 grid_resume.loc[i, 'Connection Type'] = \
                     grid_resume.loc[exam['Cost'].idxmin(), 'Connection Type']
+                grid_resume.loc[i, 'Substation ID'] = \
+                    grid_resume.loc[exam['Cost'].idxmin(), 'Substation ID']
                 print('A new connection for Cluster ' + str(
                     i) + ' was successfully created')
                 total_connections_opt = gpd.GeoDataFrame(

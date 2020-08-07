@@ -23,15 +23,15 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
          '6.LCOE Analysis']
 print("\n".join(steps))
 supporting_GISEle2.s()
-step = int(input('Which step do you want to select?: '))
-# step = 6
+# step = int(input('Which step do you want to select?: '))
+step = 3
 if step == 1:
     '-------------------------------------------------------------------------'
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
 
     df, input_sub, input_csv, crs, resolution, unit, pop_load, pop_thresh, \
-        line_bc, limit_hv, limit_mv, wt, coe, grid_ir, grid_om, grid_lifetime\
-        = initialization.import_csv_file(step)
+        line_bc, sub_cost_hv, sub_cost_mv, wt, coe, grid_ir, grid_om, \
+        grid_lifetime = initialization.import_csv_file(step)
 
     df_weighted = initialization.weighting(df)
 
@@ -51,11 +51,10 @@ if step == 1:
     grid_resume, substations = grid.routing(geo_df_clustered, geo_df,
                                             clusters_list, resolution,
                                             pop_thresh, input_sub, line_bc,
-                                            limit_hv, limit_mv)
+                                            sub_cost_hv, sub_cost_mv)
 
     grid_resume_opt = optimization.connections(geo_df, grid_resume, resolution,
-                                               line_bc, limit_hv, limit_mv,
-                                               step)
+                                               line_bc, step, input_sub)
 
     results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
                   substations)
@@ -80,8 +79,8 @@ elif step == 2:
     "1. Importing and Creating the GeoDataFrame"
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
-        pop_thresh, line_bc, limit_hv, limit_mv, wt, coe, grid_ir, grid_om, \
-        grid_lifetime = initialization.import_csv_file(step)
+        pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, wt, coe, grid_ir, \
+        grid_om, grid_lifetime = initialization.import_csv_file(step)
 
     geo_df, pop_points = initialization. \
         creating_geodataframe(df_weighted, crs, unit, input_csv, step)
@@ -97,11 +96,10 @@ elif step == 2:
     grid_resume, substations = grid.routing(geo_df_clustered, geo_df,
                                             clusters_list, resolution,
                                             pop_thresh, input_sub, line_bc,
-                                            limit_hv, limit_mv)
+                                            sub_cost_hv, sub_cost_mv)
 
     grid_resume_opt = optimization.connections(geo_df, grid_resume, resolution,
-                                               line_bc, limit_hv, limit_mv,
-                                               step)
+                                               line_bc, step, input_sub)
 
     results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
                   substations)
@@ -127,7 +125,7 @@ elif step == 3:
     "1. Importing and Creating the GeoDataFrame"
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
-        pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
+        pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, geo_df_clustered, \
         clusters_list, wt, coe, grid_ir, grid_om, grid_lifetime \
         = initialization.import_csv_file(step)
 
@@ -140,11 +138,10 @@ elif step == 3:
     grid_resume, substations = grid.routing(geo_df_clustered, geo_df,
                                             clusters_list, resolution,
                                             pop_thresh, input_sub, line_bc,
-                                            limit_hv, limit_mv)
+                                            sub_cost_hv, sub_cost_mv)
 
     grid_resume_opt = optimization.connections(geo_df, grid_resume, resolution,
-                                               line_bc, limit_hv, limit_mv,
-                                               step)
+                                               line_bc, step, input_sub)
 
     results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
                   substations)
@@ -172,7 +169,7 @@ elif step == 4:
     "1. Importing and Creating the GeoDataFrame"
 
     df_weighted, input_sub, input_csv, crs, resolution, unit, pop_load, \
-        pop_thresh, line_bc, limit_hv, limit_mv, geo_df_clustered, \
+        pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, geo_df_clustered, \
         clusters_list, input_csv_lr, pop_thresh_lr, line_bc_col, \
         full_ele, wt, coe, grid_ir, grid_om, grid_lifetime \
         = initialization.import_csv_file(step)
@@ -185,13 +182,13 @@ elif step == 4:
     grid_resume, substations = branches.routing(geo_df_clustered, geo_df,
                                                 clusters_list, resolution,
                                                 pop_thresh, input_sub, line_bc,
-                                                limit_hv, limit_mv, pop_load,
-                                                input_csv_lr, pop_thresh_lr,
-                                                line_bc_col, full_ele)
+                                                sub_cost_hv, sub_cost_mv,
+                                                pop_load, input_csv_lr,
+                                                pop_thresh_lr, line_bc_col,
+                                                full_ele)
 
     grid_resume_opt = optimization.connections(geo_df, grid_resume, resolution,
-                                               line_bc, limit_hv, limit_mv,
-                                               step)
+                                               line_bc, step, input_sub)
 
     results.graph(geo_df_clustered, clusters_list, step, grid_resume_opt,
                   substations)

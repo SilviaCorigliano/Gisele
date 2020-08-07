@@ -36,8 +36,8 @@ def import_csv_file(step):
     pop_load = float(config[6, 1])
     pop_thresh = float(config[7, 1])
     line_bc = float(config[8, 1])
-    limit_hv = float(config[9, 1])
-    limit_mv = float(config[10, 1])
+    sub_cost_hv = float(config[9, 1])
+    sub_cost_mv = float(config[10, 1])
     wt = config[15, 1]
     coe = float(config[16, 1])
     grid_ir = float(config[17, 1])
@@ -50,14 +50,14 @@ def import_csv_file(step):
             study_area = collecting.data_gathering(crs)
             df = processing.create_mesh(study_area, crs, resolution)
             return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-                pop_thresh, line_bc, limit_hv, limit_mv, wt, coe, grid_ir, \
+                pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, wt, coe, grid_ir, \
                 grid_om, grid_lifetime
 
         df = pd.read_csv(input_csv + '.csv', sep=',')
         print("Input files successfully imported.")
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-            pop_thresh, line_bc, limit_hv, limit_mv, wt, coe, grid_ir, \
+            pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, wt, coe, grid_ir, \
             grid_om, grid_lifetime
     elif step > 1:
         os.chdir(r'..//')
@@ -74,7 +74,7 @@ def import_csv_file(step):
         os.chdir(r'..//..')
         if step == 2:
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-                   pop_load, pop_thresh, line_bc, limit_hv, limit_mv, wt, coe,\
+                   pop_load, pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, wt, coe,\
                    grid_ir, grid_om, grid_lifetime
         l()
         print("Importing Clusters..")
@@ -98,7 +98,7 @@ def import_csv_file(step):
         os.chdir(r'..//..')
         if step == 3:
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-                   pop_load, pop_thresh, line_bc, limit_hv, limit_mv, \
+                   pop_load, pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, \
                    geo_df_clustered, clusters_list, wt, coe, grid_ir, \
                    grid_om, grid_lifetime
         if step == 4:
@@ -107,8 +107,8 @@ def import_csv_file(step):
             line_bc_col = float(config[13, 1])
             full_ele = config[14, 1]
             return df_weighted, input_sub, input_csv, crs, resolution, \
-                unit, pop_load, pop_thresh, line_bc, limit_hv, \
-                limit_mv, geo_df_clustered, clusters_list, \
+                unit, pop_load, pop_thresh, line_bc, sub_cost_hv, \
+                sub_cost_mv, geo_df_clustered, clusters_list, \
                 input_csv_lr, pop_thresh_lr, line_bc_col, full_ele, wt, \
                 coe, grid_ir, grid_om, grid_lifetime
 
