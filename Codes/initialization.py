@@ -38,6 +38,10 @@ def import_csv_file(step):
     line_bc = float(config[8, 1])
     sub_cost_hv = float(config[9, 1])
     sub_cost_mv = float(config[10, 1])
+    branch = config[11, 1]
+    pop_thresh_lr = float(config[12, 1])
+    line_bc_col = float(config[13, 1])
+    full_ele = config[14, 1]
     wt = config[15, 1]
     coe = float(config[16, 1])
     grid_ir = float(config[17, 1])
@@ -50,14 +54,16 @@ def import_csv_file(step):
             study_area = collecting.data_gathering(crs)
             df = processing.create_mesh(study_area, crs, resolution)
             return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-                pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, wt, coe, grid_ir, \
+                pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, branch, \
+                pop_thresh_lr, line_bc_col, full_ele, wt, coe, grid_ir, \
                 grid_om, grid_lifetime
 
         df = pd.read_csv(input_csv + '.csv', sep=',')
         print("Input files successfully imported.")
         os.chdir(r'..//')
         return df, input_sub, input_csv, crs, resolution, unit, pop_load, \
-            pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, wt, coe, grid_ir, \
+            pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, branch, \
+            pop_thresh_lr, line_bc_col, full_ele, wt, coe, grid_ir, \
             grid_om, grid_lifetime
     elif step > 1:
         os.chdir(r'..//')
@@ -74,8 +80,9 @@ def import_csv_file(step):
         os.chdir(r'..//..')
         if step == 2:
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
-                   pop_load, pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, wt, coe,\
-                   grid_ir, grid_om, grid_lifetime
+                   pop_load, pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, \
+                   branch, pop_thresh_lr, line_bc_col, full_ele, wt, \
+                   coe, grid_ir, grid_om, grid_lifetime
         l()
         print("Importing Clusters..")
         os.chdir(r'Output//Clusters')
@@ -99,32 +106,32 @@ def import_csv_file(step):
         if step == 3:
             return df_weighted, input_sub, input_csv, crs, resolution, unit, \
                    pop_load, pop_thresh, line_bc, sub_cost_hv, sub_cost_mv, \
-                   geo_df_clustered, clusters_list, wt, coe, grid_ir, \
-                   grid_om, grid_lifetime
-        if step == 4:
-            input_csv_lr = config[11, 1]
-            pop_thresh_lr = float(config[12, 1])
-            line_bc_col = float(config[13, 1])
-            full_ele = config[14, 1]
-            return df_weighted, input_sub, input_csv, crs, resolution, \
-                unit, pop_load, pop_thresh, line_bc, sub_cost_hv, \
-                sub_cost_mv, geo_df_clustered, clusters_list, \
-                input_csv_lr, pop_thresh_lr, line_bc_col, full_ele, wt, \
-                coe, grid_ir, grid_om, grid_lifetime
+                   branch, pop_thresh_lr, line_bc_col, full_ele, wt, \
+                   coe, grid_ir, grid_om, grid_lifetime, geo_df_clustered, \
+                   clusters_list
+        # if step == 4:
+        #
+        #     return df_weighted, input_sub, input_csv, crs, resolution, \
+        #         unit, pop_load, pop_thresh, line_bc, sub_cost_hv, \
+        #         sub_cost_mv, geo_df_clustered, clusters_list, \
+        #         branch, pop_thresh_lr, line_bc_col, full_ele, wt, \
+        #         coe, grid_ir, grid_om, grid_lifetime
 
         if step == 5:
-            grid_resume = pd.read_csv('Output/Grids/grid_resume.csv')
+            grid_resume = pd.read_csv('Output/Grids/grid_resume.csv',
+                                      index_col='Cluster')
             return geo_df_clustered, clusters_list, wt, grid_resume, \
                 coe, grid_ir, grid_om, grid_lifetime
 
         if step == 6:
-            grid_resume = pd.read_csv('Output/Grids/grid_resume.csv')
-            mg = pd.read_csv('Output/Microgrids/microgrids.csv')
-            total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv')
+            grid_resume = pd.read_csv('Output/Grids/grid_resume.csv',
+                                      index_col='Cluster')
+            mg = pd.read_csv('Output/Microgrids/microgrids.csv',
+                             index_col='Cluster')
+            total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv',
+                                       index_col='Cluster')
             return clusters_list, grid_resume, mg, total_energy, \
                 coe, grid_ir, grid_om, grid_lifetime
-
-
 
 
 def weighting(df):

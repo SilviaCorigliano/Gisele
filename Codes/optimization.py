@@ -5,15 +5,16 @@ from supporting_GISEle2 import line_to_points, distance_2d, l
 from Codes import dijkstra
 
 
-def connections(geo_df, grid_resume, resolution, line_bc, step, input_sub):
-    if step == 4:
-        file = 'Branch_'
-    else:
-        file = 'Grid_'
-    os.chdir('../..')
+def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
 
     substations = pd.read_csv(r'Input/' + input_sub + '.csv')
-    os.chdir(r'Output/Grids')
+
+    if branch == 'yes':
+        file = 'Branch_'
+        os.chdir(r'Output/Branches')
+    else:
+        file = 'Grid_'
+        os.chdir(r'Output/Grids')
 
     total_connections_opt = pd.DataFrame()
     check = pd.DataFrame(index=grid_resume.Cluster, columns=['Check'])
@@ -39,8 +40,8 @@ def connections(geo_df, grid_resume, resolution, line_bc, step, input_sub):
                     i) + '. Keeping the substation connection ')
                 check.loc[i, 'Check'] = True
                 continue
-            for j in grid_resume.Cluster:
 
+            for j in grid_resume.Cluster:
                 if i == j:
                     exam.Distance[j] = 9999999
                     exam.Cost[j] = 99999999
@@ -60,7 +61,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, step, input_sub):
 
                 # if the distance between clusters too high, skip
                 if dist_2d.min().min() / 1000 > \
-                        2 * (grid_resume.loc[i, 'Connection Length']):
+                        1.2 * (grid_resume.loc[i, 'Connection Length']):
                     exam.Distance[j] = 9999999
                     exam.Cost[j] = 99999999
                     continue

@@ -160,7 +160,7 @@ def sensitivity(pop_points, geo_df):
     tab_people.to_csv("%_peop.csv")
     tab_area.to_csv("%_area.csv")
     tab_people_area.to_csv("people_area.csv")
-    os.chdir(r'..//..//..')
+    os.chdir(r'..')
     print("Clustering sensitivity process completed.\n"
           "You can check the tables in the Output folder.")
     l()
@@ -255,7 +255,7 @@ def analysis(pop_points, geo_df, pop_load):
         clusters_list.loc[i, 'Load'] = \
             round(clusters_list.loc[i, 'Population'] * pop_load, 2)
 
-    os.chdir(r'Output//Clusters')
+    # os.chdir(r'Output//Clusters')
     geo_df_clustered.to_file("geo_df_clustered.shp")
     gdf_clustered_clean.to_file("geo_df_clustered_clean.shp")
     os.chdir(r'..//..')

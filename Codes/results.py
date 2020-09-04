@@ -6,18 +6,21 @@ import plotly.graph_objs as go
 from plotly.offline import plot
 
 
-def graph(df, clusters_list, step, grid_resume_opt, substations):
+def graph(df, clusters_list, branch, grid_resume_opt, substations):
     print('Plotting results..')
 
-    if step == 4:
-        os.chdir(r'Output//Main Branch')
+    study_area = gpd.read_file(r'Input/Namajavira_4326.shp')
+
+    if branch == 'yes':
+        os.chdir(r'Output//Branches')
     else:
         os.chdir(r'Output//Grids')
 
     substations = substations.to_crs(epsg=4326)
     df = df.to_crs(epsg=4326)
     clusters = df[df['Cluster'] != -1]
-    area = df.unary_union.convex_hull.boundary.xy
+    area = study_area.boundary.unary_union.xy
+    # area = df.unary_union.convex_hull.boundary.xy
 
     fig = go.Figure()
     fig.add_trace(go.Scattermapbox(name='Study Area',
@@ -62,7 +65,7 @@ def graph(df, clusters_list, step, grid_resume_opt, substations):
 
     for cluster_n in clusters_list.Cluster:
 
-        if step == 4:
+        if branch == 'yes':
             line_break('Branch_', cluster_n, fig, 'red')
             if grid_resume_opt.loc[cluster_n, 'Branch Length'] != 0:
                 line_break('Collateral_', cluster_n, fig, 'black')

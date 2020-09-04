@@ -147,11 +147,11 @@ def create_box(limits, df):
 
     dist = Point(x_min, y_min).distance(Point(x_max, y_max))
     if dist < 5000:
-        extension = dist * 2
+        extension = dist * 1.5
     elif dist < 15000:
         extension = dist
     else:
-        extension = dist / 8
+        extension = dist / 4
 
     bubble = box(minx=x_min - extension, maxx=x_max + extension,
                  miny=y_min - extension, maxy=y_max + extension)
@@ -398,7 +398,6 @@ def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
                                        'MG LCOE [EUR/kWh]',
                                        'Grid LCOE [EUR/kWh]', 'Best Solution'])
     for i in clusters_list.Cluster:
-        print(i)
         final_lcoe.at[i, 'Grid Energy Consumption [kWh]'] = \
             total_energy.loc[i, 'Energy']
 

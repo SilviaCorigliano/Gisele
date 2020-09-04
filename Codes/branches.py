@@ -1,13 +1,14 @@
 import os
 import networkx as nx
-from shapely.geometry import Point
+from shapely.geometry import Point, Polygon
 from Codes.grid import *
 from Codes import dijkstra, Steinerman
+from supporting_GISEle2 import nearest
 
 
 def routing(geo_df_clustered, geo_df, clusters_list, resolution,
             pop_thresh, input_sub, line_bc, limit_hv, limit_mv,
-            pop_load, input_csv_lr, pop_thresh_lr, line_bc_col, full_ele='no'):
+            pop_load, gdf_lr, pop_thresh_lr, line_bc_col, full_ele='no'):
     s()
     print("4. Main Branch and Collateral's")
     s()
@@ -16,26 +17,21 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
                                columns=['Branch Length',
                                         'Branch Cost',
                                         'Collateral Length', 'Collateral Cost',
+                                        'Grid Length', 'Grid Cost',
                                         'Connection Length', 'Connection Cost',
-                                        'Connection Type', 'Link Length',
-                                        'Link Cost'])
+                                        'Connection Type', 'Substation ID',
+                                        'Link Length', 'Link Cost'])
     grid_resume = clusters_list.join(grid_resume)
 
-    #  IMPORTING THE LOWER RESOLUTION GRID
-    os.chdir(r'Input//')
-    csv_lr = pd.read_csv(input_csv_lr + '.csv')
-    geometry = [Point(xy) for xy in zip(csv_lr['X'], csv_lr['Y'])]
-    gdf_zoomed = gpd.GeoDataFrame(csv_lr, geometry=geometry, crs=geo_df.crs)
-
     #  IMPORTING SUBSTATIONS
-    substations = pd.read_csv(input_sub + '.csv')
+    substations = pd.read_csv(r'Input/' + input_sub + '.csv')
     geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
     substations = gpd.GeoDataFrame(substations, geometry=geometry,
                                    crs=geo_df.crs)
-    os.chdir(r'..')
+
     os.chdir(r'Output//Branches')
 
-    grid_resume = main_branch(gdf_zoomed, geo_df_clustered, clusters_list,
+    grid_resume = main_branch(gdf_lr, geo_df_clustered, clusters_list,
                               resolution, pop_thresh_lr, line_bc, grid_resume)
 
     grid_resume, all_collateral = collateral(geo_df_clustered, geo_df,
@@ -48,21 +44,22 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
         links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
               grid_resume)
 
+    os.chdir(r'..//..')
     return grid_resume, substations
 
 
-def main_branch(gdf_zoomed, geo_df_clustered, clusters_list, resolution,
+def main_branch(gdf_lr, geo_df_clustered, clusters_list, resolution,
                 pop_thresh_lr, line_bc, grid_resume):
     all_branch = pd.DataFrame()
     for i in clusters_list.Cluster:
 
         gdf_cluster_only = geo_df_clustered[geo_df_clustered['Cluster'] == i]
-        gdf_zoomed_pop = gdf_zoomed[gdf_zoomed['Cluster'] == i]
+        gdf_lr_pop = gdf_lr[gdf_lr['Cluster'] == i]
 
-        gdf_zoomed_pop = gdf_zoomed_pop[gdf_zoomed_pop['Population'] >=
+        gdf_lr_pop = gdf_lr_pop[gdf_lr_pop['Population'] >=
                                         pop_thresh_lr]
 
-        points_to_electrify = int(len(gdf_zoomed_pop))
+        points_to_electrify = int(len(gdf_lr_pop))
         l()
         print("Creating main branch for Cluster n." + str(i) + " of "
               + str(len(clusters_list.Cluster)))
@@ -70,7 +67,7 @@ def main_branch(gdf_zoomed, geo_df_clustered, clusters_list, resolution,
         if points_to_electrify > 1:
             #  cluster gdf is given instead of total gdf to force mb inside
             branch, branch_cost, branch_length, branch_points = Steinerman. \
-                steiner(gdf_cluster_only, gdf_zoomed_pop, line_bc, resolution)
+                steiner(gdf_cluster_only, gdf_lr_pop, line_bc, resolution)
 
             print("Cluster main branch created")
 
@@ -91,8 +88,8 @@ def main_branch(gdf_zoomed, geo_df_clustered, clusters_list, resolution,
 
 
 def collateral(geo_df_clustered, geo_df, clusters_list, substations,
-               resolution, pop_thresh, line_bc, line_bc_col, limit_hv,
-               limit_mv, grid_resume, pop_load):
+               resolution, pop_thresh, line_bc, line_bc_col, sub_cost_hv,
+               sub_cost_mv, grid_resume, pop_load):
 
     all_connections = pd.DataFrame()
     all_collateral = pd.DataFrame()
@@ -104,33 +101,50 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
         l()
         print("Creating collateral's for Cluster " + str(i))
         l()
+
         if grid_resume.loc[i, 'Branch Length'] == 0:
 
             col, col_cost, col_length, col_points = \
                 Steinerman.steiner(geo_df, gdf_clusters_pop, line_bc_col,
                                    resolution)
 
-            print('Assigning to the nearest substation.. ')
-            assigned_substation, connecting_point, connection_type = \
+            print('Assigning to the 5 nearest substations.. ')
+            assigned_substations, connecting_points = \
                 substation_assignment(i, geo_df, col_points,
-                                      substations, clusters_list, limit_hv,
-                                      limit_mv)
+                                      substations, clusters_list)
+
             print('Connecting to the substation.. ')
-            connection, connection_cost, connection_length = \
-                dijkstra.dijkstra_connection(geo_df, assigned_substation,
-                                             connecting_point, col_points,
-                                             line_bc, resolution)
+
+            connection, connection_cost, connection_length, connection_type, \
+                connection_id = substation_connection(geo_df, substations,
+                                                      assigned_substations,
+                                                      connecting_points,
+                                                      col_points,
+                                                      line_bc, resolution,
+                                                      sub_cost_hv, sub_cost_mv)
+
             print("Substation connection created")
+
+            col['Power'] = clusters_list.loc[i, 'Load']
+            col['id'] = 1
 
             col.to_file("Branch_" + str(i) + '.shp')
             grid_resume.loc[i, 'Collateral Length'] = col_length / 1000
             grid_resume.loc[i, 'Collateral Cost'] = col_cost / 1000
             all_collateral = gpd.GeoDataFrame(pd.concat([all_collateral,
                                                          col], sort=True))
-            if connection_cost > 100:
-                all_connections = gpd.GeoDataFrame(
-                    pd.concat([all_connections, connection], sort=True))
-                connection.to_file("Connection_" + str(i) + '.shp')
+            if not connection.empty:
+                connection.to_file('Connection_' + str(i) + '.shp')
+                all_connections = gpd.GeoDataFrame(pd.concat(
+                    [all_connections, connection], sort=True))
+            grid_resume.loc[i, 'Connection Type'] = connection_type
+            grid_resume.loc[i, 'Substation ID'] = connection_id
+            grid_resume.loc[i, 'Grid Cost'] = \
+                grid_resume.loc[i, 'Collateral Cost'] + \
+                grid_resume.loc[i, 'Branch Cost']
+            grid_resume.loc[i, 'Grid Length'] = \
+                grid_resume.loc[i, 'Collateral Length'] + \
+                grid_resume.loc[i, 'Branch Length']
             grid_resume.loc[i, 'Connection Length'] = connection_length / 1000
             grid_resume.loc[i, 'Connection Cost'] = connection_cost / 1000
 
@@ -148,28 +162,38 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
 
         col = collateral_sizing(geo_df_clustered, col, pop_load)
 
-        print('Assigning to the nearest substation.. ')
-        assigned_substation, connecting_point, connection_type = \
+        print('Assigning to the nearest 5 substations.. ')
+        assigned_substations, connecting_points = \
             substation_assignment(i, geo_df, branch_points,
-                                  substations, clusters_list, limit_hv,
-                                  limit_mv)
+                                  substations, clusters_list)
 
         print('Connecting to the substation.. ')
-        connection, connection_cost, connection_length = \
-            dijkstra.dijkstra_connection(geo_df, assigned_substation,
-                                         connecting_point, branch_points,
-                                         line_bc, resolution)
+        connection, connection_cost, connection_length, connection_type, \
+            connection_id = substation_connection(geo_df, substations,
+                                                  assigned_substations,
+                                                  connecting_points,
+                                                  branch_points,
+                                                  line_bc, resolution,
+                                                  sub_cost_hv, sub_cost_mv)
         print("Substation connection created")
 
-        if connection_cost > 100:
-            all_connections = gpd.GeoDataFrame(
-                pd.concat([all_connections, connection], sort=True))
-            connection.to_file("Connection_" + str(i) + '.shp')
+        if not connection.empty:
+            connection.to_file('Connection_' + str(i) + '.shp')
+            all_connections = gpd.GeoDataFrame(pd.concat(
+                [all_connections, connection], sort=True))
+
         grid_resume.loc[i, 'Connection Length'] = connection_length / 1000
         grid_resume.loc[i, 'Connection Cost'] = connection_cost / 1000
         grid_resume.loc[i, 'Connection Type'] = connection_type
+        grid_resume.loc[i, 'Substation ID'] = connection_id
         grid_resume.loc[i, 'Collateral Cost'] = col_cost / 1000
         grid_resume.loc[i, 'Collateral Length'] = col_length / 1000
+        grid_resume.loc[i, 'Grid Cost'] = \
+            grid_resume.loc[i, 'Collateral Cost'] + \
+            grid_resume.loc[i, 'Branch Cost']
+        grid_resume.loc[i, 'Grid Length'] = \
+            grid_resume.loc[i, 'Collateral Length'] + \
+            grid_resume.loc[i, 'Branch Length']
         col.to_file("Collateral_" + str(i) + '.shp')
         all_collateral = gpd.GeoDataFrame(pd.concat([all_collateral, col],
                                                     sort=True))
@@ -259,3 +283,61 @@ def links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
     print('100% electrification achieved')
 
     return grid_resume
+
+
+def reduce_resolution(input_csv, geo_df, geo_df_clustered):
+
+    if os.path.isfile(r'Output/Datasets/' + input_csv + '_lr.csv'):
+        csv_lr = pd.read_csv(r'Output/Datasets/' + input_csv + '_lr.csv')
+        geometry = [Point(xy) for xy in zip(csv_lr['X'], csv_lr['Y'])]
+        gdf_lr = gpd.GeoDataFrame(csv_lr, geometry=geometry, crs=geo_df.crs)
+        print('Lower resolution geodataframe imported')
+        return gdf_lr
+
+    print('Creating a lower resolution geodataframe..')
+    min_x, min_y, max_x, max_y = geo_df.geometry.total_bounds
+    lr = 3000
+    length = lr
+    wide = lr
+
+    cols = list(
+        range(int(np.floor(min_x - lr)), int(np.ceil(max_x + lr)), wide))
+    rows = list(
+        range(int(np.floor(min_y - lr)), int(np.ceil(max_y + lr)), length))
+    rows.reverse()
+    polygons = []
+    for x in cols:
+        for y in rows:
+            polygons.append(Polygon(
+                [(x, y), (x + wide, y), (x + wide, y - length),
+                 (x, y - length)]))
+
+    gdf_lr = gpd.GeoDataFrame({'geometry': polygons}, crs=geo_df.crs)
+    for i in gdf_lr.iterrows():
+        print(i)
+        if geo_df.geometry.within(i[1][0]).any():
+            inner_points = geo_df_clustered[
+                geo_df_clustered.geometry.within(i[1][0])]
+            gdf_lr.loc[i[0], 'Population'] = inner_points.Population.sum()
+            if not inner_points[inner_points.Cluster != -1].empty:
+                nearest_p = shapely.ops.\
+                    nearest_points(i[1][0].centroid,
+                                   inner_points[inner_points.Cluster != -1]
+                                   .unary_union)
+                cluster = inner_points[inner_points.geometry == nearest_p[1]]
+                gdf_lr.loc[i[0], 'Cluster'] = cluster.Cluster.values[0]
+                gdf_lr.loc[i[0], 'ID'] = cluster.ID.values[0]
+            else:
+                gdf_lr.loc[i[0], 'Cluster'] = -1
+        else:
+            gdf_lr.loc[i[0], 'Population'] = 0
+    gdf_lr['geometry'] = gdf_lr['geometry'].centroid
+    gdf_lr.dropna(subset=["Cluster"], inplace=True)
+    gdf_lr['X'] = gdf_lr.geometry.x
+    gdf_lr['Y'] = gdf_lr.geometry.y
+
+    gdf_lr.to_csv(r'Output/Datasets/' + input_csv + '_lr.csv', index=False)
+    gdf_lr.to_file(r'Output/Datasets/' + input_csv + '_lr.shp')
+    print('Lower resolution geodataframe created and exported')
+
+    return gdf_lr

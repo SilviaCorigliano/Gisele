@@ -35,7 +35,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
 
         n_terminal_nodes = int(len(gdf_cluster_pop))
 
-        if n_terminal_nodes > 0:
+        if n_terminal_nodes > 1:
 
             l()
             print("Creating grid for Cluster n." + str(cluster_n) + " of "
@@ -94,6 +94,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     total_grid.crs = total_connection.crs = geo_df.crs
     total_grid.to_file('all_cluster_grids')
     total_connection.to_file('all_connections')
+    os.chdir(r'../..')
     return grid_resume, substations
 
 
@@ -120,7 +121,7 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
 
     dist = distance_3d(grid_points, sub_in_df, 'X', 'Y', 'Elevation')
 
-    assigned_substations = dist.min().nsmallest(5).index.values
+    assigned_substations = dist.min().nsmallest(3).index.values
 
     connecting_points = dist.idxmin()
     connecting_points = connecting_points[
@@ -147,7 +148,7 @@ def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
     c_grid_length = 0
     c_grid_points = []
 
-    if n_terminal_nodes < resolution/5 and gdf_cluster.length.size < 1500:
+    if n_terminal_nodes < resolution/5 and gdf_cluster.length.size < 500:
 
         c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
             spider(geo_df, gdf_cluster_pop, line_bc, resolution)
