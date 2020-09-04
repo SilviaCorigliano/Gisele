@@ -1,4 +1,5 @@
 import os
+import math
 import networkx as nx
 from shapely.geometry import Point, Polygon
 from Codes.grid import *
@@ -43,7 +44,8 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     if full_ele == 'yes':
         links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
               grid_resume)
-
+    elif full_ele == 'no':
+        grid_resume.to_csv('grid_resume.csv', index=False)
     os.chdir(r'..//..')
     return grid_resume, substations
 
@@ -285,7 +287,8 @@ def links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
     return grid_resume
 
 
-def reduce_resolution(input_csv, geo_df, geo_df_clustered):
+def reduce_resolution(input_csv, geo_df, resolution, geo_df_clustered,
+                      clusters_list):
 
     if os.path.isfile(r'Output/Datasets/' + input_csv + '_lr.csv'):
         csv_lr = pd.read_csv(r'Output/Datasets/' + input_csv + '_lr.csv')
@@ -296,10 +299,12 @@ def reduce_resolution(input_csv, geo_df, geo_df_clustered):
 
     print('Creating a lower resolution geodataframe..')
     min_x, min_y, max_x, max_y = geo_df.geometry.total_bounds
-    lr = 3000
+    for i in clusters_list.Cluster:
+        size = geo_df_clustered[geo_df_clustered['Cluster'] == i].__len__()
+        clusters_list.loc[i, 'Size'] = size
+    lr = int((((math.sqrt(clusters_list.Size.min())) / 3) + 1) * resolution)
     length = lr
     wide = lr
-
     cols = list(
         range(int(np.floor(min_x - lr)), int(np.ceil(max_x + lr)), wide))
     rows = list(
@@ -314,7 +319,7 @@ def reduce_resolution(input_csv, geo_df, geo_df_clustered):
 
     gdf_lr = gpd.GeoDataFrame({'geometry': polygons}, crs=geo_df.crs)
     for i in gdf_lr.iterrows():
-        print(i)
+
         if geo_df.geometry.within(i[1][0]).any():
             inner_points = geo_df_clustered[
                 geo_df_clustered.geometry.within(i[1][0])]

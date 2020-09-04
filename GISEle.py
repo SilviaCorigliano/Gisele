@@ -62,8 +62,8 @@ if step == 1:
                       substations)
 
     elif branch == 'yes':
-        gdf_lr = branches.reduce_resolution(input_csv, geo_df,
-                                            geo_df_clustered)
+        gdf_lr = branches.reduce_resolution(input_csv, geo_df, resolution,
+                                            geo_df_clustered, clusters_list)
 
         grid_resume, substations = branches.routing(geo_df_clustered, geo_df,
                                                     clusters_list, resolution,
@@ -131,8 +131,8 @@ elif step == 2:
                       substations)
 
     elif branch == 'yes':
-        gdf_lr = branches.reduce_resolution(input_csv, geo_df,
-                                            geo_df_clustered)
+        gdf_lr = branches.reduce_resolution(input_csv, geo_df, resolution,
+                                            geo_df_clustered, clusters_list)
 
         grid_resume, substations = branches.routing(geo_df_clustered, geo_df,
                                                     clusters_list, resolution,
@@ -195,8 +195,8 @@ elif step == 3:
                       substations)
 
     elif branch == 'yes':
-        gdf_lr = branches.reduce_resolution(input_csv, geo_df,
-                                            geo_df_clustered)
+        gdf_lr = branches.reduce_resolution(input_csv, geo_df, resolution,
+                                            geo_df_clustered, clusters_list)
 
         grid_resume, substations = branches.routing(geo_df_clustered, geo_df,
                                                     clusters_list, resolution,

@@ -147,7 +147,7 @@ def create_box(limits, df):
 
     dist = Point(x_min, y_min).distance(Point(x_max, y_max))
     if dist < 5000:
-        extension = dist * 1.5
+        extension = dist * 2
     elif dist < 15000:
         extension = dist
     else:

@@ -9,7 +9,8 @@ from plotly.offline import plot
 def graph(df, clusters_list, branch, grid_resume_opt, substations):
     print('Plotting results..')
 
-    study_area = gpd.read_file(r'Input/Namajavira_4326.shp')
+    study_area = gpd.read_file(r'Input/Cavalcante_4326.shp')
+    study_area = study_area.to_crs(epsg=4326)
 
     if branch == 'yes':
         os.chdir(r'Output//Branches')

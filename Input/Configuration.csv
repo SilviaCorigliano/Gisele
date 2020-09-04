@@ -11,7 +11,7 @@ line_bc,5000
 sub_cost_HV,1000000
 sub_cost_MV,100000
 branch,yes
-pop_thresh_lr,400
+pop_thresh_lr,200
 line_bc_col,3333
 full_ele,no
 wt,Nordex N27 150

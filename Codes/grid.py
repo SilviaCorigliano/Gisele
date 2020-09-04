@@ -186,6 +186,7 @@ def substation_connection(geo_df, substations, assigned_substations,
     best_connection_cost = 0
     best_connection_length = 0
     best_connection_type = []
+    best_connection_power = 0
     connection_id = []
 
     costs = np.full((1, len(assigned_substations)), 9999999)[0]
@@ -203,11 +204,17 @@ def substation_connection(geo_df, substations, assigned_substations,
             elif substations.loc[row[1]['sub_id'], 'Type'] == 'MV':
                 connection_cost = connection_cost + sub_cost_mv
         costs[row[0]] = connection_cost
+        connection_power = substations.loc[row[1]['sub_id'], 'PowerAvailable']
         if min(costs) == connection_cost:
+            if (best_connection_cost - connection_cost) < 5000 \
+                    and (best_connection_power - connection_power) > 100:
+                continue
             best_connection = connection
             best_connection_cost = connection_cost
             best_connection_length = connection_length
             best_connection_type = substations.loc[row[1]['sub_id'], 'Type']
+            best_connection_power = substations.loc[row[1]['sub_id'],
+                                                    'PowerAvailable']
             connection_id = row[1]['sub_id']
     return best_connection, best_connection_cost, best_connection_length, \
         best_connection_type, connection_id

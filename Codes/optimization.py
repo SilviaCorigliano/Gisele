@@ -61,7 +61,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
 
                 # if the distance between clusters too high, skip
                 if dist_2d.min().min() / 1000 > \
-                        1.2 * (grid_resume.loc[i, 'Connection Length']):
+                        1.15 * (grid_resume.loc[i, 'Connection Length']):
                     exam.Distance[j] = 9999999
                     exam.Cost[j] = 99999999
                     continue

@@ -22,7 +22,6 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation,
 
     df_box = create_box(pd.concat([assigned_substation, connecting_point]),
                         geo_df)
-
     dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
     dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
 
