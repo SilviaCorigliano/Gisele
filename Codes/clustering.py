@@ -191,7 +191,8 @@ def analysis(pop_points, geo_df, pop_load):
     labels = db.labels_
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)  # ignore noise
     clusters_list = pd.DataFrame(index=range(n_clusters),
-                                 columns=['Cluster', 'Population', 'Load'])
+                                 columns=['Cluster', 'Population',
+                                          'Load [kW]'])
     clusters_list.loc[:, 'Cluster'] = np.arange(n_clusters)
     print('Initial number of clusters: %d' % n_clusters)
 
@@ -252,7 +253,7 @@ def analysis(pop_points, geo_df, pop_load):
         clusters_list.loc[i, 'Population'] = \
             round(sum(geo_df_clustered.loc[geo_df_clustered
                                            ['Cluster'] == i, 'Population']))
-        clusters_list.loc[i, 'Load'] = \
+        clusters_list.loc[i, 'Load [kW]'] = \
             round(clusters_list.loc[i, 'Population'] * pop_load, 2)
 
     # os.chdir(r'Output//Clusters')

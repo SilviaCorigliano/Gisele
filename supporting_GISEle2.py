@@ -283,10 +283,13 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
     """
     geo_df_clustered = geo_df_clustered.to_crs(4326)
     mg = pd.DataFrame(index=clusters_list.index,
-                      columns=['PV', 'Wind', 'Diesel', 'BESS', 'Inverter',
-                               'Investment Cost', 'OM Cost', 'Replace Cost',
-                               'Total Cost', 'Energy Produced',
-                               'Energy Consumed', 'LCOE'])
+                      columns=['PV [kW]', 'Wind [kW]', 'Diesel [kW]',
+                               'BESS [kWh]', 'Inverter [kW]',
+                               'Investment Cost [k€]', 'OM Cost [k€]',
+                               'Replace Cost [k€]', 'Total Cost [k€]',
+                               'Energy Produced [MWh]',
+                               'Energy Consumed [MWh]', 'LCOE [€/kWh]'],
+                      dtype=float)
     for cluster_n in clusters_list.Cluster:
 
         l()
@@ -324,20 +327,20 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
             rep_cost, om_cost, salvage_value, gen_energy, load_energy = \
             start(load_profile_cluster, pv_avg, wt_avg)
 
-        mg.loc[cluster_n, 'PV'] = inst_pv
-        mg.loc[cluster_n, 'Wind'] = inst_wind
-        mg.loc[cluster_n, 'Diesel'] = inst_dg
-        mg.loc[cluster_n, 'BESS'] = inst_bess
-        mg.loc[cluster_n, 'Inverter'] = inst_inv
-        mg.loc[cluster_n, 'Investment Cost'] = init_cost
-        mg.loc[cluster_n, 'OM Cost'] = om_cost
-        mg.loc[cluster_n, 'Replace Cost'] = rep_cost
-        mg.loc[cluster_n, 'Total Cost'] = rep_cost + om_cost + init_cost
-        mg.loc[cluster_n, 'Energy Produced'] = gen_energy
-        mg.loc[cluster_n, 'Energy Consumed'] = load_energy
-        mg.loc[cluster_n, 'LCOE'] = (rep_cost + om_cost + init_cost)/gen_energy
+        mg.loc[cluster_n, 'PV [kW]'] = inst_pv
+        mg.loc[cluster_n, 'Wind [kW]'] = inst_wind
+        mg.loc[cluster_n, 'Diesel [kW]'] = inst_dg
+        mg.loc[cluster_n, 'BESS [kWh]'] = inst_bess
+        mg.loc[cluster_n, 'Inverter [kW]'] = inst_inv
+        mg.loc[cluster_n, 'Investment Cost [k€]'] = init_cost
+        mg.loc[cluster_n, 'OM Cost [k€]'] = om_cost
+        mg.loc[cluster_n, 'Replace Cost [k€]'] = rep_cost
+        mg.loc[cluster_n, 'Total Cost [k€]'] = rep_cost + om_cost + init_cost
+        mg.loc[cluster_n, 'Energy Produced [MWh]'] = gen_energy
+        mg.loc[cluster_n, 'Energy Consumed [MWh]'] = load_energy
+        mg.loc[cluster_n, 'LCOE [€/kWh]'] = (rep_cost + om_cost + init_cost)/gen_energy
         print(mg)
-
+    mg = mg.round(decimals=4)
     mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
 
     return mg
@@ -393,49 +396,50 @@ def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
      """
 
     final_lcoe = pd.DataFrame(index=clusters_list.Cluster,
-                              columns=['Grid NPC [EUR]', 'MG NPC [EUR]',
-                                       'Grid Energy Consumption [kWh]',
-                                       'MG LCOE [EUR/kWh]',
-                                       'Grid LCOE [EUR/kWh]', 'Best Solution'])
+                              columns=['Grid NPC [k€]', 'MG NPC [k€]',
+                                       'Grid Energy Consumption [MWh]',
+                                       'MG LCOE [€/kWh]',
+                                       'Grid LCOE [€/kWh]'],
+                              dtype=float)
     for i in clusters_list.Cluster:
-        final_lcoe.at[i, 'Grid Energy Consumption [kWh]'] = \
-            total_energy.loc[i, 'Energy']
+        final_lcoe.at[i, 'Grid Energy Consumption [MWh]'] = \
+            total_energy.loc[i, 'Energy']/1000
 
         # finding the npv of the cost of O&M for the whole grid lifetime
         total_grid_om = grid_om * grid_resume.loc[i, 'Grid Cost'] * 1000
         total_grid_om = [total_grid_om]*grid_lifetime
         total_grid_om = np.npv(grid_ir, total_grid_om)
 
-        final_lcoe.at[i, 'Grid NPC [EUR]'] = \
+        final_lcoe.at[i, 'Grid NPC [k€]'] = \
             (grid_resume.loc[i, 'Grid Cost'] +
-             grid_resume.loc[i, 'Connection Cost']) * 1000 \
-            + total_grid_om
+             grid_resume.loc[i, 'Connection Cost'])  \
+            + total_grid_om/1000
 
-        final_lcoe.at[i, 'MG NPC [EUR]'] = mg.loc[i, 'Total Cost'] * 1000
+        final_lcoe.at[i, 'MG NPC [k€]'] = mg.loc[i, 'Total Cost [k€]']
 
-        final_lcoe.at[i, 'MG LCOE [EUR/kWh]'] = mg.loc[i, 'LCOE']
+        final_lcoe.at[i, 'MG LCOE [€/kWh]'] = mg.loc[i, 'LCOE [€/kWh]']
 
-        grid_lcoe = final_lcoe.loc[i, 'Grid NPC [EUR]'] / final_lcoe.loc[
-            i, 'Grid Energy Consumption [kWh]'] + coe
+        grid_lcoe = final_lcoe.loc[i, 'Grid NPC [k€]'] / final_lcoe.loc[
+            i, 'Grid Energy Consumption [MWh]'] + coe
 
-        final_lcoe.at[i, 'Grid LCOE [EUR/kWh]'] = grid_lcoe
+        final_lcoe.at[i, 'Grid LCOE [€/kWh]'] = grid_lcoe
 
-        if mg.loc[i, 'LCOE'] > grid_lcoe:
-            ratio = grid_lcoe / mg.loc[i, 'LCOE']
+        if mg.loc[i, 'LCOE [€/kWh]'] > grid_lcoe:
+            ratio = grid_lcoe / mg.loc[i, 'LCOE [€/kWh]']
             if ratio < 0.95:
-                proposal = 'GRID'
+                proposal = 'ON-GRID'
             else:
                 proposal = 'BOTH'
 
         else:
-            ratio = mg.loc[i, 'LCOE'] / grid_lcoe
+            ratio = mg.loc[i, 'LCOE [€/kWh]'] / grid_lcoe
             if ratio < 0.95:
                 proposal = 'OFF-GRID'
             else:
                 proposal = 'BOTH'
 
         final_lcoe.at[i, 'Best Solution'] = proposal
-
+    final_lcoe = final_lcoe.round(decimals=4)
     l()
     print(final_lcoe)
 

@@ -19,7 +19,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
     total_connections_opt = pd.DataFrame()
     check = pd.DataFrame(index=grid_resume.Cluster, columns=['Check'])
     check.loc[:, 'Check'] = False
-    grid_resume = grid_resume.sort_values(by='Connection Cost')
+    grid_resume = grid_resume.sort_values(by='Connection Cost [k€]')
     l()
     print('Optimization of substation connections')
     l()
@@ -35,7 +35,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
 
             exam = pd.DataFrame(index=grid_resume.index,
                                 columns=['Distance', 'Cost'], dtype=int)
-            if grid_resume.loc[i, 'Connection Cost'] == 0:
+            if grid_resume.loc[i, 'Connection Cost [k€]'] == 0:
                 print('No better connection for Cluster ' + str(
                     i) + '. Keeping the substation connection ')
                 check.loc[i, 'Check'] = True
@@ -61,7 +61,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
 
                 # if the distance between clusters too high, skip
                 if dist_2d.min().min() / 1000 > \
-                        1.15 * (grid_resume.loc[i, 'Connection Length']):
+                        1.15 * (grid_resume.loc[i, 'Connection Length [km]']):
                     exam.Distance[j] = 9999999
                     exam.Cost[j] = 99999999
                     continue
@@ -75,21 +75,21 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
                 exam.Cost[j] = connection_cost
                 exam.Distance[j] = connection_length
 
-                if grid_resume.loc[i, 'Load'] + grid_resume.loc[j, 'Load'] \
+                if grid_resume.loc[i, 'Load [kW]'] + grid_resume.loc[j, 'Load [kW]'] \
                         > substations.loc[sub_id, 'PowerAvailable']:
                     continue
 
                 if min(exam.Cost) == connection_cost and check.loc[j, 'Check']\
                     and connection_cost / 1000 < \
-                        grid_resume.loc[i, 'Connection Cost']:
+                        grid_resume.loc[i, 'Connection Cost [k€]']:
                     optimized = True
                     best_connection = connection
 
             if optimized:
                 best_connection.to_file('Connection_' + str(i) + '.shp')
                 grid_resume.loc[
-                    i, 'Connection Length'] = min(exam.Distance) / 1000
-                grid_resume.loc[i, 'Connection Cost'] = min(exam.Cost) / 1000
+                    i, 'Connection Length [km]'] = min(exam.Distance) / 1000
+                grid_resume.loc[i, 'Connection Cost [k€]'] = min(exam.Cost) / 1000
                 grid_resume.loc[i, 'Connection Type'] = \
                     grid_resume.loc[exam['Cost'].idxmin(), 'Connection Type']
                 grid_resume.loc[i, 'Substation ID'] = \
@@ -102,7 +102,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
             elif not optimized:
                 print('No better connection for Cluster ' + str(
                     i) + '. Keeping the substation connection ')
-                if grid_resume.loc[i, 'Connection Length'] > 0:
+                if grid_resume.loc[i, 'Connection Length [km]'] > 0:
                     best_connection = gpd.read_file(
                         'connection_' + str(i) + '.shp')
                     total_connections_opt = gpd.GeoDataFrame(

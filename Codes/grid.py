@@ -14,8 +14,9 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     s()
     total_grid = total_connection = pd.DataFrame()
     grid_resume = pd.DataFrame(index=clusters_list.index,
-                               columns=['Grid Length', 'Grid Cost',
-                                        'Connection Length', 'Connection Cost',
+                               columns=['Grid Length [km]', 'Grid Cost [k€]',
+                                        'Connection Length [km]',
+                                        'Connection Cost [k€]',
                                         'Connection Type', 'Substation ID'])
 
     os.chdir(r'Input//')
@@ -75,19 +76,19 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
 
             grid_resume.loc[cluster_n, 'Connection Type'] = connection_type
             grid_resume.loc[cluster_n, 'Substation ID'] = connection_id
-            grid_resume.loc[cluster_n, 'Grid Length'] = c_grid_length / 1000
-            grid_resume.loc[cluster_n, 'Grid Cost'] = c_grid_cost / 1000
+            grid_resume.loc[cluster_n, 'Grid Length [km]'] = c_grid_length / 1000
+            grid_resume.loc[cluster_n, 'Grid Cost [k€]'] = c_grid_cost / 1000
             grid_resume.loc[
-                cluster_n, 'Connection Length'] = connection_length / 1000
+                cluster_n, 'Connection Length [km]'] = connection_length / 1000
             grid_resume.loc[
-                cluster_n, 'Connection Cost'] = connection_cost / 1000
+                cluster_n, 'Connection Cost [k€]'] = connection_cost / 1000
 
         elif n_terminal_nodes == 0:
 
-            grid_resume.at[cluster_n, 'Grid Length'] = 0
-            grid_resume.at[cluster_n, 'Grid Cost'] = 0
-            grid_resume.at[cluster_n, 'Connection Length'] = 0
-            grid_resume.at[cluster_n, 'Connection Cost'] = 0
+            grid_resume.at[cluster_n, 'Grid Length [km]'] = 0
+            grid_resume.at[cluster_n, 'Grid Cost [k€]'] = 0
+            grid_resume.at[cluster_n, 'Connection Length [km]'] = 0
+            grid_resume.at[cluster_n, 'Connection Cost [k€]'] = 0
 
     grid_resume = clusters_list.join(grid_resume)
     grid_resume.to_csv('grid_resume.csv', index=False)
@@ -102,7 +103,7 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
                           clusters_list):
 
     substations = substations[substations['PowerAvailable']
-                              > clusters_list.loc[cluster_n, 'Load']]
+                              > clusters_list.loc[cluster_n, 'Load [kW]']]
     substations = substations.assign(
         nearest_id=substations.apply(nearest, df=geo_df, src_column='ID',
                                      axis=1))

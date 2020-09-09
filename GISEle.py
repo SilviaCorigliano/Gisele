@@ -78,8 +78,8 @@ if step == 1:
                                                    resolution, line_bc, branch,
                                                    input_sub)
 
-        results.graph(geo_df_clustered, clusters_list, branch, grid_resume_opt,
-                      substations)
+        results.app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
+                          substations)
     '-------------------------------------------------------------------------'
     "4.Microgrid sizing"
     load_profile, years, total_energy = supporting_GISEle2.load(clusters_list,
@@ -127,7 +127,7 @@ elif step == 2:
                                                    resolution, line_bc, branch,
                                                    input_sub)
 
-        results.graph(geo_df_clustered, clusters_list, branch, grid_resume_opt,
+        results.start_app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
                       substations)
 
     elif branch == 'yes':
@@ -147,7 +147,7 @@ elif step == 2:
                                                    resolution, line_bc, branch,
                                                    input_sub)
 
-        results.graph(geo_df_clustered, clusters_list, branch, grid_resume_opt,
+        results.start_app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
                       substations)
     '-------------------------------------------------------------------------'
     "4.Microgrid sizing"
@@ -191,8 +191,8 @@ elif step == 3:
                                                    resolution, line_bc, branch,
                                                    input_sub)
 
-        results.graph(geo_df_clustered, clusters_list, branch, grid_resume_opt,
-                      substations)
+        results.start_app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
+                    substations)
 
     elif branch == 'yes':
         gdf_lr = branches.reduce_resolution(input_csv, geo_df, resolution,
@@ -210,7 +210,7 @@ elif step == 3:
                                                    resolution, line_bc, branch,
                                                    input_sub)
 
-        results.graph(geo_df_clustered, clusters_list, branch, grid_resume_opt,
+        results.start_app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
                       substations)
     '-------------------------------------------------------------------------'
     "4.Microgrid sizing"
@@ -229,7 +229,7 @@ elif step == 3:
                                                    grid_ir, grid_om,
                                                    grid_lifetime)
 
-elif step == 5:
+elif step == 4:
     '-------------------------------------------------------------------------'
     "1. Importing Parameters"
     geo_df_clustered, clusters_list, wt, grid_resume, coe, grid_ir, grid_om, \
@@ -251,7 +251,7 @@ elif step == 5:
                                                    grid_resume, mg, coe,
                                                    grid_ir, grid_om,
                                                    grid_lifetime)
-elif step == 6:
+elif step == 5:
 
     "1. Importing Parameters"
     clusters_list, grid_resume, mg, total_energy, coe, grid_ir, grid_om, \

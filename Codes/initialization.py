@@ -26,7 +26,7 @@ def import_csv_file(step):
     """
     print("Importing parameters and input files..")
     os.chdir(r'Input//')
-    config = pd.read_csv('Configuration3.csv').values
+    config = pd.read_csv('Configuration.csv').values
     data_import = config[0, 1]
     input_csv = config[1, 1]
     input_sub = config[2, 1]
@@ -89,7 +89,7 @@ def import_csv_file(step):
         geo_df_clustered = gpd.read_file("geo_df_clustered.shp")
         clusters_list = pd.DataFrame(
             index=geo_df_clustered.Cluster.unique(),
-            columns=['Cluster', 'Population', 'Load'])
+            columns=['Cluster', 'Population', 'Load [kW]'])
 
         clusters_list.loc[:, 'Cluster'] = geo_df_clustered.Cluster.unique()
         clusters_list = clusters_list.drop(index=-1)
@@ -98,7 +98,7 @@ def import_csv_file(step):
                 round(sum(geo_df_clustered.loc
                           [geo_df_clustered['Cluster'] == i,
                            'Population']))
-            clusters_list.loc[i, 'Load'] = \
+            clusters_list.loc[i, 'Load [kW]'] = \
                 round(clusters_list.loc[i, 'Population'] * pop_load, 2)
         print("Clusters successfully imported")
         l()
@@ -109,23 +109,24 @@ def import_csv_file(step):
                    branch, pop_thresh_lr, line_bc_col, full_ele, wt, \
                    coe, grid_ir, grid_om, grid_lifetime, geo_df_clustered, \
                    clusters_list
-        # if step == 4:
-        #
-        #     return df_weighted, input_sub, input_csv, crs, resolution, \
-        #         unit, pop_load, pop_thresh, line_bc, sub_cost_hv, \
-        #         sub_cost_mv, geo_df_clustered, clusters_list, \
-        #         branch, pop_thresh_lr, line_bc_col, full_ele, wt, \
-        #         coe, grid_ir, grid_om, grid_lifetime
 
-        if step == 5:
-            grid_resume = pd.read_csv('Output/Grids/grid_resume.csv',
-                                      index_col='Cluster')
+        if step == 4:
+            if branch == 'yes':
+                grid_resume = pd.read_csv('Output/Branches/grid_resume_opt.csv'
+                                          , index_col='Cluster')
+            else:
+                grid_resume = pd.read_csv('Output/Grids/grid_resume_opt.csv',
+                                          index_col='Cluster')
             return geo_df_clustered, clusters_list, wt, grid_resume, \
                 coe, grid_ir, grid_om, grid_lifetime
 
-        if step == 6:
-            grid_resume = pd.read_csv('Output/Grids/grid_resume.csv',
-                                      index_col='Cluster')
+        if step == 5:
+            if branch == 'yes':
+                grid_resume = pd.read_csv('Output/Branches/grid_resume_opt.csv'
+                                          , index_col='Cluster')
+            else:
+                grid_resume = pd.read_csv('Output/Grids/grid_resume_opt.csv',
+                                          index_col='Cluster')
             mg = pd.read_csv('Output/Microgrids/microgrids.csv',
                              index_col='Cluster')
             total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv',

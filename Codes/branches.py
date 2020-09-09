@@ -15,13 +15,13 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     s()
 
     grid_resume = pd.DataFrame(index=clusters_list.Cluster,
-                               columns=['Branch Length',
-                                        'Branch Cost',
-                                        'Collateral Length', 'Collateral Cost',
-                                        'Grid Length', 'Grid Cost',
-                                        'Connection Length', 'Connection Cost',
+                               columns=['Branch Length [km]',
+                                        'Branch Cost [k€]',
+                                        'Collateral Length [km]', 'Collateral Cost [k€]',
+                                        'Grid Length [km]', 'Grid Cost [k€]',
+                                        'Connection Length [km]', 'Connection Cost [k€]',
                                         'Connection Type', 'Substation ID',
-                                        'Link Length', 'Link Cost'])
+                                        'Link Length [km]', 'Link Cost [k€]'])
     grid_resume = clusters_list.join(grid_resume)
 
     #  IMPORTING SUBSTATIONS
@@ -73,15 +73,15 @@ def main_branch(gdf_lr, geo_df_clustered, clusters_list, resolution,
 
             print("Cluster main branch created")
 
-            grid_resume.at[i, 'Branch Length'] = branch_length / 1000
-            grid_resume.at[i, 'Branch Cost'] = branch_cost / 1000
+            grid_resume.at[i, 'Branch Length [km]'] = branch_length / 1000
+            grid_resume.at[i, 'Branch Cost [k€]'] = branch_cost / 1000
             branch.to_file("Branch_" + str(i) + '.shp')
             all_branch = gpd.GeoDataFrame(pd.concat([all_branch, branch],
                                                     sort=True))
         else:
             print('Main branch for Cluster ' + str(i) + ' not necessary')
-            grid_resume.at[i, 'Branch Length'] = 0
-            grid_resume.at[i, 'Branch Cost'] = 0
+            grid_resume.at[i, 'Branch Length [km]'] = 0
+            grid_resume.at[i, 'Branch Cost [k€]'] = 0
 
     all_branch.crs = geo_df_clustered.crs
     all_branch.to_file('all_branch')
@@ -104,10 +104,10 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
         print("Creating collateral's for Cluster " + str(i))
         l()
 
-        if grid_resume.loc[i, 'Branch Length'] == 0:
+        if grid_resume.loc[i, 'Branch Length [km]'] == 0:
 
             col, col_cost, col_length, col_points = \
-                Steinerman.steiner(geo_df, gdf_clusters_pop, line_bc_col,
+                Steinerman.steiner(geo_df, gdf_clusters_pop, line_bc,
                                    resolution)
 
             print('Assigning to the 5 nearest substations.. ')
@@ -127,12 +127,12 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
 
             print("Substation connection created")
 
-            col['Power'] = clusters_list.loc[i, 'Load']
+            col['Power'] = clusters_list.loc[i, 'Load [kW]']
             col['id'] = 1
 
             col.to_file("Branch_" + str(i) + '.shp')
-            grid_resume.loc[i, 'Collateral Length'] = col_length / 1000
-            grid_resume.loc[i, 'Collateral Cost'] = col_cost / 1000
+            grid_resume.loc[i, 'Collateral Length [km]'] = col_length / 1000
+            grid_resume.loc[i, 'Collateral Cost [k€]'] = col_cost / 1000
             all_collateral = gpd.GeoDataFrame(pd.concat([all_collateral,
                                                          col], sort=True))
             if not connection.empty:
@@ -141,14 +141,14 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
                     [all_connections, connection], sort=True))
             grid_resume.loc[i, 'Connection Type'] = connection_type
             grid_resume.loc[i, 'Substation ID'] = connection_id
-            grid_resume.loc[i, 'Grid Cost'] = \
-                grid_resume.loc[i, 'Collateral Cost'] + \
-                grid_resume.loc[i, 'Branch Cost']
-            grid_resume.loc[i, 'Grid Length'] = \
-                grid_resume.loc[i, 'Collateral Length'] + \
-                grid_resume.loc[i, 'Branch Length']
-            grid_resume.loc[i, 'Connection Length'] = connection_length / 1000
-            grid_resume.loc[i, 'Connection Cost'] = connection_cost / 1000
+            grid_resume.loc[i, 'Grid Cost [k€]'] = \
+                grid_resume.loc[i, 'Collateral Cost [k€]'] + \
+                grid_resume.loc[i, 'Branch Cost [k€]']
+            grid_resume.loc[i, 'Grid Length [km]'] = \
+                grid_resume.loc[i, 'Collateral Length [km]'] + \
+                grid_resume.loc[i, 'Branch Length [km]']
+            grid_resume.loc[i, 'Connection Length [km]'] = connection_length / 1000
+            grid_resume.loc[i, 'Connection Cost [k€]'] = connection_cost / 1000
 
             continue
 
@@ -159,8 +159,8 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
                                  branch.ID2.astype(int)))
 
         col, col_cost, col_length, col_points = \
-            Steinerman.steiner(geo_df, gdf_clusters_pop, line_bc, resolution,
-                               branch_points)
+            Steinerman.steiner(geo_df, gdf_clusters_pop, line_bc_col,
+                               resolution, branch_points)
 
         col = collateral_sizing(geo_df_clustered, col, pop_load)
 
@@ -184,18 +184,18 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
             all_connections = gpd.GeoDataFrame(pd.concat(
                 [all_connections, connection], sort=True))
 
-        grid_resume.loc[i, 'Connection Length'] = connection_length / 1000
-        grid_resume.loc[i, 'Connection Cost'] = connection_cost / 1000
+        grid_resume.loc[i, 'Connection Length [km]'] = connection_length / 1000
+        grid_resume.loc[i, 'Connection Cost [k€]'] = connection_cost / 1000
         grid_resume.loc[i, 'Connection Type'] = connection_type
         grid_resume.loc[i, 'Substation ID'] = connection_id
-        grid_resume.loc[i, 'Collateral Cost'] = col_cost / 1000
-        grid_resume.loc[i, 'Collateral Length'] = col_length / 1000
-        grid_resume.loc[i, 'Grid Cost'] = \
-            grid_resume.loc[i, 'Collateral Cost'] + \
-            grid_resume.loc[i, 'Branch Cost']
-        grid_resume.loc[i, 'Grid Length'] = \
-            grid_resume.loc[i, 'Collateral Length'] + \
-            grid_resume.loc[i, 'Branch Length']
+        grid_resume.loc[i, 'Collateral Cost [k€]'] = col_cost / 1000
+        grid_resume.loc[i, 'Collateral Length [km]'] = col_length / 1000
+        grid_resume.loc[i, 'Grid Cost [k€]'] = \
+            grid_resume.loc[i, 'Collateral Cost [k€]'] + \
+            grid_resume.loc[i, 'Branch Cost [k€]']
+        grid_resume.loc[i, 'Grid Length [km]'] = \
+            grid_resume.loc[i, 'Collateral Length [km]'] + \
+            grid_resume.loc[i, 'Branch Length [km]']
         col.to_file("Collateral_" + str(i) + '.shp')
         all_collateral = gpd.GeoDataFrame(pd.concat([all_collateral, col],
                                                     sort=True))
@@ -276,8 +276,8 @@ def links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
         all_link_no_dup = gpd.GeoDataFrame(pd.concat([all_link_no_dup,
                                                       unique_line], sort=True))
 
-    grid_resume.loc[0, 'Link Length'] = all_link_no_dup.Length.sum() / 1000
-    grid_resume.loc[0, 'Link Cost'] = all_link_no_dup.Cost.sum() / 1000
+    grid_resume.loc[0, 'Link Length [km]'] = all_link_no_dup.Length.sum() / 1000
+    grid_resume.loc[0, 'Link Cost [k€]'] = all_link_no_dup.Cost.sum() / 1000
     all_link_no_dup.crs = geo_df.crs
     all_link_no_dup.to_file('all_link')
     grid_resume.to_csv('grid_resume.csv', index=False)
