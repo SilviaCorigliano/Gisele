@@ -33,7 +33,7 @@ if step == 1:
         pop_thresh_lr, line_bc_col, full_ele, wt, coe, grid_ir, \
         grid_om, grid_lifetime = initialization.import_csv_file(step)
 
-    df_weighted = initialization.weighting(df)
+    df_weighted = initialization.weighting(df, resolution)
 
     geo_df, pop_points = initialization.creating_geodataframe(df_weighted, crs,
                                                               unit, input_csv,
@@ -49,14 +49,15 @@ if step == 1:
     "3. Grid creation"
 
     if branch == 'no':
-        grid_resume, substations = grid.routing(geo_df_clustered, geo_df,
-                                                clusters_list, resolution,
-                                                pop_thresh, input_sub, line_bc,
-                                                sub_cost_hv, sub_cost_mv)
+        grid_resume, substations, gdf_roads, roads_segments = \
+            grid.routing(geo_df_clustered, geo_df, clusters_list, resolution,
+                         pop_thresh, input_sub, line_bc, sub_cost_hv,
+                         sub_cost_mv)
 
         grid_resume_opt = optimization.connections(geo_df, grid_resume,
                                                    resolution, line_bc, branch,
-                                                   input_sub)
+                                                   input_sub, gdf_roads,
+                                                   roads_segments)
 
         results.graph(geo_df_clustered, clusters_list, branch, grid_resume_opt,
                       substations)
@@ -65,20 +66,19 @@ if step == 1:
         gdf_lr = branches.reduce_resolution(input_csv, geo_df, resolution,
                                             geo_df_clustered, clusters_list)
 
-        grid_resume, substations = branches.routing(geo_df_clustered, geo_df,
-                                                    clusters_list, resolution,
-                                                    pop_thresh, input_sub,
-                                                    line_bc, sub_cost_hv,
-                                                    sub_cost_mv, pop_load,
-                                                    gdf_lr,
-                                                    pop_thresh_lr, line_bc_col,
-                                                    full_ele)
+        grid_resume, substations, gdf_roads, roads_segments = \
+            branches.routing(geo_df_clustered, geo_df, clusters_list,
+                             resolution, pop_thresh, input_sub, line_bc,
+                             sub_cost_hv, sub_cost_mv, pop_load, gdf_lr,
+                             pop_thresh_lr, line_bc_col, full_ele)
 
         grid_resume_opt = optimization.connections(geo_df, grid_resume,
                                                    resolution, line_bc, branch,
-                                                   input_sub)
+                                                   input_sub, gdf_roads,
+                                                   roads_segments)
 
-        results.app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
+        results.start_app(geo_df_clustered, clusters_list, branch,
+                          grid_resume_opt,
                           substations)
     '-------------------------------------------------------------------------'
     "4.Microgrid sizing"
@@ -118,37 +118,38 @@ elif step == 2:
     "3. Grid creation"
 
     if branch == 'no':
-        grid_resume, substations = grid.routing(geo_df_clustered, geo_df,
-                                                clusters_list, resolution,
-                                                pop_thresh, input_sub, line_bc,
-                                                sub_cost_hv, sub_cost_mv)
+        grid_resume, substations, gdf_roads, roads_segments = \
+            grid.routing(geo_df_clustered, geo_df, clusters_list, resolution,
+                         pop_thresh, input_sub, line_bc, sub_cost_hv,
+                         sub_cost_mv)
 
         grid_resume_opt = optimization.connections(geo_df, grid_resume,
                                                    resolution, line_bc, branch,
-                                                   input_sub)
+                                                   input_sub, gdf_roads,
+                                                   roads_segments)
 
-        results.start_app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
-                      substations)
+        results.start_app(geo_df_clustered, clusters_list, branch,
+                          grid_resume_opt,
+                          substations)
 
     elif branch == 'yes':
         gdf_lr = branches.reduce_resolution(input_csv, geo_df, resolution,
                                             geo_df_clustered, clusters_list)
 
-        grid_resume, substations = branches.routing(geo_df_clustered, geo_df,
-                                                    clusters_list, resolution,
-                                                    pop_thresh, input_sub,
-                                                    line_bc, sub_cost_hv,
-                                                    sub_cost_mv, pop_load,
-                                                    gdf_lr,
-                                                    pop_thresh_lr, line_bc_col,
-                                                    full_ele)
+        grid_resume, substations, gdf_roads, roads_segments = \
+            branches.routing(geo_df_clustered, geo_df, clusters_list,
+                             resolution, pop_thresh, input_sub, line_bc,
+                             sub_cost_hv, sub_cost_mv, pop_load, gdf_lr,
+                             pop_thresh_lr, line_bc_col, full_ele)
 
         grid_resume_opt = optimization.connections(geo_df, grid_resume,
                                                    resolution, line_bc, branch,
-                                                   input_sub)
+                                                   input_sub, gdf_roads,
+                                                   roads_segments)
 
-        results.start_app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
-                      substations)
+        results.start_app(geo_df_clustered, clusters_list, branch,
+                          grid_resume_opt,
+                          substations)
     '-------------------------------------------------------------------------'
     "4.Microgrid sizing"
     load_profile, years, total_energy = supporting_GISEle2.load(clusters_list,
@@ -182,36 +183,38 @@ elif step == 3:
     "3. Grid creation"
 
     if branch == 'no':
-        grid_resume, substations = grid.routing(geo_df_clustered, geo_df,
-                                                clusters_list, resolution,
-                                                pop_thresh, input_sub, line_bc,
-                                                sub_cost_hv, sub_cost_mv)
+        grid_resume, substations, gdf_roads, roads_segments = \
+            grid.routing(geo_df_clustered, geo_df, clusters_list, resolution,
+                         pop_thresh, input_sub, line_bc, sub_cost_hv,
+                         sub_cost_mv)
 
         grid_resume_opt = optimization.connections(geo_df, grid_resume,
                                                    resolution, line_bc, branch,
-                                                   input_sub)
+                                                   input_sub, gdf_roads,
+                                                   roads_segments)
 
-        results.start_app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
-                    substations)
+        results.start_app(geo_df_clustered, clusters_list, branch,
+                          grid_resume_opt,
+                          substations)
 
     elif branch == 'yes':
         gdf_lr = branches.reduce_resolution(input_csv, geo_df, resolution,
                                             geo_df_clustered, clusters_list)
 
-        grid_resume, substations = branches.routing(geo_df_clustered, geo_df,
-                                                    clusters_list, resolution,
-                                                    pop_thresh, input_sub,
-                                                    line_bc, sub_cost_hv,
-                                                    sub_cost_mv, pop_load,
-                                                    gdf_lr, pop_thresh_lr,
-                                                    line_bc_col, full_ele)
+        grid_resume, substations, gdf_roads, roads_segments = \
+            branches.routing(geo_df_clustered, geo_df, clusters_list,
+                             resolution, pop_thresh, input_sub, line_bc,
+                             sub_cost_hv, sub_cost_mv, pop_load, gdf_lr,
+                             pop_thresh_lr, line_bc_col, full_ele)
 
         grid_resume_opt = optimization.connections(geo_df, grid_resume,
                                                    resolution, line_bc, branch,
-                                                   input_sub)
+                                                   input_sub, gdf_roads,
+                                                   roads_segments)
 
-        results.start_app(geo_df_clustered, clusters_list, branch, grid_resume_opt,
-                      substations)
+        results.start_app(geo_df_clustered, clusters_list, branch,
+                          grid_resume_opt,
+                          substations)
     '-------------------------------------------------------------------------'
     "4.Microgrid sizing"
     load_profile, years, total_energy = supporting_GISEle2.load(clusters_list,

@@ -24,6 +24,12 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
     substations = gpd.GeoDataFrame(substations, geometry=geometry,
                                    crs=geo_df.crs)
+    roads = gpd.read_file(r'roads_cavalcante.shp')
+    roads = roads[roads.geometry != None]
+    roads = roads[(roads.fclass != 'residential') & (roads.fclass != 'path') & (roads.fclass != 'footway')]
+
+    gdf_roads, roads_segments = create_roads(roads, geo_df)
+    roads_segments.to_file('roads')
     os.chdir(r'..')
     os.chdir(r'Output//Grids')
 
@@ -45,7 +51,8 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
 
             c_grid, c_grid_cost, c_grid_length, c_grid_points = \
                 cluster_grid(geo_df, gdf_cluster_pop, resolution,
-                             line_bc, n_terminal_nodes, gdf_cluster)
+                             line_bc, n_terminal_nodes, gdf_cluster, gdf_roads,
+                             roads_segments)
             print("Cluster grid created")
 
             print('Assigning to the nearest 5 substations.. ')
@@ -61,7 +68,9 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
                                                       connecting_points,
                                                       c_grid_points,
                                                       line_bc, resolution,
-                                                      sub_cost_hv, sub_cost_mv)
+                                                      sub_cost_hv, sub_cost_mv,
+                                                      gdf_roads,
+                                                      roads_segments)
 
             print("Substation connection created")
 
@@ -76,7 +85,8 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
 
             grid_resume.loc[cluster_n, 'Connection Type'] = connection_type
             grid_resume.loc[cluster_n, 'Substation ID'] = connection_id
-            grid_resume.loc[cluster_n, 'Grid Length [km]'] = c_grid_length / 1000
+            grid_resume.loc[cluster_n, 'Grid Length [km]'] = \
+                c_grid_length / 1000
             grid_resume.loc[cluster_n, 'Grid Cost [k€]'] = c_grid_cost / 1000
             grid_resume.loc[
                 cluster_n, 'Connection Length [km]'] = connection_length / 1000
@@ -96,7 +106,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     total_grid.to_file('all_cluster_grids')
     total_connection.to_file('all_connections')
     os.chdir(r'../..')
-    return grid_resume, substations
+    return grid_resume, substations, gdf_roads, roads_segments
 
 
 def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
@@ -142,7 +152,7 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
 
 
 def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
-                 n_terminal_nodes, gdf_cluster):
+                 n_terminal_nodes, gdf_cluster, gdf_roads, roads_segments):
 
     c_grid = gdf_cluster_pop
     c_grid_cost = 0
@@ -151,8 +161,17 @@ def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
 
     if n_terminal_nodes < resolution/5 and gdf_cluster.length.size < 500:
 
+        # c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
+        #     spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
+        #            roads_segments)
+        #
+        # c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
+        #     steiner_roads(geo_df, gdf_cluster_pop, line_bc, resolution,
+        #                   gdf_roads, roads_segments)
+
         c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
-            spider(geo_df, gdf_cluster_pop, line_bc, resolution)
+            spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
+                   roads_segments)
 
         c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
             steiner(geo_df, gdf_cluster_pop, line_bc, resolution)
@@ -174,14 +193,16 @@ def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
     else:
         print("Too many points to use Steiner, running Spider.")
         c_grid, c_grid_cost, c_grid_length, c_grid_points = Spiderman. \
-            spider(geo_df, gdf_cluster_pop, line_bc, resolution)
+            spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
+                   roads_segments)
 
     return c_grid, c_grid_cost, c_grid_length, c_grid_points
 
 
 def substation_connection(geo_df, substations, assigned_substations,
                           connecting_point, c_grid_points, line_bc,
-                          resolution, sub_cost_hv, sub_cost_mv):
+                          resolution, sub_cost_hv, sub_cost_mv, gdf_roads,
+                          roads_segments):
 
     best_connection = pd.DataFrame()
     best_connection_cost = 0
@@ -194,8 +215,13 @@ def substation_connection(geo_df, substations, assigned_substations,
     for row in assigned_substations.iterrows():
         point = geo_df[geo_df['ID'] == connecting_point[row[0]]]
         sub = geo_df[geo_df['ID'] == row[1].ID]
-
-        connection, connection_cost, connection_length = \
+        #
+        # connection, connection_cost, connection_length, _ = \
+        #     dijkstra.dijkstra_connection_roads(geo_df, sub, point, c_grid_points,
+        #                                  line_bc, resolution, gdf_roads,
+        #                                  roads_segments)
+        #
+        connection, connection_cost, connection_length, _ = \
             dijkstra.dijkstra_connection(geo_df, sub, point, c_grid_points,
                                          line_bc, resolution)
 
@@ -216,6 +242,6 @@ def substation_connection(geo_df, substations, assigned_substations,
             best_connection_type = substations.loc[row[1]['sub_id'], 'Type']
             best_connection_power = substations.loc[row[1]['sub_id'],
                                                     'PowerAvailable']
-            connection_id = row[1]['sub_id']
+            connection_id = substations.loc[row[1]['sub_id'], 'ID']
     return best_connection, best_connection_cost, best_connection_length, \
         best_connection_type, connection_id

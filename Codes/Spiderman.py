@@ -7,7 +7,8 @@ from supporting_GISEle2 import *
 from Codes import dijkstra, Steinerman
 
 
-def spider(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
+def spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
+           roads_segments, branch_points=None):
 
     if branch_points is None:
         branch_points = []
@@ -34,7 +35,7 @@ def spider(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
     c_grid, c_grid_points = edges_to_line(path, gdf_cluster_pop, edges_matrix)
     c_grid['Length'] = c_grid.length.astype(int)
 
-    length_limit = resolution*1.5
+    length_limit = resolution * 1.5
     long_lines = c_grid.loc[c_grid['Length'] > math.ceil(length_limit)]
     short_lines = c_grid.loc[c_grid['Length'] <= math.ceil(length_limit)]
     short_lines = short_lines.reset_index(drop=True)
@@ -50,15 +51,16 @@ def spider(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
             point_2 = gdf_cluster_pop[gdf_cluster_pop['ID'] == row.ID2]
             c_grid_points = list(zip(short_lines.ID1, short_lines.ID2))
 
-            segment, segment_cost, segment_length = \
+            # segment, segment_cost, segment_length, seg_pts = \
+            #     dijkstra.dijkstra_connection_roads(geo_df, point_1, point_2,
+            #                                        c_grid_points, line_bc,
+            #                                        resolution, gdf_roads,
+            #                                        roads_segments)
+
+            segment, segment_cost, segment_length, seg_pts = \
                 dijkstra.dijkstra_connection(geo_df, point_1, point_2,
                                              c_grid_points, line_bc,
                                              resolution)
-
-            # line_box = create_box(pd.concat([point_1, point_2], sort=True),
-            #                       gdf_cluster_pop)
-            # segment, segment_cost, segment_length, seg_points = \
-            #     Steinerman.steiner(geo_df, line_box, line_bc, resolution)
 
             short_lines = pd.concat([short_lines, segment], sort=True)
             short_lines = short_lines.reset_index(drop=True)

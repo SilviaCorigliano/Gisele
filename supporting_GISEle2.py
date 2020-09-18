@@ -15,7 +15,8 @@ import shapely.ops
 import iso8601
 from scipy.spatial import distance_matrix
 from scipy.spatial.distance import cdist
-from shapely.geometry import Point, box, LineString
+from shapely.geometry import Point, box, LineString, MultiPoint
+from shapely.ops import split
 from Codes.michele.Michele_run import start
 from Codes.data_import import import_pv_data, import_wind_data
 
@@ -133,6 +134,50 @@ def line_to_points(line, df):
     return nodes_in_df
 
 
+def create_roads(gdf_roads, geo_df):
+    w = geo_df.shape[0]
+    line_vertices = pd.DataFrame(
+        index=pd.Series(range(w, w + len(gdf_roads.index))),
+        columns=['ID', 'X', 'Y', 'ID_line', 'Weight', 'Elevation'], dtype=int)
+    # create geodataframe with all the segments that compose the road
+    segments = gpd.GeoDataFrame(columns=['geometry', 'ID1', 'ID2'])
+    k = 0
+
+    x = 0
+    for i, row in gdf_roads.iterrows():
+        for j in list(row['geometry'].coords):
+            line_vertices.loc[w, 'X'] = j[0]
+            line_vertices.loc[w, 'Y'] = j[1]
+            line_vertices.loc[w, 'ID_line'] = k
+            line_vertices.loc[w, 'ID'] = w
+            line_vertices.loc[w, 'Weight'] = 2.5
+            w = w + 1
+        k = k + 1
+        points_to_split = MultiPoint(
+            [Point(x, y) for x, y in row['geometry'].coords[1:]])
+        splitted = split(row['geometry'], points_to_split)
+        for j in splitted:
+            segments.loc[x, 'geometry'] = j
+            segments.loc[x, 'length'] = segments.loc[
+                                            x, 'geometry'].length / 1000
+            segments.loc[x, 'ID1'] = line_vertices[
+                (line_vertices['X'] == j.coords[0][0]) & (
+                        line_vertices['Y'] == j.coords[0][1])][
+                'ID'].values[0]
+            segments.loc[x, 'ID2'] = line_vertices[
+                (line_vertices['X'] == j.coords[1][0]) & (
+                        line_vertices['Y'] == j.coords[1][1])][
+                'ID'].values[0]
+            x = x + 1
+    line_vertices.loc[:, 'Elevation'] = geo_df.Elevation.mean()
+    # line_vertices.loc[:, 'Elevation'] = 300
+    geometry = [Point(xy) for xy in
+                zip(line_vertices['X'], line_vertices['Y'])]
+    line_gdf = gpd.GeoDataFrame(line_vertices, crs=geo_df.crs,
+                                geometry=geometry)
+    return line_gdf, segments
+
+
 def create_box(limits, df):
     """
     Creates a delimiting box around a geodataframe.
@@ -147,16 +192,16 @@ def create_box(limits, df):
 
     dist = Point(x_min, y_min).distance(Point(x_max, y_max))
     if dist < 5000:
-        extension = dist * 2
-    elif dist < 15000:
         extension = dist
+    elif dist < 15000:
+        extension = dist*0.6
     else:
-        extension = dist / 4
+        extension = dist/4
 
     bubble = box(minx=x_min - extension, maxx=x_max + extension,
                  miny=y_min - extension, maxy=y_max + extension)
     df_box = df[df.within(bubble)]
-    df_box.index = pd.Series(range(0, len(df_box['ID'])))
+    df_box.index = pd.Series(range(0, len(df_box.index)))
 
     return df_box
 
@@ -220,7 +265,7 @@ def load(clusters_list, grid_lifetime):
     for column in daily_profile:
         daily_profile.loc[:, column] = \
             (input_profile.loc[:, 'Hourly Factor']
-             * clusters_list.loc[column, 'Load']).values
+             * clusters_list.loc[column, 'Load [kW]']).values
     rep_days = int(data_michele.loc[0, 1].split(';')[0])
     grid_energy = daily_profile.append([daily_profile] * 364,
                                        ignore_index=True)

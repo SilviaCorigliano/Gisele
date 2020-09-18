@@ -25,8 +25,9 @@ def import_csv_file(step):
     :return: All parameters contained in the Configuration.csv
     """
     print("Importing parameters and input files..")
+
     os.chdir(r'Input//')
-    config = pd.read_csv('Configuration.csv').values
+    config = pd.read_csv('Configuration3.csv').values
     data_import = config[0, 1]
     input_csv = config[1, 1]
     input_sub = config[2, 1]
@@ -135,11 +136,12 @@ def import_csv_file(step):
                 coe, grid_ir, grid_om, grid_lifetime
 
 
-def weighting(df):
+def weighting(df, resolution):
     """
     Assign weights to all points of a dataframe according to the terrain
     characteristics and the distance to the nearest road.
     :param df: From which part of GISEle the user is starting
+    :param resolution: resolution of the dataframe df
     :return df_weighted: Point dataframe with weight attributes assigned
     """
     df_weighted = df.dropna(subset=['Elevation'])
@@ -168,8 +170,8 @@ def weighting(df):
             df_weighted.loc[index, 'Weight'] += landcover_csv.WeightOther[
                 landcover_csv.iloc[:, 2] == row.Land_cover].values[0]
         # Road distance conditions
-        if row.Road_dist < 100:
-            df_weighted.loc[index, 'Weight'] = 1
+        if row.Road_dist < resolution/2:
+            df_weighted.loc[index, 'Weight'] += 1
         elif row.Road_dist < 1000:
             df_weighted.loc[index, 'Weight'] += 5 * row.Road_dist / 1000
         else:

@@ -5,7 +5,8 @@ from supporting_GISEle2 import line_to_points, distance_2d, l
 from Codes import dijkstra
 
 
-def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
+def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
+                gdf_roads, roads_segments):
 
     substations = pd.read_csv(r'Input/' + input_sub + '.csv')
 
@@ -61,12 +62,17 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
 
                 # if the distance between clusters too high, skip
                 if dist_2d.min().min() / 1000 > \
-                        1.15 * (grid_resume.loc[i, 'Connection Length [km]']):
+                        1.5*(grid_resume.loc[i, 'Connection Length [km]']):
                     exam.Distance[j] = 9999999
                     exam.Cost[j] = 99999999
                     continue
 
-                connection, connection_cost, connection_length = \
+                # connection, connection_cost, connection_length, _ = \
+                #     dijkstra.dijkstra_connection_roads(geo_df, p1, p2, c_grid_points,
+                #                                  line_bc, resolution,
+                #                                  gdf_roads, roads_segments)
+
+                connection, connection_cost, connection_length, _ = \
                     dijkstra.dijkstra_connection(geo_df, p1, p2, c_grid_points,
                                                  line_bc, resolution)
 
@@ -86,10 +92,12 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub):
                     best_connection = connection
 
             if optimized:
-                best_connection.to_file('Connection_' + str(i) + '.shp')
+                if not best_connection.empty:
+                    best_connection.to_file('Connection_' + str(i) + '.shp')
                 grid_resume.loc[
                     i, 'Connection Length [km]'] = min(exam.Distance) / 1000
-                grid_resume.loc[i, 'Connection Cost [k€]'] = min(exam.Cost) / 1000
+                grid_resume.loc[i, 'Connection Cost [k€]'] = \
+                    min(exam.Cost)/1000
                 grid_resume.loc[i, 'Connection Type'] = \
                     grid_resume.loc[exam['Cost'].idxmin(), 'Connection Type']
                 grid_resume.loc[i, 'Substation ID'] = \
