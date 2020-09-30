@@ -3,11 +3,10 @@ import dash
 import pandas as pd
 import geopandas as gpd
 import dash_table
-import plotly.express as px
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 import dash_core_components as dcc
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 from dash.exceptions import PreventUpdate
 from shapely.geometry import Point
@@ -20,12 +19,6 @@ pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 gis_columns = pd.DataFrame(columns=['ID', 'X', 'Y', 'Population', 'Elevation',
                                     'Weight'])
-
-# grid_columns = pd.DataFrame(columns=['Cluster', 'Population', 'Load [kW]',
-#                                      'Grid Length [km]', 'Grid Cost [k€]',
-#                                      'Connection Length [km]',
-#                                      'Connection Cost [k€]',
-#                                      'Connection Type', 'Substation ID'])
 
 mg_columns = pd.DataFrame(columns=['Cluster', 'PV' '[kW]', 'Wind [kW]',
                                    'Diesel [kW]', 'BESS [kWh]',
