@@ -20,7 +20,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
     total_connections_opt = pd.DataFrame()
     check = pd.DataFrame(index=grid_resume.Cluster, columns=['Check'])
     check.loc[:, 'Check'] = False
-    grid_resume = grid_resume.sort_values(by='Connection Length [km]')
+    grid_resume = grid_resume.sort_values(by='Connection Cost [k€]')
     l()
     print('Optimization of substation connections')
     l()
@@ -62,7 +62,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
 
                 # if the distance between clusters too high, skip
                 if dist_2d.min().min() / 1000 > \
-                        1.5*(grid_resume.loc[i, 'Connection Length [km]']):
+                        2*(grid_resume.loc[i, 'Connection Length [km]']):
                     exam.Distance[j] = 9999999
                     exam.Cost[j] = 99999999
                     continue
