@@ -33,9 +33,11 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                    mode='lines',
                                    marker=go.scattermapbox.Marker(
                                        size=10,
-                                       color='black',
+                                       color='pink',
                                        opacity=1
                                    ),
+                                   text='Boundary of the analysed area',
+                                   hoverinfo='text',
                                    below="''",
                                    ))
 
@@ -45,8 +47,8 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                    mode='markers',
                                    marker=go.scattermapbox.Marker(
                                        size=10,
-                                       color='gray',
-                                       opacity=0.7
+                                       color='black',
+                                       opacity=0.5
                                    ),
                                    text=clusters.Cluster,
                                    hoverinfo='text',
@@ -78,7 +80,7 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                        color='yellow',
                                        opacity=1
                                    ),
-                                   text=terminal_nodes.Population,
+                                   text=terminal_nodes.Population.round(0),
                                    hoverinfo='text',
                                    below="''"
                                    ))

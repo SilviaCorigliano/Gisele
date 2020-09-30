@@ -1034,10 +1034,11 @@ def create_dataframe(create_df):
             mode='markers',
             marker=go.scattermapbox.Marker(
                 size=10,
+                showscale=True,
                 color=geo_df.Weight,
                 opacity=0.8
             ),
-            text=geo_df.ID,
+            text=list(zip(geo_df.ID, geo_df.Weight.round(2))),
             hoverinfo='text',
             below="''"
         ))
