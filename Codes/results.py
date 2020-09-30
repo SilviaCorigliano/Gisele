@@ -83,8 +83,8 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
           full_ele='no'):
     print('Plotting results..')
 
-    # study_area = gpd.read_file(r'Input/Namanjavira_4326.geojson')
-    study_area = gpd.read_file(r'Input/Cavalcante_4326.geojson')
+    study_area = gpd.read_file(r'Input/Namanjavira_4326.geojson')
+    # study_area = gpd.read_file(r'Input/Cavalcante_4326.geojson')
     study_area = study_area.to_crs(epsg=4326)
 
     if branch == 'yes':

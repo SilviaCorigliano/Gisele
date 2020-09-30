@@ -20,7 +20,7 @@ pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 gis_columns = pd.DataFrame(columns=['ID', 'X', 'Y', 'Population', 'Elevation',
                                     'Weight'])
 
-mg_columns = pd.DataFrame(columns=['Cluster', 'PV' '[kW]', 'Wind [kW]',
+mg_columns = pd.DataFrame(columns=['Cluster', 'PV [kW]', 'Wind [kW]',
                                    'Diesel [kW]', 'BESS [kWh]',
                                    'Inverter [kW]', 'Investment Cost [k€]',
                                    'OM Cost [k€]', 'Replace Cost [k€]',
@@ -32,7 +32,7 @@ lcoe_columns = pd.DataFrame(columns=['Cluster', 'Grid NPC [k€]', 'MG NPC [k€
                                      'MG LCOE [€/kWh]',
                                      'Grid LCOE [€/kWh]', 'Best Solution'])
 
-config = pd.read_csv(r'Input/Configuration3.csv')
+config = pd.read_csv(r'Input/Configuration.csv')
 config.loc[21, 'Value'] = sorted(list(map(int,
                                           config.loc[21, 'Value'].split('-'))))
 config.loc[20, 'Value'] = sorted(list(map(int,
@@ -1202,17 +1202,17 @@ def microgrid_size(mg_sizing):
     grid_lifetime = int(config.iloc[19, 1])
     wt = (config.iloc[15, 1])
 
-    geo_df_clustered = \
-        gpd.read_file(r"Output/Clusters/geo_df_clustered.json")
-    clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
-    clusters_list.index = clusters_list.Cluster.values
-
     if mg_sizing > 0:
-        # exec(open('GISEle.py').read())
+
+        geo_df_clustered = \
+            gpd.read_file(r"Output/Clusters/geo_df_clustered.json")
+
+        clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
+        clusters_list.index = clusters_list.Cluster.values
+
         load_profile, years, total_energy = load(clusters_list, grid_lifetime)
 
         mg = sizing(load_profile, clusters_list, geo_df_clustered, wt, years)
-        fig_mg = []
         return fig
     return fig
 
@@ -1229,22 +1229,23 @@ def lcoe_computation(lcoe_btn):
     grid_ir = float(config.iloc[17, 1])
     grid_lifetime = int(config.iloc[19, 1])
 
-    geo_df = gpd.read_file(r"Output/Datasets/geo_df_json")
-    geo_df_clustered = \
-        gpd.read_file(r"Output/Clusters/geo_df_clustered.json")
-    clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
-    clusters_list.index = clusters_list.Cluster.values
-    substations = pd.read_csv(r'Input/' + input_sub + '.csv')
-    geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
-    substations = gpd.GeoDataFrame(substations, geometry=geometry,
-                                   crs=geo_df.crs)
-
-    mg = pd.read_csv('Output/Microgrids/microgrids.csv')
-    mg.index = mg.Cluster.values
-    total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv')
-    total_energy.index = total_energy.Cluster.values
-
     if lcoe_btn > 0:
+
+        geo_df = gpd.read_file(r"Output/Datasets/geo_df_json")
+        geo_df_clustered = \
+            gpd.read_file(r"Output/Clusters/geo_df_clustered.json")
+        clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
+        clusters_list.index = clusters_list.Cluster.values
+        substations = pd.read_csv(r'Input/' + input_sub + '.csv')
+        geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
+        substations = gpd.GeoDataFrame(substations, geometry=geometry,
+                                       crs=geo_df.crs)
+
+        mg = pd.read_csv('Output/Microgrids/microgrids.csv')
+        mg.index = mg.Cluster.values
+        total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv')
+        total_energy.index = total_energy.Cluster.values
+
         if branch == 'no':
             grid_resume_opt = pd.read_csv(r'Output/Grids/grid_resume_opt.csv')
             grid_resume_opt.index = grid_resume_opt.Cluster.values

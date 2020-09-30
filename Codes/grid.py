@@ -27,8 +27,8 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     substations = gpd.GeoDataFrame(substations, geometry=geometry,
                                    crs=geo_df.crs)
 
-    # roads = gpd.read_file(r'roads_namanjavira.shp')
-    roads = gpd.read_file(r'roads_cavalcante.shp')
+    roads = gpd.read_file(r'roads_namanjavira.shp')
+    # roads = gpd.read_file(r'roads_cavalcante.shp')
     roads = roads[roads.geometry != None]
     roads = roads[(roads.fclass != 'residential') & (roads.fclass != 'path') &
                   (roads.fclass != 'footway')]
