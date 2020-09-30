@@ -171,7 +171,7 @@ def weighting(df, resolution):
                 landcover_csv.iloc[:, 2] == row.Land_cover].values[0]
         # Road distance conditions
         if row.Road_dist < resolution/2:
-            df_weighted.loc[index, 'Weight'] += 1
+            df_weighted.loc[index, 'Weight'] = 1.5
         elif row.Road_dist < 1000:
             df_weighted.loc[index, 'Weight'] += 5 * row.Road_dist / 1000
         else:

@@ -20,7 +20,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
     total_connections_opt = pd.DataFrame()
     check = pd.DataFrame(index=grid_resume.Cluster, columns=['Check'])
     check.loc[:, 'Check'] = False
-    grid_resume = grid_resume.sort_values(by='Connection Cost [k€]')
+    grid_resume = grid_resume.sort_values(by='Connection Length [km]')
     l()
     print('Optimization of substation connections')
     l()
@@ -67,14 +67,14 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
                     exam.Cost[j] = 99999999
                     continue
 
-                # connection, connection_cost, connection_length, _ = \
-                #     dijkstra.dijkstra_connection_roads(geo_df, p1, p2, c_grid_points,
-                #                                  line_bc, resolution,
-                #                                  gdf_roads, roads_segments)
-
                 connection, connection_cost, connection_length, _ = \
-                    dijkstra.dijkstra_connection(geo_df, p1, p2, c_grid_points,
-                                                 line_bc, resolution)
+                    dijkstra.dijkstra_connection_roads(geo_df, p1, p2, c_grid_points,
+                                                 line_bc, resolution,
+                                                 gdf_roads, roads_segments)
+
+                # connection, connection_cost, connection_length, _ = \
+                #     dijkstra.dijkstra_connection(geo_df, p1, p2, c_grid_points,
+                #                                  line_bc, resolution)
 
                 sub_id = grid_resume.loc[j, 'Substation ID']
 

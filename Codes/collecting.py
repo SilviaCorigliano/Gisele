@@ -12,7 +12,7 @@ def data_gathering(crs):
 
     #  Import layer with region boundaries and extract its extent
     #  the study area will be given by the dash app later, for now its manually
-    study_area = gpd.read_file(r'Input/Namajavira_4326.shp')
+    study_area = gpd.read_file(r'Input/Namajavira_4326.geojson')
     study_area = study_area.to_crs(4326)
     min_x, min_y, max_x, max_y = study_area.geometry.total_bounds
 

@@ -20,14 +20,14 @@ def spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
     dist_3d_matrix = distance_3d(gdf_cluster_pop, gdf_cluster_pop, 'X', 'Y',
                                  'Elevation')
     edges_matrix = cost_matrix(gdf_cluster_pop, dist_3d_matrix, line_bc)
-
+    # edges_matrix = dist_3d_matrix
     for i in branch_points:
         if i[0] in edges_matrix.index.values and \
                 i[1] in edges_matrix.index.values:
             edges_matrix.loc[i[0], i[1]] = 0.001
             edges_matrix.loc[i[1], i[0]] = 0.001
 
-    edges_matrix_sparse = sparse.csr_matrix(edges_matrix)
+    edges_matrix_sparse = sparse.csr_matrix(dist_3d_matrix)
     graph = nx.from_scipy_sparse_matrix(edges_matrix_sparse)
 
     tree = nx.minimum_spanning_tree(graph, weight='weight')
@@ -51,16 +51,16 @@ def spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
             point_2 = gdf_cluster_pop[gdf_cluster_pop['ID'] == row.ID2]
             c_grid_points = list(zip(short_lines.ID1, short_lines.ID2))
 
-            # segment, segment_cost, segment_length, seg_pts = \
-            #     dijkstra.dijkstra_connection_roads(geo_df, point_1, point_2,
-            #                                        c_grid_points, line_bc,
-            #                                        resolution, gdf_roads,
-            #                                        roads_segments)
-
             segment, segment_cost, segment_length, seg_pts = \
-                dijkstra.dijkstra_connection(geo_df, point_1, point_2,
-                                             c_grid_points, line_bc,
-                                             resolution)
+                dijkstra.dijkstra_connection_roads(geo_df, point_1, point_2,
+                                                   c_grid_points, line_bc,
+                                                   resolution, gdf_roads,
+                                                   roads_segments)
+
+            # segment, segment_cost, segment_length, seg_pts = \
+            #     dijkstra.dijkstra_connection(geo_df, point_1, point_2,
+            #                                  c_grid_points, line_bc,
+            #                                  resolution)
 
             short_lines = pd.concat([short_lines, segment], sort=True)
             short_lines = short_lines.reset_index(drop=True)

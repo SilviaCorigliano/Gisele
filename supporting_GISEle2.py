@@ -150,7 +150,7 @@ def create_roads(gdf_roads, geo_df):
             line_vertices.loc[w, 'Y'] = j[1]
             line_vertices.loc[w, 'ID_line'] = k
             line_vertices.loc[w, 'ID'] = w
-            line_vertices.loc[w, 'Weight'] = 2.5
+            line_vertices.loc[w, 'Weight'] = 1
             w = w + 1
         k = k + 1
         points_to_split = MultiPoint(
@@ -451,13 +451,13 @@ def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
             total_energy.loc[i, 'Energy']/1000
 
         # finding the npv of the cost of O&M for the whole grid lifetime
-        total_grid_om = grid_om * grid_resume.loc[i, 'Grid Cost'] * 1000
+        total_grid_om = grid_om * grid_resume.loc[i, 'Grid Cost [k€]'] * 1000
         total_grid_om = [total_grid_om]*grid_lifetime
         total_grid_om = np.npv(grid_ir, total_grid_om)
 
         final_lcoe.at[i, 'Grid NPC [k€]'] = \
-            (grid_resume.loc[i, 'Grid Cost'] +
-             grid_resume.loc[i, 'Connection Cost'])  \
+            (grid_resume.loc[i, 'Grid Cost [k€]'] +
+             grid_resume.loc[i, 'Connection Cost [k€]'])  \
             + total_grid_om/1000
 
         final_lcoe.at[i, 'MG NPC [k€]'] = mg.loc[i, 'Total Cost [k€]']

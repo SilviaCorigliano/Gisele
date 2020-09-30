@@ -23,7 +23,7 @@ steps = ['1.Assigning weights, Cleaning and creating the GeoDataFrame',
 print("\n".join(steps))
 supporting_GISEle2.s()
 # step = int(input('Which step do you want to select?: '))
-step = 3
+step = 4
 if step == 1:
     '-------------------------------------------------------------------------'
     "1. Assigning weights, Cleaning and Creating the GeoDataFrame"
@@ -186,7 +186,7 @@ elif step == 3:
         grid_resume, substations, gdf_roads, roads_segments = \
             grid.routing(geo_df_clustered, geo_df, clusters_list, resolution,
                          pop_thresh, input_sub, line_bc, sub_cost_hv,
-                         sub_cost_mv)
+                         sub_cost_mv, full_ele)
 
         grid_resume_opt = optimization.connections(geo_df, grid_resume,
                                                    resolution, line_bc, branch,

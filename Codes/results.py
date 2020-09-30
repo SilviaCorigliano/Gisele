@@ -79,11 +79,12 @@ def generate_table(dataframe, max_rows=10):
     ])
 
 
-def graph(df, clusters_list, branch, grid_resume_opt, substations):
+def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
+          full_ele='no'):
     print('Plotting results..')
 
-    study_area = gpd.read_file(r'Input/Namajavira_4326.shp')
-    # study_area = gpd.read_file(r'Input/Cavalcante_4326.shp')
+    # study_area = gpd.read_file(r'Input/Namanjavira_4326.geojson')
+    study_area = gpd.read_file(r'Input/Cavalcante_4326.geojson')
     study_area = study_area.to_crs(epsg=4326)
 
     if branch == 'yes':
@@ -95,7 +96,10 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations):
     df = df.to_crs(epsg=4326)
     clusters = df[df['Cluster'] != -1]
     area = study_area.boundary.unary_union.xy
-    # area = df.unary_union.convex_hull.boundary.xy
+    if full_ele == 'no':
+        terminal_nodes = clusters[clusters['Population'] >= pop_thresh]
+    elif full_ele == 'yes':
+        terminal_nodes = df[df['Population'] >= pop_thresh]
 
     fig = go.Figure()
     fig.add_trace(go.Scattermapbox(name='Study Area',
@@ -116,8 +120,8 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations):
                                    mode='markers',
                                    marker=go.scattermapbox.Marker(
                                        size=10,
-                                       color=clusters.Cluster,
-                                       opacity=0.8
+                                       color='gray',
+                                       opacity=0.7
                                    ),
                                    text=clusters.Cluster,
                                    hoverinfo='text',
@@ -138,6 +142,20 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations):
                                    below="''"
                                    ))
 
+    fig.add_trace(go.Scattermapbox(name='Terminal Nodes',
+                                   lat=terminal_nodes.geometry.y,
+                                   lon=terminal_nodes.geometry.x,
+                                   mode='markers',
+                                   marker=go.scattermapbox.Marker(
+                                       size=6,
+                                       color='yellow',
+                                       opacity=1
+                                   ),
+                                   text=terminal_nodes.ID,
+                                   hoverinfo='text',
+                                   below="''"
+                                   ))
+
     for cluster_n in clusters_list.Cluster:
 
         if branch == 'yes':
@@ -151,6 +169,9 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations):
         if grid_resume_opt.loc[cluster_n, 'Connection Length [km]'] == 0:
             continue
         line_break('Connection_', cluster_n, fig, 'blue')
+
+    if full_ele == 'yes':
+        line_break(r'all_link/', 'all_link', fig, 'green')
 
     fig.update_layout(mapbox_style="carto-positron",
                       mapbox_zoom=8.5)

@@ -2,13 +2,15 @@ import os
 import pandas as pd
 import numpy as np
 import geopandas as gpd
+import osmnx as ox
 from supporting_GISEle2 import *
 from shapely.geometry import Point
 from Codes import Steinerman, Spiderman, dijkstra
 
 
 def routing(geo_df_clustered, geo_df, clusters_list, resolution,
-            pop_thresh, input_sub, line_bc, sub_cost_hv, sub_cost_mv):
+            pop_thresh, input_sub, line_bc, sub_cost_hv, sub_cost_mv,
+            full_ele):
     s()
     print("3. Grid Creation")
     s()
@@ -24,12 +26,14 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
     substations = gpd.GeoDataFrame(substations, geometry=geometry,
                                    crs=geo_df.crs)
+
+    # roads = gpd.read_file(r'roads_namanjavira.shp')
     roads = gpd.read_file(r'roads_cavalcante.shp')
     roads = roads[roads.geometry != None]
-    roads = roads[(roads.fclass != 'residential') & (roads.fclass != 'path') & (roads.fclass != 'footway')]
+    roads = roads[(roads.fclass != 'residential') & (roads.fclass != 'path') &
+                  (roads.fclass != 'footway')]
 
     gdf_roads, roads_segments = create_roads(roads, geo_df)
-    roads_segments.to_file('roads')
     os.chdir(r'..')
     os.chdir(r'Output//Grids')
 
@@ -63,14 +67,14 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
             print('Connecting to the substation.. ')
 
             connection, connection_cost, connection_length, connection_type, \
-                connection_id = substation_connection(geo_df, substations,
-                                                      assigned_substations,
-                                                      connecting_points,
-                                                      c_grid_points,
-                                                      line_bc, resolution,
-                                                      sub_cost_hv, sub_cost_mv,
-                                                      gdf_roads,
-                                                      roads_segments)
+            connection_id = substation_connection(geo_df, substations,
+                                                  assigned_substations,
+                                                  connecting_points,
+                                                  c_grid_points,
+                                                  line_bc, resolution,
+                                                  sub_cost_hv, sub_cost_mv,
+                                                  gdf_roads,
+                                                  roads_segments)
 
             print("Substation connection created")
 
@@ -101,7 +105,11 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
             grid_resume.at[cluster_n, 'Connection Cost [k€]'] = 0
 
     grid_resume = clusters_list.join(grid_resume)
-    grid_resume.to_csv('grid_resume.csv', index=False)
+    if full_ele == 'yes':
+        links(geo_df_clustered, geo_df, total_grid, resolution,
+              line_bc, grid_resume, gdf_roads, roads_segments)
+    elif full_ele == 'no':
+        grid_resume.to_csv('grid_resume.csv', index=False)
     total_grid.crs = total_connection.crs = geo_df.crs
     total_grid.to_file('all_cluster_grids')
     total_connection.to_file('all_connections')
@@ -111,7 +119,6 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
 
 def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
                           clusters_list):
-
     substations = substations[substations['PowerAvailable']
                               > clusters_list.loc[cluster_n, 'Load [kW]']]
     substations = substations.assign(
@@ -153,26 +160,25 @@ def substation_assignment(cluster_n, geo_df, c_grid_points, substations,
 
 def cluster_grid(geo_df, gdf_cluster_pop, resolution, line_bc,
                  n_terminal_nodes, gdf_cluster, gdf_roads, roads_segments):
-
     c_grid = gdf_cluster_pop
     c_grid_cost = 0
     c_grid_length = 0
     c_grid_points = []
 
-    if n_terminal_nodes < resolution/5 and gdf_cluster.length.size < 500:
-
-        # c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
-        #     spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
-        #            roads_segments)
-        #
-        # c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
-        #     steiner_roads(geo_df, gdf_cluster_pop, line_bc, resolution,
-        #                   gdf_roads, roads_segments)
+    if n_terminal_nodes < resolution / 5 and gdf_cluster.length.size < 500:
 
         c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
             spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
                    roads_segments)
 
+        # c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
+        #     steiner_roads(geo_df, gdf_cluster_pop, line_bc, resolution,
+        #                   gdf_roads, roads_segments)
+
+        # c_grid2, c_grid_cost2, c_grid_length2, c_grid_points2 = Spiderman. \
+        #     spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
+        #            roads_segments)
+        #
         c_grid1, c_grid_cost1, c_grid_length1, c_grid_points1 = Steinerman. \
             steiner(geo_df, gdf_cluster_pop, line_bc, resolution)
 
@@ -203,7 +209,6 @@ def substation_connection(geo_df, substations, assigned_substations,
                           connecting_point, c_grid_points, line_bc,
                           resolution, sub_cost_hv, sub_cost_mv, gdf_roads,
                           roads_segments):
-
     best_connection = pd.DataFrame()
     best_connection_cost = 0
     best_connection_length = 0
@@ -215,15 +220,16 @@ def substation_connection(geo_df, substations, assigned_substations,
     for row in assigned_substations.iterrows():
         point = geo_df[geo_df['ID'] == connecting_point[row[0]]]
         sub = geo_df[geo_df['ID'] == row[1].ID]
+
+        connection, connection_cost, connection_length, _ = \
+            dijkstra.dijkstra_connection_roads(geo_df, sub, point,
+                                               c_grid_points,
+                                               line_bc, resolution, gdf_roads,
+                                               roads_segments)
         #
         # connection, connection_cost, connection_length, _ = \
-        #     dijkstra.dijkstra_connection_roads(geo_df, sub, point, c_grid_points,
-        #                                  line_bc, resolution, gdf_roads,
-        #                                  roads_segments)
-        #
-        connection, connection_cost, connection_length, _ = \
-            dijkstra.dijkstra_connection(geo_df, sub, point, c_grid_points,
-                                         line_bc, resolution)
+        #     dijkstra.dijkstra_connection(geo_df, sub, point, c_grid_points,
+        #                                  line_bc, resolution)
 
         if substations.loc[row[1]['sub_id'], 'Exist'] == 'no':
             if substations.loc[row[1]['sub_id'], 'Type'] == 'HV':
@@ -245,3 +251,57 @@ def substation_connection(geo_df, substations, assigned_substations,
             connection_id = substations.loc[row[1]['sub_id'], 'ID']
     return best_connection, best_connection_cost, best_connection_length, \
         best_connection_type, connection_id
+
+
+def links(geo_df_clustered, geo_df, all_collateral, resolution, line_bc,
+          grid_resume, gdf_roads, roads_segments):
+    all_link = pd.DataFrame()
+    l()
+    print('Connecting all the people outside the clustered area..')
+    l()
+
+    gdf_clusters_out = geo_df_clustered[geo_df_clustered['Cluster'] == -1]
+    gdf_clusters_out = gdf_clusters_out[gdf_clusters_out['Population'] >= 1]
+
+    grid_points = list(zip(all_collateral.ID1.astype(int),
+                           all_collateral.ID2.astype(int)))
+    all_points = line_to_points(all_collateral, geo_df)
+    gdf_clusters_out = gdf_clusters_out.assign(
+        nearest_id=gdf_clusters_out.apply(nearest, df=all_points,
+                                          src_column='ID', axis=1))
+
+    for row in gdf_clusters_out.iterrows():
+        p1 = geo_df_clustered[geo_df_clustered['ID'] == row[1].ID]
+        p2 = geo_df_clustered[geo_df_clustered['ID'] == row[1].nearest_id]
+
+        link, link_cost, link_length, _ = \
+            dijkstra.dijkstra_connection_roads(geo_df, p1, p2, grid_points,
+                                               line_bc, resolution, gdf_roads,
+                                               roads_segments)
+
+        all_link = gpd.GeoDataFrame(pd.concat([all_link, link], sort=True))
+
+    #  REMOVING DUPLICATIONS
+    nodes = list(zip(all_link.ID1.astype(int), all_link.ID2.astype(int)))
+    nodes = list(set(nodes))
+    all_link.reset_index(drop=True, inplace=True)
+    all_link_no_dup = pd.DataFrame()
+
+    for pair in nodes:
+        unique_line = all_link.loc[(all_link['ID1'] == pair[0]) & (
+                all_link['ID2'] == pair[1])]
+        unique_line = all_link[all_link.index ==
+                               unique_line.first_valid_index()]
+        all_link_no_dup = gpd.GeoDataFrame(pd.concat([all_link_no_dup,
+                                                      unique_line], sort=True))
+
+    grid_resume.loc[
+        0, 'Link Length [km]'] = all_link_no_dup.Length.sum() / 1000
+    grid_resume.loc[0, 'Link Cost [k€]'] = all_link_no_dup.Cost.sum() / 1000
+    all_link_no_dup.crs = geo_df.crs
+    all_link_no_dup.to_file('all_link')
+    grid_resume.to_csv('grid_resume.csv', index=False)
+
+    print('100% electrification achieved')
+
+    return grid_resume

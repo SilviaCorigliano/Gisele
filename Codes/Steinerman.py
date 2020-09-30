@@ -112,7 +112,7 @@ def steiner_roads(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
         graph.add_edge(
             df_box.index[df_box['ID'] == df_box_segments.loc[x, 'ID1']][0],
             df_box.index[df_box['ID'] == df_box_segments.loc[x, 'ID2']][0],
-            weight=df_box_segments.loc[x, 'length'])
+            weight=df_box_segments.loc[x, 'length']*line_bc)
 
     # taking all cluster points inside the box (terminal nodes)
     gdf_cluster_in_box = gpd.GeoDataFrame(crs=geo_df.crs, geometry=[])
@@ -121,8 +121,8 @@ def steiner_roads(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
         gdf_cluster_in_box = pd.concat([gdf_cluster_in_box, point], sort=True)
     terminal_nodes = list(gdf_cluster_in_box.index)
 
-    df_box_roads.to_file('roads_box')
-    df_box_segments.to_file('roads_segments')
+    # df_box_roads.to_file('roads_box')
+    # df_box_segments.to_file('roads_segments')
 
     tree = steiner_tree(graph, terminal_nodes, weight='weight')
     path = list(tree.edges)

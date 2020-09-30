@@ -70,7 +70,7 @@ def Load_results(instance):
     plt.xticks(x)
     plt.ylabel('Dispatching of resources [MWh]')
     plt.legend(loc='upper left')
-    plt.show()
+    # plt.show()
 
 
     # graph on dispatching of first day
@@ -95,7 +95,7 @@ def Load_results(instance):
     plt.xticks(x)
     plt.ylabel('Dispatching of resources [kWh]')
     plt.legend(loc='upper left')
-    plt.show()
+    # plt.show()
 
     Number_PV = int(instance.pv_units.get_values()[1])
     Number_WT = int(instance.wt_units.get_values()[1])
@@ -111,7 +111,7 @@ def Load_results(instance):
     unit_type=['DG', 'PV', 'WT', 'BESS']
     installed_units=[Number_Generator*dg_nominal_capacity, Number_PV*pv_nominal_capacity, Number_WT*wt_nominal_capacity, Number_BESS*bess_nominal_capacity]
     plt.bar(unit_type,installed_units)
-    plt.show()
+    # plt.show()
 
     init_cost = float(instance.initial_investment.get_values()[None])
     rep_cost = float(instance.replacement_cost.get_values()[None])
