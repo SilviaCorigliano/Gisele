@@ -1069,9 +1069,9 @@ def cluster_sensitivity(bt_cluster_sens):
         geo_df = gpd.read_file(r"Output/Datasets/geo_df_json")
         loc = {'x': geo_df['X'], 'y': geo_df['Y'], 'z': geo_df['Elevation']}
         pop_points = pd.DataFrame(data=loc).values
-        fig_sens = clustering.sensitivity2(resolution, pop_points, geo_df, eps,
-                                           pts,
-                                           int(spans))
+        fig_sens = clustering.sensitivity(resolution, pop_points, geo_df, eps,
+                                          pts,
+                                          int(spans))
         return fig_sens
     raise PreventUpdate
 
@@ -1095,8 +1095,8 @@ def analysis(cluster_analysis, bt_merge_clusters):
         pop_points = pd.DataFrame(data=loc).values
 
         geo_df_clustered, clusters_list = \
-            clustering.analysis2(pop_points, geo_df, pop_load,
-                                 eps_final, pts_final)
+            clustering.analysis(pop_points, geo_df, pop_load,
+                                eps_final, pts_final)
 
         gdf_clustered_clean = geo_df_clustered[
             geo_df_clustered['Cluster'] != -1]
@@ -1203,7 +1203,6 @@ def microgrid_size(mg_sizing):
     wt = (config.iloc[15, 1])
 
     if mg_sizing > 0:
-
         geo_df_clustered = \
             gpd.read_file(r"Output/Clusters/geo_df_clustered.json")
 
@@ -1237,7 +1236,8 @@ def lcoe_computation(lcoe_btn):
         clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
         clusters_list.index = clusters_list.Cluster.values
         substations = pd.read_csv(r'Input/' + input_sub + '.csv')
-        geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
+        geometry = [Point(xy) for xy in
+                    zip(substations['X'], substations['Y'])]
         substations = gpd.GeoDataFrame(substations, geometry=geometry,
                                        crs=geo_df.crs)
 

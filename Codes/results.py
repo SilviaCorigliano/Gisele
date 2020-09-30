@@ -1,82 +1,7 @@
 import os
 import pandas as pd
-from matplotlib.pyplot import plot
 import geopandas as gpd
 import plotly.graph_objs as go
-from plotly.offline import plot
-
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
-
-
-def start_app(df, clusters_list, branch, grid_resume_opt, substations):
-    external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-    colors = {'background': '#111111', 'text': '#000000'}
-
-    app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-    fig = graph(df, clusters_list, branch, grid_resume_opt, substations)
-    mg = pd.read_csv(r'Output/Microgrids/microgrids.csv')
-    lcoe = pd.read_csv(r'Output/Microgrids/LCOE_Analysis.csv')
-    app.layout = html.Div(children=[
-        html.H1(
-            children='GISEle: GIS for Electrification',
-            style={
-                'textAlign': 'center',
-                'color': colors['text']
-            }
-        ),
-
-        html.Div(children='Developed by Politecnico di Milano', style={
-            'textAlign': 'center',
-            'color': colors['text']
-        }),
-        html.Div([
-            dcc.Tabs([
-                dcc.Tab(label='Topological View', children=[
-                    dcc.Graph(
-                        id='example-graph-2',
-                        figure=fig
-                             )
-                        ]),
-
-                dcc.Tab(label='Grid Planning Resume',
-                        children=[html.Div(children=[
-                            html.H4(children='Grid Planning Resume'),
-                            generate_table(grid_resume_opt)])
-
-                        ]),
-                dcc.Tab(label='Microgrids',
-                        children=[html.Div(children=[
-                            html.H4(children='Grid Planning Resume'),
-                            generate_table(mg)])
-
-                        ]),
-
-                dcc.Tab(label='LCOE Analysis',
-                        children=[html.Div(children=[
-                            html.H4(children='Grid Planning Resume'),
-                            generate_table(lcoe)])
-
-                        ]),
-                 ])
-        ]),
-    ])
-
-    app.run_server(debug=False)
-
-
-def generate_table(dataframe, max_rows=10):
-    return html.Table([
-        html.Thead(
-            html.Tr([html.Th(col) for col in dataframe.columns])
-        ),
-        html.Tbody([
-            html.Tr([
-                html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
-            ]) for i in range(min(len(dataframe), max_rows))
-        ])
-    ])
 
 
 def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
@@ -137,9 +62,11 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                        color='black',
                                        opacity=0.8,
                                    ),
-                                   text=substations.Type,
+                                   text=list(
+                                       zip(substations.ID, substations.Type,
+                                           substations.PowerAvailable)),
                                    hoverinfo='text',
-                                   below="''"
+                                   below="''",
                                    ))
 
     fig.add_trace(go.Scattermapbox(name='Terminal Nodes',
@@ -151,7 +78,7 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                        color='yellow',
                                        opacity=1
                                    ),
-                                   text=terminal_nodes.ID,
+                                   text=terminal_nodes.Population,
                                    hoverinfo='text',
                                    below="''"
                                    ))
