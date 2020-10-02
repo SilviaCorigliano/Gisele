@@ -37,7 +37,8 @@ lcoe_columns = pd.DataFrame(columns=['Cluster', 'Grid NPC [k€]', 'MG NPC [k€
 
 # breaking load profile in half for proper showing in the data table
 input_profile = pd.read_csv(r'Input/Load Profile.csv').round(4)
-load_profile = pd.DataFrame(columns=['Hour 0-12', 'Power [p.u.]', 'Hour 12-24', 'Power (p.u.)'])
+load_profile = pd.DataFrame(columns=['Hour 0-12', 'Power [p.u.]',
+                                     'Hour 12-24', 'Power (p.u.)'])
 load_profile['Hour 0-12'] = pd.Series(np.arange(12)).astype(int)
 load_profile['Hour 12-24'] = pd.Series(np.arange(12, 24)).astype(int)
 load_profile['Power [p.u.]'] = input_profile.iloc[0:12, 0]
