@@ -33,10 +33,10 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                    mode='lines',
                                    marker=go.scattermapbox.Marker(
                                        size=10,
-                                       color='pink',
+                                       color='orange',
                                        opacity=1
                                    ),
-                                   text='Boundary of the analysed area',
+                                   text='Study Area',
                                    hoverinfo='text',
                                    below="''",
                                    ))

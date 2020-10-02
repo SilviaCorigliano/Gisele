@@ -239,7 +239,7 @@ def edges_to_line(path, df, edges_matrix):
     return line, line_points
 
 
-def load(clusters_list, grid_lifetime):
+def load(clusters_list, grid_lifetime, input_profile):
     """
     Reads the input daily load profile from the input csv. Reads the number of
     years of the project and the demand growth from the data.dat file of
@@ -261,7 +261,6 @@ def load(clusters_list, grid_lifetime):
     print("Creating load profile for each cluster..")
     daily_profile = pd.DataFrame(index=range(1, 25),
                                  columns=clusters_list.Cluster)
-    input_profile = pd.read_csv('Load Profile.csv')
     for column in daily_profile:
         daily_profile.loc[:, column] = \
             (input_profile.loc[:, 'Hourly Factor']

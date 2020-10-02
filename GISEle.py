@@ -2,6 +2,8 @@ import os
 import dash
 import pandas as pd
 import geopandas as gpd
+import numpy as np
+import plotly.express as px
 import dash_table
 import dash_bootstrap_components as dbc
 import dash_html_components as html
@@ -17,6 +19,7 @@ import pyutilib.subprocess.GlobalData
 
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
+# creation of global variables used in the algorithm
 gis_columns = pd.DataFrame(columns=['ID', 'X', 'Y', 'Population', 'Elevation',
                                     'Weight'])
 
@@ -32,6 +35,15 @@ lcoe_columns = pd.DataFrame(columns=['Cluster', 'Grid NPC [k€]', 'MG NPC [k€
                                      'MG LCOE [€/kWh]',
                                      'Grid LCOE [€/kWh]', 'Best Solution'])
 
+# breaking load profile in half for proper showing in the data table
+input_profile = pd.read_csv(r'Input/Load Profile.csv').round(4)
+load_profile = pd.DataFrame(columns=['Hour 0-12', 'Power [p.u.]', 'Hour 12-24', 'Power (p.u.)'])
+load_profile['Hour 0-12'] = pd.Series(np.arange(12)).astype(int)
+load_profile['Hour 12-24'] = pd.Series(np.arange(12, 24)).astype(int)
+load_profile['Power [p.u.]'] = input_profile.iloc[0:12, 0]
+load_profile['Power (p.u.)'] = input_profile.iloc[12:24, 0].values
+lp_data = load_profile.to_dict('records')
+
 config = pd.read_csv(r'Input/Configuration.csv')
 config.loc[21, 'Value'] = sorted(list(map(int,
                                           config.loc[21, 'Value'].split('-'))))
@@ -45,6 +57,7 @@ fig = go.Figure(go.Scattermapbox(
 fig.update_layout(mapbox_style="carto-positron")
 fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
+# initialization of the app
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.MINTY])
 app.layout = html.Div([
     html.Div([dbc.Row([
@@ -685,11 +698,41 @@ app.layout = html.Div([
                                         page_action='custom',
                                         sort_action='custom',
                                         sort_mode='single',
-                                        sort_by=[]
-                                    )
+                                        sort_by=[])
+                                ]),
+                        dbc.Tab(label='Load Profile',
+                                label_style={"color": "#55b298"},
+                                children=[
+                                    dbc.Row([
+                                        dbc.Col([
+                                            dash_table.DataTable(
+                                                id='datatable_load_profile',
+                                                columns=[{"name": i, "id": i}
+                                                         for i in
+                                                         load_profile.columns],
+                                                data=lp_data,
+                                                editable=True,
+                                                style_header={
+                                                    'whiteSpace': 'normal',
+                                                    'height': 'auto',
+                                                    'width': '30px',
+                                                    'textAlign': 'center'
+                                                },
+                                                style_table={
+                                                    'height': '450px'},
+                                                page_count=1,
+                                                page_current=0,
+                                                page_size=13,
+                                                page_action='custom'),
+                                        ], width={"size": 5, "offset": 0},
+                                            align='center'),
+                                        dbc.Col([
+                                            dcc.Graph(id='load_profile_graph')
+                                        ], width={"size": 7, "offset": 0},
+                                            align='center'),
+                                    ])
 
-                                ]
-                                ),
+                                ]),
                     ]),
                 ])
             ]), width={"size": 8, "offset": 0}, align='center'),
@@ -1210,9 +1253,11 @@ def microgrid_size(mg_sizing):
         clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
         clusters_list.index = clusters_list.Cluster.values
 
-        load_profile, years, total_energy = load(clusters_list, grid_lifetime)
+        yearly_profile, years, total_energy = load(clusters_list,
+                                                   grid_lifetime,
+                                                   input_profile)
 
-        mg = sizing(load_profile, clusters_list, geo_df_clustered, wt, years)
+        mg = sizing(yearly_profile, clusters_list, geo_df_clustered, wt, years)
         return fig
     return fig
 
@@ -1359,6 +1404,22 @@ def update_table(page_current, page_size, sort_by, output_mg, coe2):
     return geo_df2.iloc[
            page_current * page_size:(page_current + 1) * page_size
            ].to_dict('records')
+
+
+@app.callback(Output('load_profile_graph', 'figure'),
+              [Input('datatable_load_profile', 'data'),
+               Input('output_mg', "figure"),
+               Input('coe2', "value")])
+def update_table(datatable_load_profile, output_mg, coe2):
+    lp = pd.DataFrame(datatable_load_profile)
+    graph = go.Figure(data=go.Scatter(x=np.arange(23),
+                                      y=lp['Power [p.u.]'].append(
+                                          lp['Power (p.u.)']),
+                                      mode='lines+markers'))
+    graph.update_layout(title='Daily Load Profile',
+                        xaxis_title='Hour',
+                        yaxis_title='Power [p.u.]')
+    return graph
 
 
 @app.callback(Output('datatable_lcoe', 'data'),
