@@ -1,4 +1,4 @@
-![Screenshot](logo.png)
+![Screenshot](logo.PNG)
 
 # Welcome to GISEle!
 
