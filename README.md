@@ -1,4 +1,4 @@
-![Screenshot](cropped-logo-energia-2.png)
+![Screenshot](logo.png)
 
 # Welcome to GISEle!
 
