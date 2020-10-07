@@ -8,8 +8,9 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
           full_ele='no'):
     print('Plotting results..')
 
-    study_area = gpd.read_file(r'Input/Namanjavira_4326.geojson')
+    study_area = gpd.read_file(r'Input/bolivia.shp')
     # study_area = gpd.read_file(r'Input/Cavalcante_4326.geojson')
+    # study_area = gpd.read_file(r'Input/Namanjavira_4326.geojson')
     study_area = study_area.to_crs(epsg=4326)
 
     if branch == 'yes':
@@ -33,7 +34,7 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                    mode='lines',
                                    marker=go.scattermapbox.Marker(
                                        size=10,
-                                       color='orange',
+                                       color='black',
                                        opacity=1
                                    ),
                                    text='Study Area',
@@ -93,7 +94,7 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                 line_break('Collateral_', cluster_n, fig, 'black')
 
         else:
-            line_break('Grid_', cluster_n, fig, 'black')
+            line_break('Grid_', cluster_n, fig, 'red')
 
         if grid_resume_opt.loc[cluster_n, 'Connection Length [km]'] == 0:
             continue

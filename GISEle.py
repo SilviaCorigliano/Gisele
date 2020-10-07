@@ -1,14 +1,17 @@
 import os
 import dash
+import base64
+import io
 import pandas as pd
 import geopandas as gpd
+from shapely.geometry import Polygon
 import numpy as np
 import plotly.express as px
 import dash_table
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 import dash_core_components as dcc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 from dash.exceptions import PreventUpdate
 from shapely.geometry import Point
@@ -19,7 +22,7 @@ import pyutilib.subprocess.GlobalData
 
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
-# creation of global variables used in the algorithm
+# creation of all global variables used in the algorithm
 gis_columns = pd.DataFrame(columns=['ID', 'X', 'Y', 'Population', 'Elevation',
                                     'Weight'])
 
@@ -41,15 +44,18 @@ load_profile = pd.DataFrame(columns=['Hour 0-12', 'Power [p.u.]',
                                      'Hour 12-24', 'Power (p.u.)'])
 load_profile['Hour 0-12'] = pd.Series(np.arange(12)).astype(int)
 load_profile['Hour 12-24'] = pd.Series(np.arange(12, 24)).astype(int)
-load_profile['Power [p.u.]'] = input_profile.iloc[0:12, 0]
+load_profile['Power [p.u.]'] = input_profile.iloc[0:12, 0].values
 load_profile['Power (p.u.)'] = input_profile.iloc[12:24, 0].values
 lp_data = load_profile.to_dict('records')
 
+# configuration file, eps and pts values separated by - since they are a range
 config = pd.read_csv(r'Input/Configuration.csv')
 config.loc[21, 'Value'] = sorted(list(map(int,
                                           config.loc[21, 'Value'].split('-'))))
 config.loc[20, 'Value'] = sorted(list(map(int,
                                           config.loc[20, 'Value'].split('-'))))
+
+# empty map to show as initual output
 fig = go.Figure(go.Scattermapbox(
     lat=[''],
     lon=[''],
@@ -57,6 +63,16 @@ fig = go.Figure(go.Scattermapbox(
 
 fig.update_layout(mapbox_style="carto-positron")
 fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+
+# study area definition
+lon_point_list = [-65.07295675004093, -64.75263629329811, -64.73311537903679,
+                  -65.06630189290638]
+lat_point_list = [-17.880592240953966, -17.86581365258916, -18.065431449408248,
+                  -18.07471050015602]
+polygon_geom = Polygon(zip(lon_point_list, lat_point_list))
+study_area = gpd.GeoDataFrame(index=[0], crs=4326,
+                              geometry=[polygon_geom])
+study_area.to_file('study_area.shp')
 
 # initialization of the app
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.MINTY])
@@ -139,31 +155,143 @@ app.layout = html.Div([
                 html.H2(['GIS Data Analysis'], style={'color': "#55b298"}),
                 dbc.Checklist(id='import_data', switch=True, inline=True,
                               options=[
-                                  {'label': 'Import GIS Data',
+                                  {'label': 'Download GIS Data',
                                    'value': 'y'},
                               ],
-                              value='y',
+                              # value='y',
                               style={'margin': '15px'}
                               ),
-                dbc.Label('Input points .csv file'),
-                dbc.Input(
-                    id='input_csv',
-                    placeholder='Enter the file name..',
-                    debounce=True,
-                    type='text',
-                    value='',
-                    style={'margin': '5px'}
+                dbc.Collapse([
+                    dbc.Label(['Study Area'], id='studyarea_label'),
+                    dbc.Row([
+                        dbc.Label('Y1'),
+                        dbc.Col(
+                            dbc.Input(
+                                id='lat1',
+                                debounce=True,
+                                type='number',
+                                value=-17.8805,
+                                style={'margin': '1px'})
+                        ),
+                        dbc.Label('X1'),
+                        dbc.Col(
+                            dbc.Input(
+                                id='lon1',
+                                debounce=True,
+                                type='number',
+                                value=-65.0729,
+                                style={'margin': '1px'})
+                        ),
+                    ]),
+                    dbc.Row([
+                        dbc.Label('Y2'),
+                        dbc.Col(
+                            dbc.Input(
+                                id='lat2',
+                                debounce=True,
+                                type='number',
+                                value=-17.8658,
+                                style={'margin': '1px'})
+                        ),
+                        dbc.Label('X2'),
+                        dbc.Col(
+                            dbc.Input(
+                                id='lon2',
+                                debounce=True,
+                                type='number',
+                                value=-64.7526,
+                                style={'margin': '1px'})
+                        ),
+                    ]),
+                    dbc.Row([
+                        dbc.Label('Y3'),
+                        dbc.Col(
+                            dbc.Input(
+                                id='lat3',
+                                debounce=True,
+                                type='number',
+                                value=-18.0654,
+                                style={'margin': '1px'})
+                        ),
+                        dbc.Label('X3'),
+                        dbc.Col(
+                            dbc.Input(
+                                id='lon3',
+                                debounce=True,
+                                type='number',
+                                value=-64.7331,
+                                style={'margin': '1px'})
+                        ),
+                    ]),
+                    dbc.Row([
+                        dbc.Label('Y4'),
+                        dbc.Col(
+                            dbc.Input(
+                                id='lat4',
+                                debounce=True,
+                                type='number',
+                                value=-18.0747,
+                                style={'margin': '1px'})
+                        ),
+                        dbc.Label('X4'),
+                        dbc.Col(
+                            dbc.Input(
+                                id='lon4',
+                                debounce=True,
+                                type='number',
+                                value=-65.0663,
+                                style={'margin': '1px'})
+                        ),
+                    ]),
+                    dbc.Row([
+                        dbc.Col(
+                            dbc.Checklist(
+                                options=[
+                                    {"label": "Import Population", "value": 1},
+                                ],
+                                value=[1],
+                                id="import_pop")
+                        ),
+                        dbc.Col(
+                            dcc.Upload(
+                                id='upload_pop',
+                                children=html.Div([
+                                    html.A('Select .csv File')
+                                ]),
+                                style={
+                                    'width': '100%',
+                                    'height': '30px',
+                                    'lineHeight': '30px',
+                                    'borderWidth': '1px',
+                                    'borderStyle': 'dashed',
+                                    'borderRadius': '5px',
+                                    'textAlign': 'center',
+                                    'margin': '10px',
+                                },
+                            ),
+                        )
+                    ], align='center'),
 
-                ),
-                dbc.Label('Input substations .csv file'),
-                dbc.Input(
-                    id='input_sub',
-                    placeholder='Enter the file name..',
-                    debounce=True,
-                    type='text',
-                    value='',
-                    style={'margin': '5px'}
-                ),
+                ], id='collapse_gis'),
+                dbc.Collapse([
+                    dcc.Upload(
+                        id='upload_csv',
+                        children=html.Div([
+                            html.A('Import points .csv file')
+                        ]),
+                        style={
+                            'width': '100%',
+                            'height': '100px',
+                            'lineHeight': '100px',
+                            'borderWidth': '2px',
+                            'borderStyle': 'dashed',
+                            'borderRadius': '8px',
+                            'textAlign': 'center',
+                            'margin': '10px',
+                        },
+                    ),
+                    html.Div(id='upload_csv_out'),
+                ], id='collapse_gis2'),
                 dbc.Row([
                     dbc.Col([
                         dbc.Label('CRS'),
@@ -325,46 +453,47 @@ app.layout = html.Div([
                             value=500),
                     ])
                 ]),
-                html.H6(['Choose two clusters to merge'],
-                        style={'textAlign': 'center',
-                               'color': "#55b298",
-                               'margin': '5px'}),
-                dbc.Row([
-                    dbc.Col([
-                        # dbc.Label('Cluster to merge'),
-                        dbc.Input(
-                            debounce=True,
-                            bs_size='sm',
-                            id='c1_merge',
-                            placeholder='',
-                            type='number',
-                            min=0, max=99, step=1,
-                            value=''),
-                    ], width={"size": 3, "offset": 0}, align='center'),
-                    dbc.Col([
-                        # dbc.Label('Cluster'),
-                        dbc.Input(
-                            debounce=True,
-                            bs_size='sm',
-                            id='c2_merge',
-                            placeholder='',
-                            type='number',
-                            min=0, max=99, step=1,
-                            value=''),
-                    ], width={"size": 3, "offset": 0}, align='center'),
-                    dbc.Col([
-                        dbc.Button(
-                            'Merge',
-                            # size='sm',
-                            color='warning',
-                            id='bt_merge_clusters', n_clicks=0,
-                            disabled=False,
+                dbc.Collapse(id='collapse_merge', children=[
+                    html.H6(['Choose two clusters to merge'],
                             style={'textAlign': 'center',
-                                   'margin': '0px'},
-                            className='button-primary'),
-                    ], width={"size": 4, "offset": 0}, align='center')
-                ], justify="around", style={'height': -100}),
-
+                                   'color': "#55b298",
+                                   'margin': '5px'}),
+                    dbc.Row([
+                        dbc.Col([
+                            # dbc.Label('Cluster to merge'),
+                            dbc.Input(
+                                debounce=True,
+                                bs_size='sm',
+                                id='c1_merge',
+                                placeholder='',
+                                type='number',
+                                min=0, max=99, step=1,
+                                value=''),
+                        ], width={"size": 3, "offset": 0}, align='center'),
+                        dbc.Col([
+                            # dbc.Label('Cluster'),
+                            dbc.Input(
+                                debounce=True,
+                                bs_size='sm',
+                                id='c2_merge',
+                                placeholder='',
+                                type='number',
+                                min=0, max=99, step=1,
+                                value=''),
+                        ], width={"size": 3, "offset": 0}, align='center'),
+                        dbc.Col([
+                            dbc.Button(
+                                'Merge',
+                                # size='sm',
+                                color='warning',
+                                id='bt_merge_clusters', n_clicks=0,
+                                disabled=False,
+                                style={'textAlign': 'center',
+                                       'margin': '0px'},
+                                className='button-primary'),
+                        ], width={"size": 4, "offset": 0}, align='center')
+                    ], justify="around", style={'height': -100}),
+                ]),
                 dbc.Row([
                     dbc.Col(
                         dbc.Button(
@@ -453,7 +582,8 @@ app.layout = html.Div([
                 ]),
                 dbc.Row([
                     dbc.Col([
-                        dbc.Label('HV/MV Substation cost'),
+                        # dbc.Label(['HV/MV Substation cost'], style={'textSize': '1px'}),
+                        html.Div(['HV/MV Substation cost'], style={'font-size ': '1px'}),
                         dbc.Input(
                             id='sub_cost_HV',
                             placeholder='Enter a value [€]..',
@@ -475,7 +605,23 @@ app.layout = html.Div([
                         ),
                     ])
                 ]),
-
+                dcc.Upload(
+                    id='upload_subs',
+                    children=html.Div([
+                        html.A('Import substations .csv file')
+                    ]),
+                    style={
+                        'width': '100%',
+                        'height': '30px',
+                        'lineHeight': '30px',
+                        'borderWidth': '1px',
+                        'borderStyle': 'dashed',
+                        'borderRadius': '5px',
+                        'textAlign': 'center',
+                        'margin': '10px',
+                    },
+                ),
+                html.Div(id='upload_subs_out'),
                 dbc.Checklist(id='branch', switch=True, inline=True,
                               options=[
                                   {'label': 'Branch Strategy',
@@ -484,26 +630,29 @@ app.layout = html.Div([
                               value=[],
                               style={'margin': '15px'}
                               ),
-                dbc.Row([
-                    dbc.Col([
-                        dbc.Label(
-                            'Population Treshold (Main Branches)'),
-                        dbc.Input(
-                            debounce=True,
-                            id='pop_thresh_lr',
-                            type='number',
-                            min=0, max=1000, step=10,
-                            value='200'),
-                    ]),
-                    dbc.Col([
-                        dbc.Label(
-                            'Line base cost (Collaterals)'),
-                        dbc.Input(
-                            debounce=True,
-                            id='line_bc_col',
-                            placeholder='[€/km]',
-                            type='number',
-                            value='')
+
+                dbc.Collapse(id='collapse_branch', children=[
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Label(
+                                'Population Treshold (Main Branches)'),
+                            dbc.Input(
+                                debounce=True,
+                                id='pop_thresh_lr',
+                                type='number',
+                                min=0, max=1000, step=10,
+                                value='200'),
+                        ]),
+                        dbc.Col([
+                            dbc.Label(
+                                'Line base cost (Collaterals)'),
+                            dbc.Input(
+                                debounce=True,
+                                id='line_bc_col',
+                                placeholder='[€/km]',
+                                type='number',
+                                value='')
+                        ]),
                     ]),
                 ]),
 
@@ -572,59 +721,32 @@ app.layout = html.Div([
                 html.H2(['Microgrid Sizing'], style={'color': "#55b298"}),
                 dbc.Checklist(id='import_res', switch=True, inline=True,
                               options=[
-                                  {'label': 'Import RES data',
+                                  {'label': 'Download RES data',
                                    'value': 'y'},
                               ],
-                              value=[],
+                              value='y',
                               style={'textAlign': 'center', 'margin': '15px'},
                               ),
 
                 dbc.Row([
                     dbc.Col([
-                        dbc.Label('Cost of Electricity'),
-                        dbc.Input(
-                            id='coe2',
-                            placeholder='[€/kWh]',
-                            debounce=True,
-                            min=0, max=9999,
-                            type='number',
-                            value=''
-                        ),
-                    ]),
-                    dbc.Col([
-                        dbc.Label('Inflation Rate'),
-                        dbc.Input(
-                            id='grid_ir2',
-                            placeholder='[%/year]',
-                            debounce=True,
-                            min=0, max=1, step=0.01,
-                            type='number',
-                            value='0.01'
-                        ),
-                    ])
-                ]),
-
-                dbc.Row([
-                    dbc.Col([
-                        dbc.Label('Grid Lifetime'),
-                        dbc.Input(
-                            id='grid_lifetime2',
-                            placeholder='[y]',
-                            debounce=True,
-                            min=1, max=100, step=1,
-                            type='number',
-                            value='40'
-                        ),
-                    ]),
-                    dbc.Col([
-                        dbc.Label('Grid O&M Costs'),
-                        dbc.Input(
-                            debounce=True,
-                            id='grid_om2',
-                            placeholder='[% of total]',
-                            min=0, max=1, step=0.01,
-                            type='number',
-                            value='0.01'
+                        dbc.Label('Upload a Daily Load Profile'),
+                        dcc.Upload(
+                            id='upload_loadprofile',
+                            children=html.Div([
+                                'Drag and Drop or ',
+                                html.A('Select File')
+                            ]),
+                            style={
+                                'width': '100%',
+                                'height': '60px',
+                                'lineHeight': '60px',
+                                'borderWidth': '1px',
+                                'borderStyle': 'dashed',
+                                'borderRadius': '5px',
+                                'textAlign': 'center',
+                                'margin': '10px'
+                            },
                         ),
                     ])
                 ]),
@@ -853,12 +975,14 @@ app.layout = html.Div([
 
     ]),
     html.P(id='config_out', style={'display': 'none'}),
+    html.P(id='upload_pop_out', style={'display': 'none'}),
+    html.P(id='studyarea_out', style={'display': 'none'}),
     dbc.Tooltip(
-        "WARNING: This option increases the computation time, ",
+        "WARNING: This option could greatly increases the computation time, ",
         target="full_ele",
     ),
     dbc.Tooltip(
-        "WARNING: This option greatly increases the computation time, ",
+        "WARNING: This option could greatly increases the computation time, ",
         target="branch",
     ),
     dbc.Tooltip(
@@ -868,6 +992,13 @@ app.layout = html.Div([
         "a high value of people/km²."
         ,
         target="cluster_sens_header",
+    ),
+    dbc.Tooltip(
+        "Provide a set of four points, with coordinates in degrees (EPSG:4326)"
+        ", which will form a rectangular polygon that limits the area under "
+        "analysis."
+        ,
+        target="studyarea_label",
     ),
 ])
 
@@ -969,22 +1100,117 @@ def branch_options(branch):
         return False, False
 
 
-@app.callback([Output('c1_merge', 'disabled'),
-               Output('c2_merge', 'disabled'),
-               Output('bt_merge_clusters', 'disabled')],
-              [Input('cluster_analysis', 'n_clicks')])
-def merge_options(cluster_analysis):
-    """ Enables or not the options for merging clusters after analysis"""
-    if cluster_analysis == 0:
-        return True, True, True
+@app.callback(Output("collapse_gis", "is_open"),
+              [Input("import_data", "value")])
+def toggle_collapse_gis(value):
+    if isinstance(value, list):
+        if not value:
+            return False
+        elif value[0] == 'y':
+            return True
+    return False
+
+
+@app.callback(Output("collapse_gis2", "is_open"),
+              [Input("import_data", "value")])
+def toggle_collapse_gis(value):
+    if isinstance(value, list):
+        if not value:
+            return True
+        elif value[0] == 'y':
+            return False
+    return True
+
+
+@app.callback(Output("collapse_merge", "is_open"),
+              [Input("cluster_analysis", "n_clicks")])
+def toggle_collapse_merge(n_clicks):
+    if n_clicks >= 1:
+        return True
+    return False
+
+
+@app.callback(Output("collapse_branch", "is_open"),
+              [Input("branch", "value")])
+def toggle_collapse_merge(value):
+    if isinstance(value, list):
+        if not value:
+            return False
+        elif value[0] == 'y':
+            return True
+    return False
+
+
+@app.callback(Output('upload_pop', 'disabled'),
+              [Input('import_pop', 'value')])
+def disable_upload_pop(value):
+    if value:
+        return False
     else:
-        return False, False, False
+        return True
+
+
+@app.callback(Output('upload_pop_out', 'children'),
+              [Input('upload_pop', 'contents')])
+def read_upload_pop(contents):
+    if contents is not None:
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+        df.to_csv(r'Input/imported_pop.csv', index=False)
+    return '_'
+
+
+@app.callback(Output('upload_csv_out', 'children'),
+              [Input('upload_csv', 'contents')],
+              [State('upload_csv', 'filename')])
+def read_upload_csv(contents, filename):
+    if dash.callback_context.triggered:
+        if contents is not None:
+            if not 'csv' in filename:
+                return html.P('The selected file is not a CSV table.')
+            content_type, content_string = contents.split(',')
+            decoded = base64.b64decode(content_string)
+            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+            df.to_csv(r'Input/imported_csv.csv', index=False)
+            return html.P('CSV file successfully imported.')
+        return html.P('No files selected.')
+    return html.P('No files selected.')
+
+
+@app.callback(Output('upload_subs_out', 'children'),
+              [Input('upload_subs', 'contents')],
+              [State('upload_subs', 'filename')])
+def read_upload_csv(contents, filename):
+    if dash.callback_context.triggered:
+        if contents is not None:
+            if not 'csv' in filename:
+                return html.P('The selected file is not a CSV table.')
+            content_type, content_string = contents.split(',')
+            decoded = base64.b64decode(content_string)
+            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+            df.to_csv(r'Input/imported_subs.csv', index=False)
+            return html.P('CSV file successfully imported.')
+        return html.P('No files selected.')
+    return html.P('No files selected.')
+
+
+@app.callback(Output('studyarea_out', 'children'),
+              [Input('lat1', 'value'), Input('lat2', 'value'),
+               Input('lat3', 'value'), Input('lat4', 'value'),
+               Input('lon1', 'value'), Input('lon2', 'value'),
+               Input('lon3', 'value'), Input('lon4', 'value')])
+def create_study_area(lat1, lat2, lat3, lat4, lon1, lon2, lon3, lon4):
+    if dash.callback_context.triggered:
+        lat_points = [lat1, lat2, lat3, lat4]
+        lon_points = [lon1, lon2, lon3, lon4]
+        study_area.geometry = [Polygon(zip(lon_points, lat_points))]
+        study_area.to_file('study_area.shp')
+    return '_'
 
 
 @app.callback(Output('config_out', 'children'),
               [Input('import_data', 'value'),
-               Input('input_csv', 'value'),
-               Input('input_sub', 'value'),
                Input('crs', 'value'),
                Input('resolution', 'value'),
                Input('pop_thresh', 'value'),
@@ -1008,7 +1234,7 @@ def merge_options(cluster_analysis):
                Input('pts_final', 'value'),
                Input('c1_merge', 'value'),
                Input('c2_merge', 'value')])
-def configuration(import_data, input_csv, input_sub, crs, resolution,
+def configuration(import_data, crs, resolution,
                   pop_thresh, line_bc, pop_load, sub_cost_HV, sub_cost_MV,
                   branch, pop_thresh_lr, line_bc_col, full_ele, wt, coe,
                   grid_ir, grid_om, grid_lifetime, eps, pts, spans, eps_final,
@@ -1040,20 +1266,27 @@ def configuration(import_data, input_csv, input_sub, crs, resolution,
 
 @app.callback([Output('output_gis', 'figure'),
                Output('datatable_gis', 'page_count')],
-              [Input('create_df', 'n_clicks')])
-def create_dataframe(create_df):
+              [Input('create_df', 'n_clicks')],
+              [State('import_pop', 'value')])
+def create_dataframe(create_df, import_pop_value):
     """ Runs the functions for creating the geodataframe when the button RUN
     present in the GIS interface is pressed """
     data_import = config.iloc[0, 1]
-    input_csv = config.iloc[1, 1]
+    input_csv = 'imported_csv'
     crs = int(config.iloc[3, 1])
     resolution = float(config.iloc[4, 1])
     unit = 1
     step = 1
-    if create_df >= 1:
+    if dash.callback_context.triggered[0]['prop_id'] == 'create_df.n_clicks':
         if data_import == 'yes':
-            study_area = collecting.data_gathering(crs)
-            df = processing.create_mesh(study_area, crs, resolution)
+            collecting.data_gathering(crs, study_area)
+
+            if not import_pop_value:
+                df = processing.create_mesh(study_area, crs, resolution)
+            else:
+                imported_pop = pd.read_csv(r'Input/imported_pop.csv')
+                df = processing.create_mesh(study_area, crs, resolution,
+                                            imported_pop)
             df_weighted = initialization.weighting(df, resolution)
 
             geo_df, pop_points = \
@@ -1061,14 +1294,14 @@ def create_dataframe(create_df):
                                                      unit, input_csv, step)
             geo_df.to_file(r"Output/Datasets/geo_df_json",
                            driver='GeoJSON')
-            return 'yes'
-        df = pd.read_csv(r'Input/' + input_csv + '.csv', sep=',')
-        print("Input files successfully imported.")
-        df_weighted = initialization.weighting(df, resolution)
-        geo_df, pop_points = \
-            initialization.creating_geodataframe(df_weighted, crs,
-                                                 unit, input_csv, step)
-        geo_df.to_file(r"Output/Datasets/geo_df_json", driver='GeoJSON')
+        else:
+            df = pd.read_csv(r'Input/' + input_csv + '.csv', sep=',')
+            print("Input files successfully imported.")
+            df_weighted = initialization.weighting(df, resolution)
+            geo_df, pop_points = \
+                initialization.creating_geodataframe(df_weighted, crs,
+                                                     unit, input_csv, step)
+            geo_df.to_file(r"Output/Datasets/geo_df_json", driver='GeoJSON')
         geo_df = geo_df.to_crs(epsg=4326)
         fig2 = go.Figure(go.Scattermapbox(
 
@@ -1079,10 +1312,11 @@ def create_dataframe(create_df):
             marker=go.scattermapbox.Marker(
                 size=10,
                 showscale=True,
-                color=geo_df.Weight,
+                color=geo_df.Population,
                 opacity=0.8
             ),
-            text=list(zip(geo_df.ID, geo_df.Weight.round(2))),
+            text=list(
+                zip(geo_df.ID, geo_df.Weight.round(2), geo_df.Population)),
             hoverinfo='text',
             below="''"
         ))
@@ -1181,8 +1415,8 @@ def analysis(cluster_analysis, bt_merge_clusters):
               [Input('grid_routing', 'n_clicks')])
 def routing(grid_routing):
     if grid_routing >= 1:
-        input_csv = config.iloc[1, 1]
-        input_sub = config.iloc[2, 1]
+        input_csv = 'imported_csv'
+        input_sub = 'imported_subs'
         resolution = float(config.iloc[4, 1])
         pop_load = float(config.iloc[6, 1])
         pop_thresh = float(config.iloc[7, 1])
@@ -1266,14 +1500,17 @@ def microgrid_size(mg_sizing):
 @app.callback(Output('output_lcoe', 'figure'),
               [Input('lcoe_btn', 'n_clicks')])
 def lcoe_computation(lcoe_btn):
+    global final_lcoe
     branch = config.iloc[11, 1]
     full_ele = config.iloc[14, 1]
-    input_sub = config.iloc[2, 1]
+    input_sub = 'imported_subs'
     pop_thresh = float(config.iloc[7, 1])
     coe = float(config.iloc[16, 1])
     grid_om = float(config.iloc[18, 1])
     grid_ir = float(config.iloc[17, 1])
     grid_lifetime = int(config.iloc[19, 1])
+    resolution = float(config.iloc[4, 1])
+    line_bc = float(config.iloc[8, 1])
 
     if lcoe_btn > 0:
 
@@ -1324,6 +1561,10 @@ def lcoe_computation(lcoe_btn):
                                        coe,
                                        grid_ir, grid_om,
                                        grid_lifetime)
+        microgrids = pd.read_csv(r'Output/Microgrids/microgrids.csv')
+        optimization.milp_lcoe(geo_df_clustered, grid_resume, substations,
+                               microgrids, final_lcoe, grid_lifetime,
+                               branch, line_bc, resolution)
         return fig_grid
     else:
         return fig
@@ -1350,8 +1591,8 @@ def update_table(page_current, page_size, output_gis):
               [Input('datatable_grid', "page_current"),
                Input('datatable_grid', "page_size"),
                Input('datatable_grid', 'sort_by'),
-               Input('output_grid', "figure"),
-               Input('branch', 'value')])
+               Input('output_grid', "figure")],
+              [State('branch', 'value')])
 def update_table(page_current, page_size, sort_by, output_grid, branches):
     branch = config.iloc[11, 1]
     geo_df2 = pd.DataFrame()
@@ -1388,9 +1629,8 @@ def update_table(page_current, page_size, sort_by, output_grid, branches):
               [Input('datatable_mg', "page_current"),
                Input('datatable_mg', "page_size"),
                Input('datatable_mg', 'sort_by'),
-               Input('output_mg', "figure"),
-               Input('coe2', "value")])
-def update_table(page_current, page_size, sort_by, output_mg, coe2):
+               Input('output_mg', "figure")])
+def update_table(page_current, page_size, sort_by, output_mg):
     if os.path.isfile(r'Output/Microgrids/microgrids.csv'):
         geo_df2 = pd.read_csv(r'Output/Microgrids/microgrids.csv')
         geo_df2 = geo_df2.round(2)
@@ -1409,9 +1649,8 @@ def update_table(page_current, page_size, sort_by, output_mg, coe2):
 
 @app.callback(Output('load_profile_graph', 'figure'),
               [Input('datatable_load_profile', 'data'),
-               Input('output_mg', "figure"),
-               Input('coe2', "value")])
-def update_table(datatable_load_profile, output_mg, coe2):
+               Input('output_mg', "figure")])
+def update_table(datatable_load_profile, output_mg):
     lp = pd.DataFrame(datatable_load_profile)
     graph = go.Figure(data=go.Scatter(x=np.arange(23),
                                       y=lp['Power [p.u.]'].append(
@@ -1443,6 +1682,28 @@ def update_table(page_current, page_size, sort_by, output_mg):
     return geo_df2.iloc[
            page_current * page_size:(page_current + 1) * page_size
            ].to_dict('records')
+
+
+@app.callback(Output('datatable_load_profile', 'data'),
+              [Input('upload_loadprofile', 'contents')],
+              [State('upload_loadprofile', 'filename'),
+               State('upload_loadprofile', 'last_modified')])
+def update_output(contents, filename, last_modified):
+    if contents is not None:
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        df = pd.read_csv(io.StringIO(decoded.decode('utf-8'))).round(4)
+        upload_profile = pd.DataFrame(columns=['Hour 0-12', 'Power [p.u.]',
+                                               'Hour 12-24',
+                                               'Power (p.u.)'])
+        upload_profile['Hour 0-12'] = pd.Series(np.arange(12)).astype(int)
+        upload_profile['Hour 12-24'] = pd.Series(np.arange(12, 24)).astype(
+            int)
+        upload_profile['Power [p.u.]'] = df.iloc[0:12, 0].values
+        upload_profile['Power (p.u.)'] = df.iloc[12:24, 0].values
+
+        return upload_profile.to_dict('records')
+    raise PreventUpdate
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import os
+import itertools
 import pandas as pd
 import geopandas as gpd
 from supporting_GISEle2 import line_to_points, distance_2d, l
@@ -9,6 +10,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
                 gdf_roads, roads_segments):
 
     substations = pd.read_csv(r'Input/' + input_sub + '.csv')
+    substations.index = substations['ID'].values
 
     if branch == 'yes':
         file = 'Branch_'
@@ -67,14 +69,14 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
                     exam.Cost[j] = 99999999
                     continue
 
-                connection, connection_cost, connection_length, _ = \
-                    dijkstra.dijkstra_connection_roads(geo_df, p1, p2, c_grid_points,
-                                                 line_bc, resolution,
-                                                 gdf_roads, roads_segments)
-
                 # connection, connection_cost, connection_length, _ = \
-                #     dijkstra.dijkstra_connection(geo_df, p1, p2, c_grid_points,
-                #                                  line_bc, resolution)
+                #     dijkstra.dijkstra_connection_roads(geo_df, p1, p2, c_grid_points,
+                #                                  line_bc, resolution,
+                #                                  gdf_roads, roads_segments)
+
+                connection, connection_cost, connection_length, _ = \
+                    dijkstra.dijkstra_connection(geo_df, p1, p2, c_grid_points,
+                                                 line_bc, resolution)
 
                 sub_id = grid_resume.loc[j, 'Substation ID']
 
@@ -126,3 +128,100 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
     print('All grids and connections have been optimized and exported.')
     os.chdir(r'..//..')
     return grid_resume
+
+
+def milp_lcoe(geo_df_clustered, grid_resume, substations, microgrids,
+              final_lcoe, grid_lifetime, branch, line_bc, resolution):
+
+    data_michele = pd.read_table("Codes/michele/Inputs/data.dat", sep="=",
+                                 header=None)
+    if branch == 'yes':
+        file = 'Branch_'
+        os.chdir(r'Output/Branches')
+    else:
+        file = 'Grid_'
+        os.chdir(r'Output/Grids')
+
+    mg_lifetime = int(data_michele.loc[1, 1].split(';')[0])
+    milp_clusters = grid_resume[['Cluster', 'Load [kW]']].copy()
+    milp_clusters['Cluster'] = ['C' + str(i[0]) for i in
+                                milp_clusters['Cluster'].iteritems()]
+    milp_clusters['mg_npc'] = final_lcoe['MG NPC [k€]'] * \
+                              (grid_lifetime / mg_lifetime)
+    milp_subs = substations[['ID', 'PowerAvailable']].copy()
+    milp_subs['ID'] = ['S' + str(i[1]) for i in milp_subs['ID'].iteritems()]
+    milp_subs['subs_npc'] = 10
+    sets = milp_clusters['Cluster'].append(milp_subs['ID'], ignore_index=True)
+    combinations = list(itertools.combinations(sets, 2))
+    milp_links = pd.DataFrame(index=range(combinations.__len__()),
+                              columns=['0', '1'])
+    milp_links['0'] = [i[0] for i in combinations]
+    milp_links['1'] = [i[1] for i in combinations]
+    milp_links['Cost'] = 999999
+    for row in milp_links.iterrows():
+        if 'S' in row[1][0] and 'S' in row[1][1]:
+            continue
+        c_grid_points = []
+        print('Connecting ' + row[1][0] + ' and ' + row[1][1])
+        if 'C' in row[1][0]:
+            grid_1 = gpd.read_file(file + str(row[1][0].split('C')[1]) +
+                                   ".shp")
+            c_grid_points = list(zip(grid_1.ID1.astype(int),
+                                     grid_1.ID2.astype(int)))
+            grid_1 = line_to_points(grid_1, geo_df_clustered)
+        elif 'S' in row[1][0]:
+            grid_1 = substations[substations['ID'] ==
+                                 int(row[1][0].split('S')[1])]
+
+        if 'C' in row[1][1]:
+            grid_2 = gpd.read_file(file + str(row[1][1].split('C')[1]) +
+                                   ".shp")
+            c_grid_points.append(list(zip(grid_2.ID1.astype(int),
+                                          grid_2.ID2.astype(int))))
+            grid_2 = line_to_points(grid_2, geo_df_clustered)
+        elif 'S' in row[1][1]:
+            grid_2 = substations[
+                substations['ID'] == int(row[1][1].split('S')[1])]
+
+        dist_2d = pd.DataFrame(distance_2d(grid_1, grid_2, 'X', 'Y'),
+                               index=grid_1.ID.values,
+                               columns=grid_2.ID.values)
+
+        p1 = geo_df_clustered[geo_df_clustered['ID'] == dist_2d.min().idxmin()]
+        p2 = geo_df_clustered[geo_df_clustered['ID'] ==
+                              dist_2d.min(axis=1).idxmin()]
+
+        connection, connection_cost, connection_length, _ = \
+            dijkstra.dijkstra_connection(geo_df_clustered, p1, p2,
+                                         c_grid_points, line_bc, resolution)
+
+        if connection.empty:
+            continue
+        milp_links.loc[row[0], 'Cost'] = connection_cost
+    milp_links.drop(milp_links[milp_links['Cost'] == 999999].index,
+                    inplace=True)
+    milp_links.reset_index(inplace=True, drop=True)
+    os.chdir('../..')
+    milp_links.to_csv(r'Output/LCOE/milp_links.csv', index=False)
+    sets.to_csv(r'Output/LCOE/set.csv', index=False)
+    milp_links.loc[:, ['0', '1']].to_csv(r'Output/LCOE/possible_links.csv',
+                                         index=False)
+
+    milp_subs.loc[:, ['ID', 'PowerAvailable']].to_csv(
+        r'Output/LCOE/sub_power.csv', index=False)
+
+    milp_subs.loc[:, ['ID', 'subs_npc']].to_csv(r'Output/LCOE/sub_npc.csv',
+                                                index=False)
+
+    milp_subs.loc[:, 'ID'].to_csv(r'Output/LCOE/subs.csv', index=False)
+
+    milp_clusters.loc[:, ['Cluster']].to_csv(r'Output/LCOE/clusters.csv',
+                                             index=False)
+
+    milp_clusters.loc[:, ['Cluster', 'Load [kW]']].to_csv(
+        r'Output/LCOE/c_power.csv', index=False)
+
+    milp_clusters.loc[:, ['Cluster', 'mg_npc']].to_csv(
+        r'Output/LCOE/c_npc.csv', index=False)
+
+    return

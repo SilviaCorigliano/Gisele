@@ -23,6 +23,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
 
     os.chdir(r'Input//')
     substations = pd.read_csv(input_sub + '.csv')
+    substations.index = substations['ID'].values
     geometry = [Point(xy) for xy in zip(substations['X'], substations['Y'])]
     substations = gpd.GeoDataFrame(substations, geometry=geometry,
                                    crs=geo_df.crs)

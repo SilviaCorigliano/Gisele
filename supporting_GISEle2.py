@@ -194,9 +194,9 @@ def create_box(limits, df):
     if dist < 5000:
         extension = dist
     elif dist < 15000:
-        extension = dist*0.6
+        extension = dist * 0.6
     else:
-        extension = dist/4
+        extension = dist / 4
 
     bubble = box(minx=x_min - extension, maxx=x_max + extension,
                  miny=y_min - extension, maxy=y_max + extension)
@@ -368,7 +368,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         wt_avg = shift_timezone(wt_avg, time_shift)
 
         inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
-            rep_cost, om_cost, salvage_value, gen_energy, load_energy = \
+        rep_cost, om_cost, salvage_value, gen_energy, load_energy = \
             start(load_profile_cluster, pv_avg, wt_avg)
 
         mg.loc[cluster_n, 'PV [kW]'] = inst_pv
@@ -382,7 +382,8 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'Total Cost [k€]'] = rep_cost + om_cost + init_cost
         mg.loc[cluster_n, 'Energy Produced [MWh]'] = gen_energy
         mg.loc[cluster_n, 'Energy Consumed [MWh]'] = load_energy
-        mg.loc[cluster_n, 'LCOE [€/kWh]'] = (rep_cost + om_cost + init_cost)/gen_energy
+        mg.loc[cluster_n, 'LCOE [€/kWh]'] = (
+                                                    rep_cost + om_cost + init_cost) / gen_energy
         print(mg)
     mg = mg.round(decimals=4)
     mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
@@ -447,36 +448,47 @@ def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
                               dtype=float)
     for i in clusters_list.Cluster:
         final_lcoe.at[i, 'Grid Energy Consumption [MWh]'] = \
-            total_energy.loc[i, 'Energy']/1000
+            total_energy.loc[i, 'Energy'] / 1000
 
         # finding the npv of the cost of O&M for the whole grid lifetime
-        total_grid_om = grid_om * grid_resume.loc[i, 'Grid Cost [k€]'] * 1000
-        total_grid_om = [total_grid_om]*grid_lifetime
+
+        total_grid_om = grid_om * (grid_resume.loc[i, 'Grid Cost [k€]'] +
+                                   grid_resume.loc
+                                   [i, 'Connection Cost [k€]']) * 1000
+        total_grid_om = [total_grid_om] * grid_lifetime
         total_grid_om = np.npv(grid_ir, total_grid_om)
 
+        cluster_grid_om = grid_om * grid_resume.loc[i, 'Grid Cost [k€]'] * 1000
+        cluster_grid_om = [cluster_grid_om] * grid_lifetime
+        cluster_grid_om = np.npv(grid_ir, cluster_grid_om)
+        cluster_grid_npc = cluster_grid_om / 1000 + \
+                           grid_resume.loc[i, 'Grid Cost [k€]']
+        cluster_grid_lcoe = \
+            cluster_grid_npc / final_lcoe.loc[
+                i, 'Grid Energy Consumption [MWh]']
         final_lcoe.at[i, 'Grid NPC [k€]'] = \
             (grid_resume.loc[i, 'Grid Cost [k€]'] +
-             grid_resume.loc[i, 'Connection Cost [k€]'])  \
-            + total_grid_om/1000
+             grid_resume.loc[i, 'Connection Cost [k€]']) \
+            + total_grid_om / 1000
 
         final_lcoe.at[i, 'MG NPC [k€]'] = mg.loc[i, 'Total Cost [k€]']
-
-        final_lcoe.at[i, 'MG LCOE [€/kWh]'] = mg.loc[i, 'LCOE [€/kWh]']
+        final_lcoe.at[i, 'MG LCOE [€/kWh]'] = mg.loc[i, 'LCOE [€/kWh]'] + \
+                                              cluster_grid_lcoe
 
         grid_lcoe = final_lcoe.loc[i, 'Grid NPC [k€]'] / final_lcoe.loc[
             i, 'Grid Energy Consumption [MWh]'] + coe
 
         final_lcoe.at[i, 'Grid LCOE [€/kWh]'] = grid_lcoe
 
-        if mg.loc[i, 'LCOE [€/kWh]'] > grid_lcoe:
-            ratio = grid_lcoe / mg.loc[i, 'LCOE [€/kWh]']
+        if mg.loc[i, 'LCOE [€/kWh]'] + cluster_grid_lcoe > grid_lcoe:
+            ratio = grid_lcoe / (mg.loc[i, 'LCOE [€/kWh]'] + cluster_grid_lcoe)
             if ratio < 0.95:
                 proposal = 'ON-GRID'
             else:
                 proposal = 'BOTH'
 
         else:
-            ratio = mg.loc[i, 'LCOE [€/kWh]'] / grid_lcoe
+            ratio = (mg.loc[i, 'LCOE [€/kWh]'] + cluster_grid_lcoe) / grid_lcoe
             if ratio < 0.95:
                 proposal = 'OFF-GRID'
             else:

@@ -17,9 +17,9 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation,
     if dist > 50 * resolution:
         print('Connection distance too long to use Dijkstra')
         connection_cost = 999999
-        connection_length = 0
+        connection_length = 999999
         connection = gpd.GeoDataFrame()
-        return connection, connection_cost, connection_length
+        return connection, connection_cost, connection_length, pts
 
     df_box = create_box(pd.concat([assigned_substation, connecting_point]),
                         geo_df)
@@ -86,7 +86,7 @@ def dijkstra_connection_roads(geo_df, connecting_point, assigned_substation,
     if dist > 50 * resolution:
         print('Connection distance too long to use Dijkstra')
         connection_cost = 999999
-        connection_length = 0
+        connection_length = 999999
         connection = gpd.GeoDataFrame()
         return connection, connection_cost, connection_length, pts
 

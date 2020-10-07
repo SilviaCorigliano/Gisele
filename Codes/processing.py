@@ -11,8 +11,8 @@ from shapely.geometry import Point, MultiPoint
 from shapely.ops import nearest_points
 
 
-def create_mesh(study_area, crs, resolution):
-    # crs = 32737
+def create_mesh(study_area, crs, resolution, imported_pop=pd.DataFrame()):
+
     print('Processing the imported data and creating the input csv file..')
     df = pd.DataFrame(columns=['ID', 'X', 'Y', 'Elevation', 'Slope',
                                'Population', 'Land_cover', 'Road_dist',
@@ -30,9 +30,20 @@ def create_mesh(study_area, crs, resolution):
     df['X'] = lon.reshape((np.prod(lon.shape),))
     df['Y'] = lat.reshape((np.prod(lat.shape),))
 
+    if not imported_pop.empty:
+        pop_data = pd.read_csv(r'Input/imported_pop.csv')
+        valid_fields = ['X', 'Y', 'Population']
+        blacklist = []
+        for x in pop_data.columns:
+            if x not in valid_fields:
+                blacklist.append(x)
+        pop_data.drop(blacklist, axis=1, inplace=True)
+        df = pd.concat([df, pop_data])
+
     # create geo-data-frame out of df and clip it with the area
     geo_df = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.X, df.Y),
                               crs=crs)
+    geo_df.reset_index(drop=True, inplace=True)
     geo_df = gpd.clip(geo_df, study_area)
     geo_df.reset_index(drop=True, inplace=True)
     geo_df['ID'] = geo_df.index
@@ -46,11 +57,11 @@ def create_mesh(study_area, crs, resolution):
     streets_multipoint = MultiPoint(streets_points)
     # Manage raster files and sample their values
     # extract zipped files #
-    with zipfile.ZipFile('Output/Datasets/Elevation.zip', 'r') as zip_ref:
+    with zipfile.ZipFile('Output/Datasets/Elevation/Elevation.zip', 'r') as zip_ref:
         zip_ref.extractall('Output/Datasets/Elevation')
-    with zipfile.ZipFile('Output/Datasets/LandCover.zip', 'r') as zip_ref:
+    with zipfile.ZipFile('Output/Datasets/LandCover/LandCover.zip', 'r') as zip_ref:
         zip_ref.extractall('Output/Datasets/LandCover')
-    with zipfile.ZipFile('Output/Datasets/Population.zip', 'r') as zip_ref:
+    with zipfile.ZipFile('Output/Datasets/Population/Population.zip', 'r') as zip_ref:
         zip_ref.extractall('Output/Datasets/Population')
 
     # find the name of the raster files
@@ -59,18 +70,24 @@ def create_mesh(study_area, crs, resolution):
     file_population = os.listdir('Output/Datasets/Population')
 
     # open files with rasterio
-    raster_elevation = rasterio.open('Output/Datasets/Elevation/'
-                                     + file_elevation[0])
-    raster_land_cover = rasterio.open('Output/Datasets/LandCover/'
-                                      + file_land_cover[0])
-    raster_population = rasterio.open('Output/Datasets/Population/'
-                                      + file_population[0])
+    for i in range(file_elevation.__len__()):
 
-    # compute slope
-    gdal.DEMProcessing('Output/Datasets/Elevation/slope.tif',
-                       'Output/Datasets/Elevation/' + file_elevation[0],
-                       'slope')
-    raster_slope = rasterio.open('Output/Datasets/Elevation/slope.tif')
+        if file_elevation[i].endswith('.tif'):
+            raster_elevation = rasterio.open('Output/Datasets/Elevation/'
+                                             + file_elevation[i])
+            # compute slope
+            gdal.DEMProcessing('Output/Datasets/Elevation/slope.tif',
+                               'Output/Datasets/Elevation/' + file_elevation[
+                                   i],
+                               'slope')
+            raster_slope = rasterio.open('Output/Datasets/Elevation/slope.tif')
+
+        if file_land_cover[i].endswith('.tif'):
+            raster_land_cover = rasterio.open('Output/Datasets/LandCover/'
+                                              + file_land_cover[i])
+        if file_population[i].endswith('.tif'):
+            raster_population = rasterio.open('Output/Datasets/Population/'
+                                              + file_population[i])
 
     # re-sample continuous raster according to the desired resolution(bilinear)
 
@@ -105,19 +122,20 @@ def create_mesh(study_area, crs, resolution):
     print('Assigning values to each point..')
     for i, row in geo_df.iterrows():
         # population
-        if pixel_x_pop <= resolution:
-            row_min, column_max = raster_population.\
-                index(row.X + resolution/2, row.Y + resolution/2)
-            row_max, column_min = raster_population.\
-                index(row.X - resolution / 2, row.Y - resolution / 2)
-            value = population[0, row_min:row_max,
-                               column_min:column_max].sum().sum()
-            geo_df.loc[i, 'Population'] = value
-        else:
-            x, y = raster_population.index(row.X, row.Y)
-            # better assign to the center
-            geo_df.loc[i, 'Population'] = \
-                population[0, x, y]/pixel_x_pop * resolution
+        if imported_pop.empty:
+            if pixel_x_pop <= resolution:
+                row_min, column_max = raster_population.\
+                    index(row.X + resolution/2, row.Y + resolution/2)
+                row_max, column_min = raster_population.\
+                    index(row.X - resolution / 2, row.Y - resolution / 2)
+                value = population[0, row_min:row_max,
+                                   column_min:column_max].sum().sum()
+                geo_df.loc[i, 'Population'] = value
+            else:
+                x, y = raster_population.index(row.X, row.Y)
+                # better assign to the center
+                geo_df.loc[i, 'Population'] = \
+                    population[0, x, y]/pixel_x_pop * resolution
         # road distance
         nearest_geoms = nearest_points(Point(row.X, row.Y), streets_multipoint)
         geo_df.loc[i, 'Road_dist'] = \
@@ -141,7 +159,7 @@ def create_mesh(study_area, crs, resolution):
     print('\n')
     geo_df.Elevation = geo_df.Elevation.astype(int)
     pd.DataFrame(geo_df.drop(columns='geometry'))\
-        .to_csv('Output/imported_csv.csv', index=False)
+        .to_csv('Input/downloaded_csv.csv', index=False)
 
     return geo_df
 
