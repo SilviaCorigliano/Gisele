@@ -18,7 +18,8 @@ Subcluster with MILP to find secondary substations
 ######grid routing#####
 automatize road import
 how to deal with main branch not allowed to go aoutside clusters? In Bolivia it was a problem
-Spyder even in main branch procedure
+Spyder even in main branch procedure, otherwise this procedure cannot be used with high resolution
+How to change resolution? which should be the new value?
 Include pandapower and MILP algorithm
 
 ####### microgrid sizing #######
