@@ -7,14 +7,24 @@ Give more visualization options in the map
 When the user inpuyt study area, show point in the map
 Improve explanation
 Improve hoverinfo
-
+Import protected areas
 
 
 ######clustering#######
-Show also outliers
-
+Show also outliers in the map
+Show tables with values
+Subcluster with MILP to find secondary substations
 
 ######grid routing#####
 automatize road import
 how to deal with main branch not allowed to go aoutside clusters? In Bolivia it was a problem
 Spyder even in main branch procedure
+Include pandapower and MILP algorithm
+
+####### microgrid sizing #######
+Process Michele data and show different things
+
+####### lcoe analysis #######
+improve financial evaluation
+give more information in the final tab
+give different scenarios to evaluate solutions
