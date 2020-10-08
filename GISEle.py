@@ -6,7 +6,6 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Polygon
 import numpy as np
-import plotly.express as px
 import dash_table
 import dash_bootstrap_components as dbc
 import dash_html_components as html
