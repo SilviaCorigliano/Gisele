@@ -48,7 +48,7 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                    mode='markers',
                                    marker=go.scattermapbox.Marker(
                                        size=10,
-                                       color='black',
+                                       color='gray',
                                        opacity=0.5
                                    ),
                                    text=clusters.Cluster,
@@ -96,9 +96,8 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
         else:
             line_break('Grid_', cluster_n, fig, 'red')
 
-        if grid_resume_opt.loc[cluster_n, 'Connection Length [km]'] == 0:
-            continue
-        line_break('Connection_', cluster_n, fig, 'blue')
+            if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
+                line_break('Connection_', cluster_n, fig, 'blue')
 
     if full_ele == 'yes':
         line_break(r'all_link/', 'all_link', fig, 'green')

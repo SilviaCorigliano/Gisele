@@ -42,7 +42,7 @@ def weighting(df, resolution):
         df_weighted.loc[index, 'Weight'] = row.Weight + math.exp(
             0.01732867951 * row.Slope)
         # Land cover using the column Other or GLC to compute the weight
-        option = 'other'  # user choice for the land cover data weighting
+        option = 'GLC'  # user choice for the land cover data weighting
         if option == 'GLC':
             df_weighted.loc[index, 'Weight'] += landcover_csv.WeightGLC[
                 landcover_csv.iloc[:, 0] == row.Land_cover].values[0]

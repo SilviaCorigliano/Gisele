@@ -9,164 +9,185 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-def grid_code_budget(folder,investment):
-    #Initialize model
-    model=AbstractModel()
-    data=DataPortal()
-    input_folder='../Cases/'+folder+'/Output/Intermediate/Procedure2/'
 
-    #Define sets
-    model.N=Set() #Set of all nodes, clusters and substations
-    data.load(filename=input_folder+'N.csv', set=model.N)
+def cost_optimization(p_max_lines, coe):
+    # Initialize model
+    model = AbstractModel()
+    data = DataPortal()
 
-    model.clusters=Set() #Set of clusters
-    data.load(filename=input_folder+'clusters.csv', set=model.SS)
+    # Define sets
+    model.N = Set()  # Set of all nodes, clusters and substations
+    data.load(filename=r'Output/LCOE/set.csv', set=model.N)
 
-    model.substations=Set() #Set of substations
-    data.load(filename=input_folder+'substations.csv',set=model.PS)
+    model.clusters = Set()  # Set of clusters
+    data.load(filename='Output/LCOE/clusters.csv', set=model.clusters)
 
-    model.links = Set(dimen=2,within=model.N*model.N) #in the csv the values must be delimited by commas
-    data.load(filename=input_folder+'MV_links.csv', set=model.links)
+    model.substations = Set()  # Set of substations
+    data.load(filename='Output/LCOE/subs.csv', set=model.substations)
 
+    model.links = Set(dimen=2,
+                      within=model.N * model.N)  # in the csv the values must be delimited by commas
+    data.load(filename='Output/LCOE/possible_links.csv', set=model.links)
 
-
-    #Nodes are divided into two sets, as suggested in https://pyomo.readthedocs.io/en/stable/pyomo_modeling_components/Sets.html:
+    # Nodes are divided into two sets, as suggested in https://pyomo.readthedocs.io/en/stable/pyomo_modeling_components/Sets.html:
     # NodesOut[nodes] gives for each node all nodes that are connected to it via outgoing links
     # NodesIn[nodes] gives for each node all nodes that are connected to it via ingoing links
 
     def NodesOut_init(model, node):
         retval = []
-        for (i,j) in model.links:
+        for (i, j) in model.links:
             if i == node:
                 retval.append(j)
         return retval
+
     model.NodesOut = Set(model.N, initialize=NodesOut_init)
 
     def NodesIn_init(model, node):
         retval = []
-        for (i,j) in model.links:
+        for (i, j) in model.links:
             if j == node:
                 retval.append(i)
         return retval
-    model.NodesIn = Set(model.N, initialize=NodesIn_init)
 
+    model.NodesIn = Set(model.N, initialize=NodesIn_init)
 
     #####################Define parameters#####################
 
-    #Electric power in the nodes (injected (-) or absorbed (+))
-    model.p_clusters=Param(model.clusters)
-    data.load(filename=input_folder+'p_clusters.csv', param=model.p_clusters)
+    # Electric power in the nodes (injected (-) or absorbed (+))
+    model.p_clusters = Param(model.clusters)
+    data.load(filename='Output/LCOE/c_power.csv', param=model.p_clusters)
 
-    #Maximum power supplied by sustations
-    model.p_max_substations=Param(model.substations)
-    data.load(filename=input_folder + 'p_max_substations.csv', param=model.p_max_substations)
+    # Maximum power supplied by sustations
+    model.p_max_substations = Param(model.substations)
+    data.load(filename='Output/LCOE/sub_power.csv',
+              param=model.p_max_substations)
 
-    #Total net present cost of microgrid to supply each cluster
+    # Total net present cost of microgrid to supply each cluster
     model.c_microgrids = Param(model.clusters)
-    data.load(filename=input_folder+'c_microgrids.csv', param=model.c_clusters)
+    data.load(filename='Output/LCOE/c_npc.csv',
+              param=model.c_microgrids)
 
     # Total net present cost of substations
     model.c_substations = Param(model.substations)
-    data.load(filename=input_folder + 'c_substations.csv', param=model.c_substations)
+    data.load(filename='Output/LCOE/sub_npc.csv',
+              param=model.c_substations)
 
-    #Connection distance of all the edges
-    model.c_links=Param(model.links)
-    data.load(filename=input_folder+'c_links.csv', param=model.c_links)
+    # Connection cost of the possible links
+    model.c_links = Param(model.links)
+    data.load(filename='Output/LCOE/milp_links.csv', param=model.c_links)
 
-    #poximum power flowing on lines
-    model.p_max_lines=Param() #max power flowing on MV lines
-    data.load(filename='../Cases/'+folder+'/Input/data_procedure2.dat')
+    # Energy consumed by each cluster in grid lifetime
+    model.energy = Param(model.clusters)
+    data.load(filename='Output/LCOE/energy.csv', param=model.energy)
 
+    # poximum power flowing on lines
+    # model.p_max_lines = Param()  # max power flowing on MV lines
+    # data.load(filename='Input/data_procedure2.dat')
 
     #####################Define variables#####################
 
-    #binary variable x[i,j]: 1 if the connection i,j is present, 0 otherwise,initialize=x_rule
+    # binary variable x[i,j]: 1 if the connection i,j is present, 0 otherwise,initialize=x_rule
     model.x = Var(model.links, within=Binary)
-    #binary variable y[i]: 1 if a substation is installed in node i, 0 otherwise,initialize=y_rule
-    model.y=Var(model.substations,within=Binary)
-    #binary variable z[i]: 1 if a microgrid is installed in node i, 0 otherwise,initialize=z_rule
-    model.z=Var(model.clusters,within=Binary)
-    #power[i,j] is the power flow of connection i-j
+    # binary variable y[i]: 1 if a substation is installed in node i, 0 otherwise,initialize=y_rule
+    model.y = Var(model.substations, within=Binary)
+    # binary variable z[i]: 1 if a microgrid is installed in node i, 0 otherwise,initialize=z_rule
+    model.z = Var(model.clusters, within=Binary)
+    # power[i,j] is the power flow of connection i-j
     model.P = Var(model.links)
-    #power[i] is the power provided by substation i
-    model.p_substations=Var(model.substations,within=PositiveReals)
+    # power[i] is the power provided by substation i
+    model.p_substations = Var(model.substations, within=PositiveReals)
 
     #####################Define constraints###############################
 
     def Radiality_rule(model):
-        return summation(model.x)==len(model.clusters)-summation(model.z)
-    model.Radiality = Constraint(rule=Radiality_rule) #all the clusters are either connected to the MV grid or powered by microgrid
+        return summation(model.x) == len(model.clusters) - summation(model.z)
 
-    def Power_flow_conservation_rule(model,node):
-        return (sum(model.P[j,node]for j in model.NodesIn[node])-sum(model.P[node,j]
-        for j in model.NodesOut[node]))==+model.p_clusters[node]*( 1 - model.z[node] )
-    model.Power_flow_conservation = Constraint(model.clusters, rule = Power_flow_conservation_rule)# when the node is powered by SHS all the power is transferred to the outgoing link
+    model.Radiality = Constraint(
+        rule=Radiality_rule)  # all the clusters are either connected to the MV grid or powered by microgrid
 
-    def PS_Power_flow_conservation_rule(model,node):
-        return (sum(model.P[j,node]for j in model.NodesIn[node])-sum(model.P[node,j]
-        for j in model.NodesOut[node]))== -model.p_substations[node]
-    model.PS_Power_flow_conservation = Constraint(model.substations, rule = PS_Power_flow_conservation_rule) #outgoing power from PS to connected links
+    def Power_flow_conservation_rule(model, node):
+        return (sum(model.P[j, node] for j in model.NodesIn[node]) - sum(
+            model.P[node, j]
+            for j in model.NodesOut[node])) == +model.p_clusters[node] * (
+                           1 - model.z[node])
 
-    def Power_upper_bounds_rule(model,i,j):
-        return model.P[i,j] <= model.p_max*model.x[i,j]
-    model.upper_Power_limits = Constraint(model.links, rule=Power_upper_bounds_rule) #limit to power flowing on MV lines
+    model.Power_flow_conservation = Constraint(model.clusters,
+                                               rule=Power_flow_conservation_rule)  # when the node is powered by SHS all the power is transferred to the outgoing link
 
-    def Power_lower_bounds_rule(model,i,j):
-        return model.P[i,j] >= -model.p_max_lines*model.x[i,j]
-    model.lower_Power_limits = Constraint(model.links, rule=Power_lower_bounds_rule)
+    def PS_Power_flow_conservation_rule(model, node):
+        return (sum(model.P[j, node] for j in model.NodesIn[node]) - sum(
+            model.P[node, j]
+            for j in model.NodesOut[node])) == -model.p_substations[node]
 
-    def Primary_substation_upper_bound_rule(model,i):
-        return model.p_substations[i] <= model.p_max_substations[i]*model.y[i]
-    model.Primary_substation_upper_bound = Constraint(model.substations, rule=Primary_substation_upper_bound_rule) #limit to power of PS
+    model.PS_Power_flow_conservation = Constraint(model.substations,
+                                                  rule=PS_Power_flow_conservation_rule)  # outgoing power from PS to connected links
 
+    def Power_upper_bounds_rule(model, i, j):
+        return model.P[i, j] <= p_max_lines * model.x[i, j]
+
+    model.upper_Power_limits = Constraint(model.links,
+                                          rule=Power_upper_bounds_rule)  # limit to power flowing on MV lines
+
+    def Power_lower_bounds_rule(model, i, j):
+        return model.P[i, j] >= -p_max_lines * model.x[i, j]
+
+    model.lower_Power_limits = Constraint(model.links,
+                                          rule=Power_lower_bounds_rule)
+
+    def Primary_substation_upper_bound_rule(model, i):
+        return model.p_substations[i] <= model.p_max_substations[i] * model.y[
+            i]
+
+    model.Primary_substation_upper_bound = Constraint(model.substations,
+                                                      rule=Primary_substation_upper_bound_rule)  # limit to power of PS
 
     ####################Define objective function##########################
 
-    #minimize total lcoe
+    # minimize total lcoe
     def ObjectiveFunction(model):
-        return summation(model.c_microgrids,model.z)+summation(model.y,model.c_substations)+\
-            summation(model.c_links,model.x)
+        return summation(model.c_microgrids, model.z) + summation(model.c_substations, model.y) + \
+               summation(model.c_links, model.x) + sum(model.energy[i] * (1-model.z[i]) for i in model.clusters) * coe/1000
 
     model.Obj = Objective(rule=ObjectiveFunction, sense=minimize)
 
     #############Solve model##################
     instance = model.create_instance(data)
     print('Instance is constructed:', instance.is_constructed())
-    #opt = SolverFactory('cplex',executable=r'C:\Users\silvi\IBM\ILOG\CPLEX_Studio1210\cplex\bin\x64_win64\cplex')
-    #opt = SolverFactory('glpk')
+    # opt = SolverFactory('cplex',executable=r'C:\Users\silvi\IBM\ILOG\CPLEX_Studio1210\cplex\bin\x64_win64\cplex')
+    # opt = SolverFactory('glpk')
     opt = SolverFactory('gurobi')
     opt.options['mipgap'] = 0.01
     print('Starting optimization process')
-    time_i=datetime.now()
-    opt.solve(instance,tee=True)
-    time_f=datetime.now()
-    print('Time required for optimization is', time_f-time_i)
-    links=instance.x
-    power=instance.P
-    microgrids=instance.z
-    connections_output=pd.DataFrame(columns=[['id1','id2']])
-    microgrids_output=pd.DataFrame(columns=['ID'])
-    power_output=pd.DataFrame(columns=[['id1','id2','P']])
-    k=0
+    time_i = datetime.now()
+    opt.solve(instance, tee=True)
+    time_f = datetime.now()
+    print('Time required for optimization is', time_f - time_i)
+    links = instance.x
+    power = instance.P
+    microgrids = instance.z
+    connections_output = pd.DataFrame(columns=[['id1', 'id2']])
+    microgrids_output = pd.DataFrame(columns=['ID'])
+    power_output = pd.DataFrame(columns=[['id1', 'id2', 'P']])
+    k = 0
     for index in links:
-        if int(round(value(links[index])))==1:
-            connections_output.loc[k,'id1']=index[0]
-            connections_output.loc[k,'id2']=index[1]
-            k=k+1
-    k=0
+        if int(round(value(links[index]))) == 1:
+            connections_output.loc[k, 'id1'] = index[0]
+            connections_output.loc[k, 'id2'] = index[1]
+            k = k + 1
+    k = 0
     for index in microgrids:
-        if int(round(value(microgrids[index])))==1:
-            microgrids_output.loc[k,'ID']=index
-            k=k+1
-    k=0
+        if int(round(value(microgrids[index]))) == 1:
+            microgrids_output.loc[k, 'ID'] = index
+            k = k + 1
+    k = 0
     for index in power:
-        if value(power[index])!=0:
+        if value(power[index]) != 0:
             power_output.loc[k, 'id1'] = index[0]
             power_output.loc[k, 'id2'] = index[1]
             power_output.loc[k, 'P'] = value(power[index])
-            k=k+1
+            k = k + 1
 
-    connections_output.to_csv(input_folder+'MV_connections_output.csv')
-    microgrids_output.to_csv(input_folder+'MV_SHS_output.csv')
-    power_output.to_csv(input_folder+'MV_power_output.csv')
-    return
+    connections_output.to_csv('Output/LCOE/MV_connections_output.csv', index=False)
+    microgrids_output.to_csv('Output/LCOE/MV_SHS_output.csv', index=False)
+    power_output.to_csv('Output/LCOE/MV_power_output.csv', index=False)
+    return microgrids_output, connections_output

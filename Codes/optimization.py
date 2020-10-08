@@ -2,13 +2,13 @@ import os
 import itertools
 import pandas as pd
 import geopandas as gpd
-from supporting_GISEle2 import line_to_points, distance_2d, l
-from Codes import dijkstra
+import numpy as np
+from supporting_GISEle2 import line_to_points, distance_2d, l, nearest
+from Codes import dijkstra, lcoe_optimization
 
 
 def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
                 gdf_roads, roads_segments):
-
     substations = pd.read_csv(r'Input/' + input_sub + '.csv')
     substations.index = substations['ID'].values
 
@@ -64,7 +64,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
 
                 # if the distance between clusters too high, skip
                 if dist_2d.min().min() / 1000 > \
-                        2*(grid_resume.loc[i, 'Connection Length [km]']):
+                        2 * (grid_resume.loc[i, 'Connection Length [km]']):
                     exam.Distance[j] = 9999999
                     exam.Cost[j] = 99999999
                     continue
@@ -83,12 +83,13 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
                 exam.Cost[j] = connection_cost
                 exam.Distance[j] = connection_length
 
-                if grid_resume.loc[i, 'Load [kW]'] + grid_resume.loc[j, 'Load [kW]'] \
+                if grid_resume.loc[i, 'Load [kW]'] + grid_resume.loc[
+                    j, 'Load [kW]'] \
                         > substations.loc[sub_id, 'PowerAvailable']:
                     continue
 
-                if min(exam.Cost) == connection_cost and check.loc[j, 'Check']\
-                    and connection_cost / 1000 < \
+                if min(exam.Cost) == connection_cost and check.loc[j, 'Check'] \
+                        and connection_cost / 1000 < \
                         grid_resume.loc[i, 'Connection Cost [k€]']:
                     optimized = True
                     best_connection = connection
@@ -99,7 +100,7 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
                 grid_resume.loc[
                     i, 'Connection Length [km]'] = min(exam.Distance) / 1000
                 grid_resume.loc[i, 'Connection Cost [k€]'] = \
-                    min(exam.Cost)/1000
+                    min(exam.Cost) / 1000
                 grid_resume.loc[i, 'Connection Type'] = \
                     grid_resume.loc[exam['Cost'].idxmin(), 'Connection Type']
                 grid_resume.loc[i, 'Substation ID'] = \
@@ -130,11 +131,13 @@ def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,
     return grid_resume
 
 
-def milp_lcoe(geo_df_clustered, grid_resume, substations, microgrids,
-              final_lcoe, grid_lifetime, branch, line_bc, resolution):
-
-    data_michele = pd.read_table("Codes/michele/Inputs/data.dat", sep="=",
-                                 header=None)
+def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
+              grid_om, coe, grid_ir, grid_lifetime, branch, line_bc,
+              resolution):
+    substations = substations.assign(
+        nearest_id=substations.apply(nearest, df=geo_df_clustered,
+                                     src_column='ID', axis=1))
+    total_connections_opt = pd.DataFrame()
     if branch == 'yes':
         file = 'Branch_'
         os.chdir(r'Output/Branches')
@@ -142,12 +145,13 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, microgrids,
         file = 'Grid_'
         os.chdir(r'Output/Grids')
 
-    mg_lifetime = int(data_michele.loc[1, 1].split(';')[0])
     milp_clusters = grid_resume[['Cluster', 'Load [kW]']].copy()
     milp_clusters['Cluster'] = ['C' + str(i[0]) for i in
                                 milp_clusters['Cluster'].iteritems()]
-    milp_clusters['mg_npc'] = final_lcoe['MG NPC [k€]'] * \
-                              (grid_lifetime / mg_lifetime)
+    energy_mismatch = \
+        (total_energy['Energy'] / 1000) / mg['Energy Produced [MWh]']
+    milp_clusters['mg_npc'] = \
+        mg['Total Cost [k€]'] * energy_mismatch.mean()
     milp_subs = substations[['ID', 'PowerAvailable']].copy()
     milp_subs['ID'] = ['S' + str(i[1]) for i in milp_subs['ID'].iteritems()]
     milp_subs['subs_npc'] = 10
@@ -170,9 +174,10 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, microgrids,
                                      grid_1.ID2.astype(int)))
             grid_1 = line_to_points(grid_1, geo_df_clustered)
         elif 'S' in row[1][0]:
-            grid_1 = substations[substations['ID'] ==
-                                 int(row[1][0].split('S')[1])]
-
+            sub_in_df = substations[
+                substations['ID'] ==
+                int(row[1][0].split('S')[1])].nearest_id.values[0]
+            grid_2 = geo_df_clustered[geo_df_clustered['ID'] == sub_in_df]
         if 'C' in row[1][1]:
             grid_2 = gpd.read_file(file + str(row[1][1].split('C')[1]) +
                                    ".shp")
@@ -180,8 +185,10 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, microgrids,
                                           grid_2.ID2.astype(int))))
             grid_2 = line_to_points(grid_2, geo_df_clustered)
         elif 'S' in row[1][1]:
-            grid_2 = substations[
-                substations['ID'] == int(row[1][1].split('S')[1])]
+            sub_in_df = substations[
+                substations['ID'] ==
+                int(row[1][1].split('S')[1])].nearest_id.values[0]
+            grid_2 = geo_df_clustered[geo_df_clustered['ID'] == sub_in_df]
 
         dist_2d = pd.DataFrame(distance_2d(grid_1, grid_2, 'X', 'Y'),
                                index=grid_1.ID.values,
@@ -195,9 +202,15 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, microgrids,
             dijkstra.dijkstra_connection(geo_df_clustered, p1, p2,
                                          c_grid_points, line_bc, resolution)
 
-        if connection.empty:
+        if connection.empty and connection_cost == 999999:
             continue
-        milp_links.loc[row[0], 'Cost'] = connection_cost
+        elif connection.empty:
+            connection_cost = 1000
+            connection_length = 1000
+        connection_om = [(connection_cost/1000) * grid_om] * grid_lifetime
+        connection_om = np.npv(grid_ir, connection_om)
+        milp_links.loc[row[0], 'Cost'] = (connection_cost / 1000) \
+            + connection_om
     milp_links.drop(milp_links[milp_links['Cost'] == 999999].index,
                     inplace=True)
     milp_links.reset_index(inplace=True, drop=True)
@@ -224,4 +237,100 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, microgrids,
     milp_clusters.loc[:, ['Cluster', 'mg_npc']].to_csv(
         r'Output/LCOE/c_npc.csv', index=False)
 
-    return
+    total_energy['Cluster'] = ['C' + str(i[0]) for i in
+                               total_energy['Cluster'].iteritems()]
+    total_energy.to_csv(r'Output/LCOE/energy.csv', index=False)
+
+    lcoe_optimization.cost_optimization(10000, coe)
+
+    con_out = pd.read_csv(r'Output/LCOE/MV_connections_output.csv')
+    mg_out = pd.read_csv(r'Output/LCOE/MV_SHS_output.csv')
+
+    dups = con_out.duplicated('id1', keep=False)
+    dups = dups[dups == True].index.values
+    for i in dups:
+        if 'C' in con_out.loc[i, 'id2']:
+            if con_out.loc[i, 'id2'] not in con_out.loc[:, 'id1']:
+                swap = con_out.loc[i, 'id1']
+                con_out.loc[i, 'id1'] = con_out.loc[i, 'id2']
+                con_out.loc[i, 'id2'] = swap
+    con_out = con_out.sort_values('id2', ascending=False)
+    if branch == 'yes':
+        file = 'Branch_'
+        os.chdir(r'Output/Branches')
+    else:
+        file = 'Grid_'
+        os.chdir(r'Output/Grids')
+
+    for row in mg_out.iterrows():
+        index = grid_resume.loc[
+            grid_resume['Cluster'] == int(row[1][0].split('C')[1])].index
+
+        grid_resume.loc[index, 'Connection Length [km]'] = 0
+        grid_resume.loc[index, 'Connection Cost [k€]'] = 0
+        grid_resume.loc[index, 'Connection Type'] = 'Microgrid'
+        grid_resume.loc[index, 'Substation ID'] = 'Microgrid'
+
+    for row in con_out.iterrows():
+        index = grid_resume.loc[
+            grid_resume['Cluster'] == int(row[1][0].split('C')[1])].index
+
+        grid_1 = gpd.read_file(file + str(row[1][0].split('C')[1]) +
+                               ".shp")
+        c_grid_points = list(zip(grid_1.ID1.astype(int),
+                                 grid_1.ID2.astype(int)))
+        grid_1 = line_to_points(grid_1, geo_df_clustered)
+        if 'C' in row[1][1]:
+            grid_2 = gpd.read_file(file + str(row[1][1].split('C')[1]) +
+                                   ".shp")
+            c_grid_points.append(list(zip(grid_2.ID1.astype(int),
+                                          grid_2.ID2.astype(int))))
+            grid_2 = line_to_points(grid_2, geo_df_clustered)
+
+            grid_resume.loc[index, 'Connection Type'] = grid_resume.loc[
+                grid_resume['Cluster'] ==
+                int(row[1][1].split('C')[1])]['Connection Type'].values[0]
+
+            grid_resume.loc[index, 'Substation ID'] = grid_resume.loc[
+                grid_resume['Cluster'] ==
+                int(row[1][1].split('C')[1])]['Substation ID'].values[0]
+
+        elif 'S' in row[1][1]:
+            sub_in_df = substations[
+                substations['ID'] ==
+                int(row[1][1].split('S')[1])].nearest_id.values[0]
+            grid_2 = geo_df_clustered[geo_df_clustered['ID'] == sub_in_df]
+
+            grid_resume.loc[index, 'Connection Type'] = substations[
+                substations['ID'] == int(row[1][1].split('S')[1])].Type.values[
+                0]
+            grid_resume.loc[index, 'Substation ID'] = substations[
+                substations['ID'] == int(row[1][1].split('S')[1])].ID.values[0]
+
+        dist_2d = pd.DataFrame(distance_2d(grid_1, grid_2, 'X', 'Y'),
+                               index=grid_1.ID.values,
+                               columns=grid_2.ID.values)
+
+        p1 = geo_df_clustered[geo_df_clustered['ID'] == dist_2d.min().idxmin()]
+        p2 = geo_df_clustered[geo_df_clustered['ID'] ==
+                              dist_2d.min(axis=1).idxmin()]
+
+        connection, connection_cost, connection_length, _ = \
+            dijkstra.dijkstra_connection(geo_df_clustered, p1, p2,
+                                         c_grid_points, line_bc, resolution)
+        if not connection.empty:
+            connection.to_file(
+                'Connection_' + row[1][0].split('C')[1] + '.shp')
+        grid_resume.loc[index, 'Connection Length [km]'] = \
+            connection_length / 1000
+        grid_resume.loc[index, 'Connection Cost [k€]'] = connection_cost / 1000
+        print('Connection for Cluster ' + row[1][0] + ' created')
+        total_connections_opt = \
+            gpd.GeoDataFrame(pd.concat([total_connections_opt,
+                                        connection], sort=True))
+
+    grid_resume.to_csv('grid_resume_opt.csv', index=False)
+    total_connections_opt.crs = geo_df_clustered.crs
+    total_connections_opt.to_file('all_connections_opt')
+    os.chdir('../..')
+    return grid_resume

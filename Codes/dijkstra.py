@@ -50,8 +50,8 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation,
             path = nx.dijkstra_path(graph, source, target, weight='weight')
         else:
             connection = pd.DataFrame()
-            connection_cost = 9999999
-            connection_length = 9999999
+            connection_cost = 999999
+            connection_length = 999999
             return connection, connection_cost, connection_length, pts
 
         steps = len(path)
@@ -146,8 +146,8 @@ def dijkstra_connection_roads(geo_df, connecting_point, assigned_substation,
             path = nx.dijkstra_path(graph, source, target, weight='weight')
         else:
             connection = pd.DataFrame()
-            connection_cost = 9999999
-            connection_length = 9999999
+            connection_cost = 999999
+            connection_length = 999999
             return connection, connection_cost, connection_length, pts
 
         steps = len(path)

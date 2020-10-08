@@ -49,7 +49,7 @@ load_profile['Power (p.u.)'] = input_profile.iloc[12:24, 0].values
 lp_data = load_profile.to_dict('records')
 
 # configuration file, eps and pts values separated by - since they are a range
-config = pd.read_csv(r'Input/Configuration.csv')
+config = pd.read_csv(r'Input/Configuration3.csv')
 config.loc[21, 'Value'] = sorted(list(map(int,
                                           config.loc[21, 'Value'].split('-'))))
 config.loc[20, 'Value'] = sorted(list(map(int,
@@ -72,7 +72,6 @@ lat_point_list = [-17.880592240953966, -17.86581365258916, -18.065431449408248,
 polygon_geom = Polygon(zip(lon_point_list, lat_point_list))
 study_area = gpd.GeoDataFrame(index=[0], crs=4326,
                               geometry=[polygon_geom])
-study_area.to_file('study_area.shp')
 
 # initialization of the app
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.MINTY])
@@ -558,7 +557,7 @@ app.layout = html.Div([
                             placeholder='',
                             debounce=True,
                             type='number',
-                            min=0, max=1000, step=10,
+                            min=0, max=1000, step=1,
                             value='100')
                     ]),
                     dbc.Col([
@@ -583,7 +582,8 @@ app.layout = html.Div([
                 dbc.Row([
                     dbc.Col([
                         # dbc.Label(['HV/MV Substation cost'], style={'textSize': '1px'}),
-                        html.Div(['HV/MV Substation cost'], style={'font-size ': '1px'}),
+                        html.Div(['HV/MV Substation cost'],
+                                 style={'font-size ': '1px'}),
                         dbc.Input(
                             id='sub_cost_HV',
                             placeholder='Enter a value [€]..',
@@ -1439,14 +1439,14 @@ def routing(grid_routing):
                              resolution, pop_thresh, input_sub, line_bc,
                              sub_cost_hv, sub_cost_mv, full_ele)
 
-            grid_resume_opt = optimization.connections(geo_df, grid_resume,
-                                                       resolution, line_bc,
-                                                       branch, input_sub,
-                                                       gdf_roads,
-                                                       roads_segments)
+            # grid_resume_opt = optimization.connections(geo_df, grid_resume,
+            #                                            resolution, line_bc,
+            #                                            branch, input_sub,
+            #                                            gdf_roads,
+            #                                            roads_segments)
 
             fig_grid = results.graph(geo_df_clustered, clusters_list, branch,
-                                     grid_resume_opt, substations, pop_thresh,
+                                     grid_resume, substations, pop_thresh,
                                      full_ele)
 
         elif branch == 'yes':
@@ -1460,14 +1460,14 @@ def routing(grid_routing):
                                  sub_cost_hv, sub_cost_mv, pop_load, gdf_lr,
                                  pop_thresh_lr, line_bc_col, full_ele)
 
-            grid_resume_opt = optimization.connections(geo_df, grid_resume,
-                                                       resolution, line_bc,
-                                                       branch, input_sub,
-                                                       gdf_roads,
-                                                       roads_segments)
+            # grid_resume_opt = optimization.connections(geo_df, grid_resume,
+            #                                            resolution, line_bc,
+            #                                            branch, input_sub,
+            #                                            gdf_roads,
+            #                                            roads_segments)
 
             fig_grid = results.graph(geo_df_clustered, clusters_list, branch,
-                                     grid_resume_opt, substations, pop_thresh,
+                                     grid_resume, substations, pop_thresh,
                                      full_ele)
 
         return fig_grid
@@ -1529,42 +1529,23 @@ def lcoe_computation(lcoe_btn):
         mg.index = mg.Cluster.values
         total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv')
         total_energy.index = total_energy.Cluster.values
+        grid_resume = pd.read_csv(r'Output/Grids/grid_resume.csv')
+        grid_resume.index = grid_resume.Cluster.values
 
-        if branch == 'no':
-            grid_resume_opt = pd.read_csv(r'Output/Grids/grid_resume_opt.csv')
-            grid_resume_opt.index = grid_resume_opt.Cluster.values
-            grid_resume = pd.read_csv(r'Output/Grids/grid_resume_opt.csv')
-            grid_resume.index = grid_resume.Cluster.values
+        grid_resume_opt = \
+            optimization.milp_lcoe(geo_df_clustered, grid_resume,
+                                   substations, mg, total_energy, grid_om, coe,
+                                   grid_ir, grid_lifetime, branch, line_bc,
+                                   resolution)
 
-            fig_grid = results.graph(geo_df_clustered, clusters_list, branch,
-                                     grid_resume_opt, substations, pop_thresh,
-                                     full_ele)
+        fig_grid = results.graph(geo_df_clustered, clusters_list, branch,
+                                 grid_resume_opt, substations, pop_thresh,
+                                 full_ele)
 
-            final_lcoe = lcoe_analysis(clusters_list, total_energy,
-                                       grid_resume_opt, mg,
-                                       coe,
-                                       grid_ir, grid_om,
-                                       grid_lifetime)
-        elif branch == 'yes':
-            grid_resume_opt = \
-                pd.read_csv(r'Output/Branches/grid_resume_opt.csv')
-            grid_resume_opt.index = grid_resume_opt.Cluster.values
-            grid_resume = \
-                pd.read_csv(r'Output/Branches/grid_resume.csv')
-            grid_resume.index = grid_resume.Cluster.values
-            fig_grid = results.graph(geo_df_clustered, clusters_list, branch,
-                                     grid_resume_opt, substations, pop_thresh,
-                                     full_ele)
+        final_lcoe = lcoe_analysis(clusters_list, total_energy,
+                                   grid_resume_opt, mg, coe, grid_ir, grid_om,
+                                   grid_lifetime)
 
-            final_lcoe = lcoe_analysis(clusters_list, total_energy,
-                                       grid_resume_opt, mg,
-                                       coe,
-                                       grid_ir, grid_om,
-                                       grid_lifetime)
-        microgrids = pd.read_csv(r'Output/Microgrids/microgrids.csv')
-        optimization.milp_lcoe(geo_df_clustered, grid_resume, substations,
-                               microgrids, final_lcoe, grid_lifetime,
-                               branch, line_bc, resolution)
         return fig_grid
     else:
         return fig
@@ -1598,8 +1579,8 @@ def update_table(page_current, page_size, sort_by, output_grid, branches):
     geo_df2 = pd.DataFrame()
 
     if branch == 'no':
-        if os.path.isfile(r'Output/Grids/grid_resume_opt.csv'):
-            geo_df2 = pd.read_csv(r'Output/Grids/grid_resume_opt.csv')
+        if os.path.isfile(r'Output/Grids/grid_resume.csv'):
+            geo_df2 = pd.read_csv(r'Output/Grids/grid_resume.csv')
             geo_df2 = geo_df2.round(2)
 
             if len(sort_by):
@@ -1609,8 +1590,8 @@ def update_table(page_current, page_size, sort_by, output_grid, branches):
                     inplace=False)
 
     if branch == 'yes':
-        if os.path.isfile(r'Output/Branches/grid_resume_opt.csv'):
-            geo_df2 = pd.read_csv(r'Output/Branches/grid_resume_opt.csv')
+        if os.path.isfile(r'Output/Branches/grid_resume.csv'):
+            geo_df2 = pd.read_csv(r'Output/Branches/grid_resume.csv')
             geo_df2 = geo_df2.round(2)
 
             if len(sort_by):

@@ -60,43 +60,43 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
                              roads_segments)
             print("Cluster grid created")
 
-            print('Assigning to the nearest 5 substations.. ')
-            assigned_substations, connecting_points = \
-                substation_assignment(cluster_n, geo_df, c_grid_points,
-                                      substations, clusters_list)
-
-            print('Connecting to the substation.. ')
-
-            connection, connection_cost, connection_length, connection_type, \
-            connection_id = substation_connection(geo_df, substations,
-                                                  assigned_substations,
-                                                  connecting_points,
-                                                  c_grid_points,
-                                                  line_bc, resolution,
-                                                  sub_cost_hv, sub_cost_mv,
-                                                  gdf_roads,
-                                                  roads_segments)
+            # print('Assigning to the nearest 5 substations.. ')
+            # assigned_substations, connecting_points = \
+            #     substation_assignment(cluster_n, geo_df, c_grid_points,
+            #                           substations, clusters_list)
+            #
+            # print('Connecting to the substation.. ')
+            #
+            # connection, connection_cost, connection_length, connection_type, \
+            # connection_id = substation_connection(geo_df, substations,
+            #                                       assigned_substations,
+            #                                       connecting_points,
+            #                                       c_grid_points,
+            #                                       line_bc, resolution,
+            #                                       sub_cost_hv, sub_cost_mv,
+            #                                       gdf_roads,
+            #                                       roads_segments)
 
             print("Substation connection created")
 
             c_grid.to_file('Grid_' + str(cluster_n) + '.shp')
             total_grid = gpd.GeoDataFrame(
                 pd.concat([total_grid, c_grid], sort=True))
-
-            if not connection.empty:
-                connection.to_file('Connection_' + str(cluster_n) + '.shp')
-                total_connection = gpd.GeoDataFrame(pd.concat(
-                    [total_connection, connection], sort=True))
-
-            grid_resume.loc[cluster_n, 'Connection Type'] = connection_type
-            grid_resume.loc[cluster_n, 'Substation ID'] = connection_id
+            #
+            # if not connection.empty:
+            #     connection.to_file('Connection_' + str(cluster_n) + '.shp')
+            #     total_connection = gpd.GeoDataFrame(pd.concat(
+            #         [total_connection, connection], sort=True))
+            #
+            # grid_resume.loc[cluster_n, 'Connection Type'] = connection_type
+            # grid_resume.loc[cluster_n, 'Substation ID'] = connection_id
             grid_resume.loc[cluster_n, 'Grid Length [km]'] = \
                 c_grid_length / 1000
             grid_resume.loc[cluster_n, 'Grid Cost [k€]'] = c_grid_cost / 1000
-            grid_resume.loc[
-                cluster_n, 'Connection Length [km]'] = connection_length / 1000
-            grid_resume.loc[
-                cluster_n, 'Connection Cost [k€]'] = connection_cost / 1000
+            # grid_resume.loc[
+            #     cluster_n, 'Connection Length [km]'] = connection_length / 1000
+            # grid_resume.loc[
+            #     cluster_n, 'Connection Cost [k€]'] = connection_cost / 1000
 
         elif n_terminal_nodes == 0:
 
@@ -113,7 +113,7 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
         grid_resume.to_csv('grid_resume.csv', index=False)
     total_grid.crs = total_connection.crs = geo_df.crs
     total_grid.to_file('all_cluster_grids')
-    total_connection.to_file('all_connections')
+    # total_connection.to_file('all_connections')
     os.chdir(r'../..')
     return grid_resume, substations, gdf_roads, roads_segments
 
