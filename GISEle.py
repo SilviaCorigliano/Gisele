@@ -49,7 +49,7 @@ load_profile['Power (p.u.)'] = input_profile.iloc[12:24, 0].values
 lp_data = load_profile.to_dict('records')
 
 # configuration file, eps and pts values separated by - since they are a range
-config = pd.read_csv(r'Input/Configuration3.csv')
+config = pd.read_csv(r'Input/Configuration.csv')
 config.loc[21, 'Value'] = sorted(list(map(int,
                                           config.loc[21, 'Value'].split('-'))))
 config.loc[20, 'Value'] = sorted(list(map(int,
@@ -981,6 +981,31 @@ app.layout = html.Div([
 
                                 ]
                                 ),
+                        dbc.Tab(label='Table',
+                                label_style={"color": "#55b298"},
+                                children=[
+                                    dash_table.DataTable(
+                                        id='datatable_grid_final',
+                                        columns=[]
+                                        ,
+                                        style_header={
+                                            'whiteSpace': 'normal',
+                                            'height': 'auto',
+                                            'width': '30px',
+                                            'textAlign': 'center'
+                                        },
+                                        style_table={'height': '450px'},
+                                        page_count=1,
+                                        page_current=0,
+                                        page_size=13,
+                                        page_action='custom',
+                                        sort_action='custom',
+                                        sort_mode='single',
+                                        sort_by=[]
+                                    )
+
+                                ]
+                                ),
                     ]),
                 ])
             ]), width={"size": 8, "offset": 0}, align='center'),
@@ -1219,7 +1244,7 @@ def create_study_area(lat1, lat2, lat3, lat4, lon1, lon2, lon3, lon4):
         lat_points = [lat1, lat2, lat3, lat4]
         lon_points = [lon1, lon2, lon3, lon4]
         study_area.geometry = [Polygon(zip(lon_points, lat_points))]
-        study_area.to_file('study_area.shp')
+        study_area.to_file(r'Input/study_area.shp')
     return '_'
 
 
@@ -1296,7 +1321,7 @@ def create_dataframe(create_df, import_pop_value):
     if dash.callback_context.triggered[0]['prop_id'] == 'create_df.n_clicks':
         if data_import == 'yes':
             collecting.data_gathering(crs, study_area)
-
+            landcover_option = 'CGLS'
             if not import_pop_value:
                 df = processing.create_mesh(study_area, crs, resolution)
             else:
@@ -1687,6 +1712,45 @@ def update_table(page_current, page_size, sort_by, output_mg):
     return geo_df2.iloc[
            page_current * page_size:(page_current + 1) * page_size
            ].to_dict('records')
+
+
+@app.callback([Output('datatable_grid_final', 'data'),
+               Output('datatable_grid_final', 'columns')],
+              [Input('datatable_grid_final', "page_current"),
+               Input('datatable_grid_final', "page_size"),
+               Input('datatable_grid_final', 'sort_by'),
+               Input('output_lcoe', "figure")],
+              [State('branch', 'value')])
+def update_table(page_current, page_size, sort_by, output_grid, branches):
+    branch = config.iloc[11, 1]
+    geo_df2 = pd.DataFrame()
+
+    if branch == 'no':
+        if os.path.isfile(r'Output/Grids/grid_resume_opt.csv'):
+            geo_df2 = pd.read_csv(r'Output/Grids/grid_resume_opt.csv')
+            geo_df2 = geo_df2.round(2)
+
+            if len(sort_by):
+                geo_df2 = geo_df2.sort_values(
+                    sort_by[0]['column_id'],
+                    ascending=sort_by[0]['direction'] == 'asc',
+                    inplace=False)
+
+    if branch == 'yes':
+        if os.path.isfile(r'Output/Branches/grid_resume_opt.csv'):
+            geo_df2 = pd.read_csv(r'Output/Branches/grid_resume_opt.csv')
+            geo_df2 = geo_df2.round(2)
+
+            if len(sort_by):
+                geo_df2 = geo_df2.sort_values(
+                    sort_by[0]['column_id'],
+                    ascending=sort_by[0]['direction'] == 'asc',
+                    inplace=False)
+    geo_df2 = geo_df2.dropna(axis=1, how='all')
+    columns = [{"name": i, "id": i} for i in geo_df2.columns]
+    return geo_df2.iloc[
+           page_current * page_size:(page_current + 1) * page_size
+           ].to_dict('records'), columns
 
 
 @app.callback(Output('datatable_load_profile', 'data'),

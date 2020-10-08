@@ -20,11 +20,14 @@ def data_gathering(crs, study_area):
 
     study_area = study_area.to_crs(4326)
     min_x, min_y, max_x, max_y = study_area.geometry.total_bounds
-    shutil.rmtree(r'Output\Datasets\Elevation')
+    if os.path.exists("Output\Datasets\Elevation"):
+        shutil.rmtree(r'Output\Datasets\Elevation')
     os.mkdir(r'Output\Datasets\Elevation')
-    shutil.rmtree(r'Output\Datasets\Population')
+    if os.path.exists("Output\Datasets\Population"):
+        shutil.rmtree(r'Output\Datasets\Population')
     os.mkdir(r'Output\Datasets\Population')
-    shutil.rmtree(r'Output\Datasets\LandCover')
+    if os.path.exists("Output\Datasets\Landcover"):
+        shutil.rmtree(r'Output\Datasets\LandCover')
     os.mkdir(r'Output\Datasets\LandCover')
     # Download layers from Earth Engine
 

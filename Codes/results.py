@@ -7,11 +7,15 @@ import plotly.graph_objs as go
 def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
           full_ele='no'):
     print('Plotting results..')
-
-    study_area = gpd.read_file(r'Input/bolivia.shp')
+    if os.path.isfile(r'Input/study_area.shp'):
+        study_area = gpd.read_file(r'Input/study_area.shp')
+        study_area = study_area.to_crs(epsg=4326)
+        area = study_area.boundary.unary_union.xy
+    else:
+        study_area = pd.DataFrame()
+        area = ['', '']
     # study_area = gpd.read_file(r'Input/Cavalcante_4326.geojson')
     # study_area = gpd.read_file(r'Input/Namanjavira_4326.geojson')
-    study_area = study_area.to_crs(epsg=4326)
 
     if branch == 'yes':
         os.chdir(r'Output//Branches')
@@ -21,7 +25,7 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
     substations = substations.to_crs(epsg=4326)
     df = df.to_crs(epsg=4326)
     clusters = df[df['Cluster'] != -1]
-    area = study_area.boundary.unary_union.xy
+
     if full_ele == 'no':
         terminal_nodes = clusters[clusters['Population'] >= pop_thresh]
     elif full_ele == 'yes':

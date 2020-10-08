@@ -138,108 +138,108 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
         nearest_id=substations.apply(nearest, df=geo_df_clustered,
                                      src_column='ID', axis=1))
     total_connections_opt = pd.DataFrame()
-    # if branch == 'yes':
-    #     file = 'Branch_'
-    #     os.chdir(r'Output/Branches')
-    # else:
-    #     file = 'Grid_'
-    #     os.chdir(r'Output/Grids')
-    #
-    # milp_clusters = grid_resume[['Cluster', 'Load [kW]']].copy()
-    # milp_clusters['Cluster'] = ['C' + str(i[0]) for i in
-    #                             milp_clusters['Cluster'].iteritems()]
-    # energy_mismatch = \
-    #     (total_energy['Energy'] / 1000) / mg['Energy Produced [MWh]']
-    # milp_clusters['mg_npc'] = \
-    #     mg['Total Cost [k€]'] * energy_mismatch.mean()
-    # milp_subs = substations[['ID', 'PowerAvailable']].copy()
-    # milp_subs['ID'] = ['S' + str(i[1]) for i in milp_subs['ID'].iteritems()]
-    # milp_subs['subs_npc'] = 10
-    # sets = milp_clusters['Cluster'].append(milp_subs['ID'], ignore_index=True)
-    # combinations = list(itertools.combinations(sets, 2))
-    # milp_links = pd.DataFrame(index=range(combinations.__len__()),
-    #                           columns=['0', '1'])
-    # milp_links['0'] = [i[0] for i in combinations]
-    # milp_links['1'] = [i[1] for i in combinations]
-    # milp_links['Cost'] = 999999
-    # for row in milp_links.iterrows():
-    #     if 'S' in row[1][0] and 'S' in row[1][1]:
-    #         continue
-    #     c_grid_points = []
-    #     print('Connecting ' + row[1][0] + ' and ' + row[1][1])
-    #     if 'C' in row[1][0]:
-    #         grid_1 = gpd.read_file(file + str(row[1][0].split('C')[1]) +
-    #                                ".shp")
-    #         c_grid_points = list(zip(grid_1.ID1.astype(int),
-    #                                  grid_1.ID2.astype(int)))
-    #         grid_1 = line_to_points(grid_1, geo_df_clustered)
-    #     elif 'S' in row[1][0]:
-    #         sub_in_df = substations[
-    #             substations['ID'] ==
-    #             int(row[1][0].split('S')[1])].nearest_id.values[0]
-    #         grid_2 = geo_df_clustered[geo_df_clustered['ID'] == sub_in_df]
-    #     if 'C' in row[1][1]:
-    #         grid_2 = gpd.read_file(file + str(row[1][1].split('C')[1]) +
-    #                                ".shp")
-    #         c_grid_points.append(list(zip(grid_2.ID1.astype(int),
-    #                                       grid_2.ID2.astype(int))))
-    #         grid_2 = line_to_points(grid_2, geo_df_clustered)
-    #     elif 'S' in row[1][1]:
-    #         sub_in_df = substations[
-    #             substations['ID'] ==
-    #             int(row[1][1].split('S')[1])].nearest_id.values[0]
-    #         grid_2 = geo_df_clustered[geo_df_clustered['ID'] == sub_in_df]
-    #
-    #     dist_2d = pd.DataFrame(distance_2d(grid_1, grid_2, 'X', 'Y'),
-    #                            index=grid_1.ID.values,
-    #                            columns=grid_2.ID.values)
-    #
-    #     p1 = geo_df_clustered[geo_df_clustered['ID'] == dist_2d.min().idxmin()]
-    #     p2 = geo_df_clustered[geo_df_clustered['ID'] ==
-    #                           dist_2d.min(axis=1).idxmin()]
-    #
-    #     connection, connection_cost, connection_length, _ = \
-    #         dijkstra.dijkstra_connection(geo_df_clustered, p1, p2,
-    #                                      c_grid_points, line_bc, resolution)
-    #
-    #     if connection.empty and connection_cost == 999999:
-    #         continue
-    #     elif connection.empty:
-    #         connection_cost = 1000
-    #         connection_length = 1000
-    #     connection_om = [(connection_cost/1000) * grid_om] * grid_lifetime
-    #     connection_om = np.npv(grid_ir, connection_om)
-    #     milp_links.loc[row[0], 'Cost'] = (connection_cost / 1000) \
-    #         + connection_om
-    # milp_links.drop(milp_links[milp_links['Cost'] == 999999].index,
-    #                 inplace=True)
-    # milp_links.reset_index(inplace=True, drop=True)
-    # os.chdir('../..')
-    # milp_links.to_csv(r'Output/LCOE/milp_links.csv', index=False)
-    # sets.to_csv(r'Output/LCOE/set.csv', index=False)
-    # milp_links.loc[:, ['0', '1']].to_csv(r'Output/LCOE/possible_links.csv',
-    #                                      index=False)
-    #
-    # milp_subs.loc[:, ['ID', 'PowerAvailable']].to_csv(
-    #     r'Output/LCOE/sub_power.csv', index=False)
-    #
-    # milp_subs.loc[:, ['ID', 'subs_npc']].to_csv(r'Output/LCOE/sub_npc.csv',
-    #                                             index=False)
-    #
-    # milp_subs.loc[:, 'ID'].to_csv(r'Output/LCOE/subs.csv', index=False)
-    #
-    # milp_clusters.loc[:, ['Cluster']].to_csv(r'Output/LCOE/clusters.csv',
-    #                                          index=False)
-    #
-    # milp_clusters.loc[:, ['Cluster', 'Load [kW]']].to_csv(
-    #     r'Output/LCOE/c_power.csv', index=False)
-    #
-    # milp_clusters.loc[:, ['Cluster', 'mg_npc']].to_csv(
-    #     r'Output/LCOE/c_npc.csv', index=False)
-    #
-    # total_energy['Cluster'] = ['C' + str(i[0]) for i in
-    #                            total_energy['Cluster'].iteritems()]
-    # total_energy.to_csv(r'Output/LCOE/energy.csv', index=False)
+    if branch == 'yes':
+        file = 'Branch_'
+        os.chdir(r'Output/Branches')
+    else:
+        file = 'Grid_'
+        os.chdir(r'Output/Grids')
+
+    milp_clusters = grid_resume[['Cluster', 'Load [kW]']].copy()
+    milp_clusters['Cluster'] = ['C' + str(i[0]) for i in
+                                milp_clusters['Cluster'].iteritems()]
+    energy_mismatch = \
+        (total_energy['Energy'] / 1000) / mg['Energy Produced [MWh]']
+    milp_clusters['mg_npc'] = \
+        mg['Total Cost [k€]'] * energy_mismatch.mean()
+    milp_subs = substations[['ID', 'PowerAvailable']].copy()
+    milp_subs['ID'] = ['S' + str(i[1]) for i in milp_subs['ID'].iteritems()]
+    milp_subs['subs_npc'] = 10
+    sets = milp_clusters['Cluster'].append(milp_subs['ID'], ignore_index=True)
+    combinations = list(itertools.combinations(sets, 2))
+    milp_links = pd.DataFrame(index=range(combinations.__len__()),
+                              columns=['0', '1'])
+    milp_links['0'] = [i[0] for i in combinations]
+    milp_links['1'] = [i[1] for i in combinations]
+    milp_links['Cost'] = 999999
+    for row in milp_links.iterrows():
+        if 'S' in row[1][0] and 'S' in row[1][1]:
+            continue
+        c_grid_points = []
+        print('Connecting ' + row[1][0] + ' and ' + row[1][1])
+        if 'C' in row[1][0]:
+            grid_1 = gpd.read_file(file + str(row[1][0].split('C')[1]) +
+                                   ".shp")
+            c_grid_points = list(zip(grid_1.ID1.astype(int),
+                                     grid_1.ID2.astype(int)))
+            grid_1 = line_to_points(grid_1, geo_df_clustered)
+        elif 'S' in row[1][0]:
+            sub_in_df = substations[
+                substations['ID'] ==
+                int(row[1][0].split('S')[1])].nearest_id.values[0]
+            grid_2 = geo_df_clustered[geo_df_clustered['ID'] == sub_in_df]
+        if 'C' in row[1][1]:
+            grid_2 = gpd.read_file(file + str(row[1][1].split('C')[1]) +
+                                   ".shp")
+            c_grid_points.append(list(zip(grid_2.ID1.astype(int),
+                                          grid_2.ID2.astype(int))))
+            grid_2 = line_to_points(grid_2, geo_df_clustered)
+        elif 'S' in row[1][1]:
+            sub_in_df = substations[
+                substations['ID'] ==
+                int(row[1][1].split('S')[1])].nearest_id.values[0]
+            grid_2 = geo_df_clustered[geo_df_clustered['ID'] == sub_in_df]
+
+        dist_2d = pd.DataFrame(distance_2d(grid_1, grid_2, 'X', 'Y'),
+                               index=grid_1.ID.values,
+                               columns=grid_2.ID.values)
+
+        p1 = geo_df_clustered[geo_df_clustered['ID'] == dist_2d.min().idxmin()]
+        p2 = geo_df_clustered[geo_df_clustered['ID'] ==
+                              dist_2d.min(axis=1).idxmin()]
+
+        connection, connection_cost, connection_length, _ = \
+            dijkstra.dijkstra_connection(geo_df_clustered, p1, p2,
+                                         c_grid_points, line_bc, resolution)
+
+        if connection.empty and connection_cost == 999999:
+            continue
+        elif connection.empty:
+            connection_cost = 1000
+            connection_length = 1000
+        connection_om = [(connection_cost/1000) * grid_om] * grid_lifetime
+        connection_om = np.npv(grid_ir, connection_om)
+        milp_links.loc[row[0], 'Cost'] = (connection_cost / 1000) \
+            + connection_om
+    milp_links.drop(milp_links[milp_links['Cost'] == 999999].index,
+                    inplace=True)
+    milp_links.reset_index(inplace=True, drop=True)
+    os.chdir('../..')
+    milp_links.to_csv(r'Output/LCOE/milp_links.csv', index=False)
+    sets.to_csv(r'Output/LCOE/set.csv', index=False)
+    milp_links.loc[:, ['0', '1']].to_csv(r'Output/LCOE/possible_links.csv',
+                                         index=False)
+
+    milp_subs.loc[:, ['ID', 'PowerAvailable']].to_csv(
+        r'Output/LCOE/sub_power.csv', index=False)
+
+    milp_subs.loc[:, ['ID', 'subs_npc']].to_csv(r'Output/LCOE/sub_npc.csv',
+                                                index=False)
+
+    milp_subs.loc[:, 'ID'].to_csv(r'Output/LCOE/subs.csv', index=False)
+
+    milp_clusters.loc[:, ['Cluster']].to_csv(r'Output/LCOE/clusters.csv',
+                                             index=False)
+
+    milp_clusters.loc[:, ['Cluster', 'Load [kW]']].to_csv(
+        r'Output/LCOE/c_power.csv', index=False)
+
+    milp_clusters.loc[:, ['Cluster', 'mg_npc']].to_csv(
+        r'Output/LCOE/c_npc.csv', index=False)
+
+    total_energy['Cluster'] = ['C' + str(i[0]) for i in
+                               total_energy['Cluster'].iteritems()]
+    total_energy.to_csv(r'Output/LCOE/energy.csv', index=False)
 
     lcoe_optimization.cost_optimization(10000, coe)
 
