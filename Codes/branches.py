@@ -130,24 +130,24 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
                 Steinerman.steiner(geo_df, gdf_clusters_pop, line_bc_col,
                                    resolution, branch_points)
 
-            print('Assigning to the 5 nearest substations.. ')
-            assigned_substations, connecting_points = \
-                substation_assignment(i, geo_df, col_points,
-                                      substations, clusters_list)
-
-            print('Connecting to the substation.. ')
-
-            connection, connection_cost, connection_length, connection_type, \
-                connection_id = substation_connection(geo_df, substations,
-                                                      assigned_substations,
-                                                      connecting_points,
-                                                      col_points,
-                                                      line_bc, resolution,
-                                                      sub_cost_hv, sub_cost_mv,
-                                                      gdf_roads,
-                                                      roads_segments)
-
-            print("Substation connection created")
+            # print('Assigning to the 5 nearest substations.. ')
+            # assigned_substations, connecting_points = \
+            #     substation_assignment(i, geo_df, col_points,
+            #                           substations, clusters_list)
+            #
+            # print('Connecting to the substation.. ')
+            #
+            # connection, connection_cost, connection_length, connection_type, \
+            #     connection_id = substation_connection(geo_df, substations,
+            #                                           assigned_substations,
+            #                                           connecting_points,
+            #                                           col_points,
+            #                                           line_bc, resolution,
+            #                                           sub_cost_hv, sub_cost_mv,
+            #                                           gdf_roads,
+            #                                           roads_segments)
+            #
+            # print("Substation connection created")
 
             col['Power'] = clusters_list.loc[i, 'Load [kW]']
             col['id'] = 1
@@ -157,21 +157,21 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
             grid_resume.loc[i, 'Collateral Cost [k€]'] = col_cost / 1000
             all_collateral = gpd.GeoDataFrame(pd.concat([all_collateral,
                                                          col], sort=True))
-            if not connection.empty:
-                connection.to_file('Connection_' + str(i) + '.shp')
-                all_connections = gpd.GeoDataFrame(pd.concat(
-                    [all_connections, connection], sort=True))
-            grid_resume.loc[i, 'Connection Type'] = connection_type
-            grid_resume.loc[i, 'Substation ID'] = connection_id
+            # if not connection.empty:
+            #     connection.to_file('Connection_' + str(i) + '.shp')
+            #     all_connections = gpd.GeoDataFrame(pd.concat(
+            #         [all_connections, connection], sort=True))
+            # grid_resume.loc[i, 'Connection Type'] = connection_type
+            # grid_resume.loc[i, 'Substation ID'] = connection_id
             grid_resume.loc[i, 'Grid Cost [k€]'] = \
                 grid_resume.loc[i, 'Collateral Cost [k€]'] + \
                 grid_resume.loc[i, 'Branch Cost [k€]']
             grid_resume.loc[i, 'Grid Length [km]'] = \
                 grid_resume.loc[i, 'Collateral Length [km]'] + \
                 grid_resume.loc[i, 'Branch Length [km]']
-            grid_resume.loc[i, 'Connection Length [km]'] = \
-                connection_length / 1000
-            grid_resume.loc[i, 'Connection Cost [k€]'] = connection_cost / 1000
+            # grid_resume.loc[i, 'Connection Length [km]'] = \
+            #     connection_length / 1000
+            # grid_resume.loc[i, 'Connection Cost [k€]'] = connection_cost / 1000
 
             continue
 
@@ -197,30 +197,30 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
         #     substation_assignment(i, geo_df, branch_points,
         #                           substations, clusters_list)
 
-        assigned_substations, connecting_points = \
-            substation_assignment(i, geo_df, branch_points, substations,
-                                  clusters_list)
+        # assigned_substations, connecting_points = \
+        #     substation_assignment(i, geo_df, branch_points, substations,
+        #                           clusters_list)
+        #
+        # print('Connecting to the substation.. ')
+        # connection, connection_cost, connection_length, connection_type, \
+        #     connection_id = substation_connection(geo_df, substations,
+        #                                           assigned_substations,
+        #                                           connecting_points,
+        #                                           branch_points,
+        #                                           line_bc, resolution,
+        #                                           sub_cost_hv, sub_cost_mv,
+        #                                           gdf_roads, roads_segments)
+        # print("Substation connection created")
 
-        print('Connecting to the substation.. ')
-        connection, connection_cost, connection_length, connection_type, \
-            connection_id = substation_connection(geo_df, substations,
-                                                  assigned_substations,
-                                                  connecting_points,
-                                                  branch_points,
-                                                  line_bc, resolution,
-                                                  sub_cost_hv, sub_cost_mv,
-                                                  gdf_roads, roads_segments)
-        print("Substation connection created")
-
-        if not connection.empty:
-            connection.to_file('Connection_' + str(i) + '.shp')
-            all_connections = gpd.GeoDataFrame(pd.concat(
-                [all_connections, connection], sort=True))
-
-        grid_resume.loc[i, 'Connection Length [km]'] = connection_length / 1000
-        grid_resume.loc[i, 'Connection Cost [k€]'] = connection_cost / 1000
-        grid_resume.loc[i, 'Connection Type'] = connection_type
-        grid_resume.loc[i, 'Substation ID'] = connection_id
+        # if not connection.empty:
+        #     connection.to_file('Connection_' + str(i) + '.shp')
+        #     all_connections = gpd.GeoDataFrame(pd.concat(
+        #         [all_connections, connection], sort=True))
+        #
+        # grid_resume.loc[i, 'Connection Length [km]'] = connection_length / 1000
+        # grid_resume.loc[i, 'Connection Cost [k€]'] = connection_cost / 1000
+        # grid_resume.loc[i, 'Connection Type'] = connection_type
+        # grid_resume.loc[i, 'Substation ID'] = connection_id
         grid_resume.loc[i, 'Collateral Cost [k€]'] = col_cost / 1000
         grid_resume.loc[i, 'Collateral Length [km]'] = col_length / 1000
         grid_resume.loc[i, 'Grid Cost [k€]'] = \
@@ -235,7 +235,7 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
 
     all_collateral.crs = all_connections.crs = geo_df.crs
     all_collateral.to_file('all_collateral')
-    all_connections.to_file('all_connections')
+    # all_connections.to_file('all_connections')
     return grid_resume, all_collateral
 
 

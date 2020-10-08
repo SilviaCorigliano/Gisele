@@ -93,6 +93,9 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
             if grid_resume_opt.loc[cluster_n, 'Branch Length [km]'] != 0:
                 line_break('Collateral_', cluster_n, fig, 'black')
 
+            if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
+                line_break('Connection_', cluster_n, fig, 'blue')
+
         else:
             line_break('Grid_', cluster_n, fig, 'red')
 

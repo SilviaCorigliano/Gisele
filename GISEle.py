@@ -315,6 +315,20 @@ app.layout = html.Div([
                     ])
                 ], style={'margin': '10px'}),
 
+                html.Div([
+                    dbc.Label('Landcover Dataset'),
+                    dcc.Dropdown(
+                        id='landcover_option',
+                        options=[
+                            {'label': 'Global Landcover GLC-2000',
+                             'value': 'GLC'},
+                            {'label': 'Copernicus CGLS-LC100',
+                             'value': 'CGLS'},
+                        ],
+                        value='GLC'
+                    )
+                ], style={'margin': '15px'}),
+
                 dbc.Row([
                     dbc.Col(
                         dbc.Button(
@@ -1233,12 +1247,13 @@ def create_study_area(lat1, lat2, lat3, lat4, lon1, lon2, lon3, lon4):
                Input('eps_final', 'value'),
                Input('pts_final', 'value'),
                Input('c1_merge', 'value'),
-               Input('c2_merge', 'value')])
+               Input('c2_merge', 'value'),
+               Input('landcover_option', 'value')])
 def configuration(import_data, crs, resolution,
                   pop_thresh, line_bc, pop_load, sub_cost_HV, sub_cost_MV,
                   branch, pop_thresh_lr, line_bc_col, full_ele, wt, coe,
                   grid_ir, grid_om, grid_lifetime, eps, pts, spans, eps_final,
-                  pts_final, c1_merge, c2_merge):
+                  pts_final, c1_merge, c2_merge, landcover_option):
     """ Reads every change of input in the UI and updates the configuration
     file accordingly """
     ctx = dash.callback_context
@@ -1275,6 +1290,7 @@ def create_dataframe(create_df, import_pop_value):
     input_csv = 'imported_csv'
     crs = int(config.iloc[3, 1])
     resolution = float(config.iloc[4, 1])
+    landcover_option = (config.iloc[27, 1])
     unit = 1
     step = 1
     if dash.callback_context.triggered[0]['prop_id'] == 'create_df.n_clicks':
@@ -1287,7 +1303,8 @@ def create_dataframe(create_df, import_pop_value):
                 imported_pop = pd.read_csv(r'Input/imported_pop.csv')
                 df = processing.create_mesh(study_area, crs, resolution,
                                             imported_pop)
-            df_weighted = initialization.weighting(df, resolution)
+            df_weighted = initialization.weighting(df, resolution,
+                                                   landcover_option)
 
             geo_df, pop_points = \
                 initialization.creating_geodataframe(df_weighted, crs,
@@ -1297,7 +1314,8 @@ def create_dataframe(create_df, import_pop_value):
         else:
             df = pd.read_csv(r'Input/' + input_csv + '.csv', sep=',')
             print("Input files successfully imported.")
-            df_weighted = initialization.weighting(df, resolution)
+            df_weighted = initialization.weighting(df, resolution,
+                                                   landcover_option)
             geo_df, pop_points = \
                 initialization.creating_geodataframe(df_weighted, crs,
                                                      unit, input_csv, step)
@@ -1529,8 +1547,14 @@ def lcoe_computation(lcoe_btn):
         mg.index = mg.Cluster.values
         total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv')
         total_energy.index = total_energy.Cluster.values
-        grid_resume = pd.read_csv(r'Output/Grids/grid_resume.csv')
-        grid_resume.index = grid_resume.Cluster.values
+
+        if branch == 'yes':
+            grid_resume = pd.read_csv(r'Output/Branches/grid_resume.csv')
+            grid_resume.index = grid_resume.Cluster.values
+
+        else:
+            grid_resume = pd.read_csv(r'Output/Grids/grid_resume.csv')
+            grid_resume.index = grid_resume.Cluster.values
 
         grid_resume_opt = \
             optimization.milp_lcoe(geo_df_clustered, grid_resume,

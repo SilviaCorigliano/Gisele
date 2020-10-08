@@ -16,7 +16,7 @@ from supporting_GISEle2 import l, s
 from Codes import collecting, processing
 
 
-def weighting(df, resolution):
+def weighting(df, resolution, landcover_option):
     """
     Assign weights to all points of a dataframe according to the terrain
     characteristics and the distance to the nearest road.
@@ -42,11 +42,10 @@ def weighting(df, resolution):
         df_weighted.loc[index, 'Weight'] = row.Weight + math.exp(
             0.01732867951 * row.Slope)
         # Land cover using the column Other or GLC to compute the weight
-        option = 'GLC'  # user choice for the land cover data weighting
-        if option == 'GLC':
+        if landcover_option == 'GLC':
             df_weighted.loc[index, 'Weight'] += landcover_csv.WeightGLC[
                 landcover_csv.iloc[:, 0] == row.Land_cover].values[0]
-        if option == 'other':
+        if landcover_option == 'CGLS':
             df_weighted.loc[index, 'Weight'] += landcover_csv.WeightOther[
                 landcover_csv.iloc[:, 2] == row.Land_cover].values[0]
         # Road distance conditions

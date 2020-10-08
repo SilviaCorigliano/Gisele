@@ -26,3 +26,4 @@ eps_final,1500
 pts_final,500
 c1_merge,0
 c2_merge,0
+landcover_option,GLC
