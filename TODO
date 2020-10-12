@@ -1,0 +1,32 @@
+#######GIS data analysis######
+Avoid for loop in the weighting process
+Avoid for loop in the GIS processing
+Allow to import raster file with population
+Show a table and allow user to modify land cover
+Give more visualization options in the map
+When the user input study area, show point in the map
+Improve explanation
+Improve hoverinfo
+Import protected areas
+
+
+######clustering#######
+Show also outliers in the map
+Show tables with values
+Subcluster with MILP to find secondary substations
+
+######grid routing#####
+automatize road import
+how to deal with main branch not allowed to go aoutside clusters? In Bolivia it was a problem
+Spyder even in main branch procedure, otherwise this procedure cannot be used with high resolution
+How to change resolution? which should be the new value?
+Include pandapower and MILP algorithm
+
+####### microgrid sizing #######
+Process Michele data and show different things
+Try different possibilities of Michele and allow user to change input data
+
+####### lcoe analysis #######
+improve financial evaluation
+give more information in the final tab
+give different scenarios to evaluate solutions
