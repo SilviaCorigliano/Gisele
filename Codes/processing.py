@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import rasterio
 from rasterio.enums import Resampling
-from shapely.geometry import Point, MultiPoint
+from shapely.geometry import Point, MultiPoint, MultiPolygon
 from shapely.ops import nearest_points
 
 
@@ -16,7 +16,7 @@ def create_mesh(study_area, crs, resolution, imported_pop=pd.DataFrame()):
     print('Processing the imported data and creating the input csv file..')
     df = pd.DataFrame(columns=['ID', 'X', 'Y', 'Elevation', 'Slope',
                                'Population', 'Land_cover', 'Road_dist',
-                               'River_flow'])
+                               'River_flow','Protected_area'])
 
     study_area = study_area.to_crs(crs)
     min_x, min_y, max_x, max_y = study_area.geometry.total_bounds
@@ -55,6 +55,11 @@ def create_mesh(study_area, crs, resolution, imported_pop=pd.DataFrame()):
         for x in list(zip(line.xy[0], line.xy[1])):
             streets_points.append(x)
     streets_multipoint = MultiPoint(streets_points)
+
+    protected_areas = gpd.read_file('Output/Datasets/ProtectedAreas/ProtectedAreas.shp')
+    protected_areas = protected_areas.to_crs(crs)
+    protected_areas = protected_areas[protected_areas['IUCN_CAT'].isin(['II','I'])]
+
     # Manage raster files and sample their values
     # extract zipped files #
     with zipfile.ZipFile('Output/Datasets/Elevation/Elevation.zip', 'r') as zip_ref:
@@ -152,6 +157,10 @@ def create_mesh(study_area, crs, resolution, imported_pop=pd.DataFrame()):
         # land cover
         x, y = raster_land_cover.index(row.X, row.Y)
         geo_df.loc[i, 'Land_cover'] = land_cover[0, x, y]
+
+        # protected areas
+        geo_df.loc[i, 'Protected_area'] = \
+            protected_areas['geometry'].contains(Point(row.X,row.Y)).any()
 
         print('\r' + str(i) + '/' + str(geo_df.index.__len__()),
               sep=' ', end='', flush=True)

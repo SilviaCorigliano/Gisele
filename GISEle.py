@@ -308,7 +308,7 @@ app.layout = html.Div([
                             placeholder='1000m',
                             debounce=True,
                             type='number',
-                            min=100, max=4000, step=50,
+                            min=100, step=50,
                             value='1000'
                         ),
                     ])
@@ -450,7 +450,7 @@ app.layout = html.Div([
                             id='eps_final',
                             placeholder='',
                             type='number',
-                            min=0, max=10000, step=50,
+                            min=0, max=10000, step=1,
                             value=1500),
                     ]),
                     dbc.Col([
@@ -461,7 +461,7 @@ app.layout = html.Div([
                             id='pts_final',
                             placeholder='..',
                             type='number',
-                            min=0, max=10000, step=10,
+                            min=0, max=10000, step=1,
                             value=500),
                     ])
                 ]),
@@ -1355,10 +1355,11 @@ def create_dataframe(create_df, import_pop_value):
                 size=10,
                 showscale=True,
                 color=geo_df.Population,
-                opacity=0.8
+                opacity=0.8,
+                colorbar=dict(title='People')
             ),
             text=list(
-                zip(geo_df.ID, geo_df.Weight.round(2), geo_df.Population)),
+                zip(geo_df.ID, geo_df.Weight, geo_df.Population.round(1))),
             hoverinfo='text',
             below="''"
         ))

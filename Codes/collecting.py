@@ -8,6 +8,7 @@ import pandas as pd
 import supporting_GISEle2
 from shapely.geometry import Point, LineString
 import numpy as np
+import shapely
 
 
 def data_gathering(crs, study_area):
@@ -65,6 +66,32 @@ def data_gathering(crs, study_area):
     image = image.reduce(ee.Reducer.median())
     out_path = 'Output\Datasets\Population\Population.zip'
     supporting_GISEle2.download_tif(study_area, crs, scale, image, out_path)
+
+    #ProtectedAreas from wdpa
+    print('Protected Areas Database:')
+    collection = ee.FeatureCollection(
+        "WCMC/WDPA/current/polygons").filterBounds(
+        ee.Geometry.Rectangle(min_x, min_y, max_x, max_y))
+    features = collection.getInfo()['features']
+    i = 0
+    dictarr = []
+    if len(features)>0:
+        for f in features:
+            print(i)
+            i = i + 1
+            attr = f['properties']
+            attr['geometry'] = f['geometry']
+            attr['geometry']
+            dictarr.append(attr)
+
+        gdf = gpd.GeoDataFrame(dictarr)
+        gdf['geometry'] = list(
+            map(lambda s: shapely.geometry.shape(s), gdf.geometry))
+        gdf = gdf.explode()  # multiparts to singleparts
+        gdf.crs = 'EPSG:4326'
+        gdf.to_file('Output\Datasets\ProtectedAreas\ProtectedAreas.shp')
+
+
 
     # Population from JRC
     # scale=250

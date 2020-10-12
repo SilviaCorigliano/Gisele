@@ -37,24 +37,29 @@ def weighting(df, resolution, landcover_option):
     os.chdir(r'..//')
     del df
     # Weighting section
-    for index, row in df_weighted.iterrows():
-        # Slope conditions
-        df_weighted.loc[index, 'Weight'] = row.Weight + math.exp(
-            0.01732867951 * row.Slope)
-        # Land cover using the column Other or GLC to compute the weight
+    # Slope conditions
+    df_weighted['Weight'] = math.e**(
+        0.01732867951 * df_weighted['Slope'])
+    # Land cover using the column Other or GLC to compute the weight
+    for i,row in landcover_csv.iterrows():
         if landcover_option == 'GLC':
-            df_weighted.loc[index, 'Weight'] += landcover_csv.WeightGLC[
-                landcover_csv.iloc[:, 0] == row.Land_cover].values[0]
-        if landcover_option == 'CGLS':
-            df_weighted.loc[index, 'Weight'] += landcover_csv.WeightOther[
-                landcover_csv.iloc[:, 2] == row.Land_cover].values[0]
-        # Road distance conditions
-        if row.Road_dist < resolution/2:
-            df_weighted.loc[index, 'Weight'] = 1.5
-        elif row.Road_dist < 1000:
-            df_weighted.loc[index, 'Weight'] += 5 * row.Road_dist / 1000
+            df_weighted.loc[
+                df_weighted['Land_cover'] == row['GLC2000'], 'Weight'] += \
+            landcover_csv.loc[i, 'WeightGLC']
         else:
-            df_weighted.loc[index, 'Weight'] += 5
+            df_weighted.loc[
+                df_weighted['Land_cover'] == row['Other'], 'Weight'] += \
+            landcover_csv.loc[i, 'WeightOther']
+    # Road distance conditions
+    df_weighted.loc[df_weighted['Road_dist'] < 1000, 'Weight'] += \
+        5 * df_weighted.loc[
+                  df_weighted[
+                      'Road_dist'] < 1000, 'Road_dist'] / 1000
+
+    df_weighted.loc[df_weighted['Road_dist'] >= 1000,'Weight'] += 5
+    df_weighted.loc[df_weighted['Road_dist'] < resolution / 2, 'Weight'] = 1.5
+    #Protected areas condition
+    df_weighted.loc[df_weighted['Protected_area'] == True, 'Weight'] += 5
 
     valid_fields = ['ID', 'X', 'Y', 'Population', 'Elevation', 'Weight']
     blacklist = []
