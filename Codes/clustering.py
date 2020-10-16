@@ -190,7 +190,11 @@ def analysis(pop_points, geo_df, pop_load, eps, pts):
     return geo_df_clustered, clusters_list
 
 
-def plot_clusters(gdf_clustered_clean, clusters_list):
+def plot_clusters(geo_df_clustered, clusters_list):
+
+    gdf_clustered_clean = geo_df_clustered[
+        geo_df_clustered['Cluster'] != -1]
+
     fig = go.Figure()
 
     for cluster_n in clusters_list.Cluster:
@@ -221,6 +225,25 @@ def plot_clusters(gdf_clustered_clean, clusters_list):
 
         fig.update_layout(clickmode='event+select')
         # fig.show()
+    plot_population = geo_df_clustered[geo_df_clustered
+                                       ['Population'] > 0]
+    plot_population = plot_population.to_crs(epsg=4326)
+    plot_population.X = plot_population.geometry.x
+    plot_population.Y = plot_population.geometry.y
+    fig.add_trace(go.Scattermapbox(
+        lat=plot_population.Y,
+        lon=plot_population.X,
+        mode='markers',
+        name='Populated points',
+        marker=go.scattermapbox.Marker(
+            size=5,
+            color='black',
+            opacity=0.5
+        ),
+        text=plot_population.Population,
+        hoverinfo='text',
+        below="''"
+    ))
 
     print("Cluster plot created")
     return fig

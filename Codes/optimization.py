@@ -148,10 +148,10 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
     milp_clusters = grid_resume[['Cluster', 'Load [kW]']].copy()
     milp_clusters['Cluster'] = ['C' + str(i[0]) for i in
                                 milp_clusters['Cluster'].iteritems()]
-    energy_mismatch = \
-        (total_energy['Energy'] / 1000) / mg['Energy Produced [MWh]']
+    # energy_mismatch = \
+    #     (total_energy['Energy'] / 1000) / mg['Energy Produced [MWh]']
     milp_clusters['mg_npc'] = \
-        mg['Total Cost [k€]'] * energy_mismatch.mean()
+        mg['Total Cost [k€]']
     milp_subs = substations[['ID', 'PowerAvailable']].copy()
     milp_subs['ID'] = ['S' + str(i[1]) for i in milp_subs['ID'].iteritems()]
     milp_subs['subs_npc'] = 10
@@ -209,8 +209,10 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
             connection_length = 1000
         connection_om = [(connection_cost/1000) * grid_om] * grid_lifetime
         connection_om = np.npv(grid_ir, connection_om)
+        connection_salvage = (connection_cost/1000) * \
+                             (grid_lifetime-20)/(grid_lifetime)
         milp_links.loc[row[0], 'Cost'] = (connection_cost / 1000) \
-            + connection_om
+            + connection_om - connection_salvage
     milp_links.drop(milp_links[milp_links['Cost'] == 999999].index,
                     inplace=True)
     milp_links.reset_index(inplace=True, drop=True)
@@ -237,9 +239,15 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
     milp_clusters.loc[:, ['Cluster', 'mg_npc']].to_csv(
         r'Output/LCOE/c_npc.csv', index=False)
 
-    total_energy['Cluster'] = ['C' + str(i[0]) for i in
-                               total_energy['Cluster'].iteritems()]
-    total_energy.to_csv(r'Output/LCOE/energy.csv', index=False)
+    # total_energy['Cluster'] = ['C' + str(i[0]) for i in
+    #                            total_energy['Cluster'].iteritems()]
+    # total_energy.to_csv(r'Output/LCOE/energy.csv', index=False)
+
+    mg_energy=mg[['Cluster','Energy Produced [MWh]']]
+    mg_energy['Cluster'] = ['C' + str(i[0]) for i in
+                               mg_energy['Cluster'].iteritems()]
+    mg_energy.to_csv(r'Output/LCOE/energy.csv', index=False)
+
 
     lcoe_optimization.cost_optimization(10000, coe)
 
@@ -331,6 +339,6 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
 
     grid_resume.to_csv('grid_resume_opt.csv', index=False)
     total_connections_opt.crs = geo_df_clustered.crs
-    total_connections_opt.to_file('all_connections_opt')
+    total_connections_opt.to_file('all_connections_opt.shp')
     os.chdir('../..')
     return grid_resume

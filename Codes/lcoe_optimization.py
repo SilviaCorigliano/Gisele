@@ -143,10 +143,10 @@ def cost_optimization(p_max_lines, coe):
 
     ####################Define objective function##########################
 
-    # minimize total lcoe
+    # minimize total npc over microgrid lifetime
     def ObjectiveFunction(model):
         return summation(model.c_microgrids, model.z) + summation(model.c_substations, model.y) + \
-               summation(model.c_links, model.x) + sum(model.energy[i] * (1-model.z[i]) for i in model.clusters) * coe/1000
+               summation(model.c_links, model.x) + sum(model.energy[i] * (1-model.z[i]) for i in model.clusters) * coe
 
     model.Obj = Objective(rule=ObjectiveFunction, sense=minimize)
 
