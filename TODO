@@ -1,17 +1,17 @@
 #######GIS data analysis######
-Avoid for loop in the weighting process
+Avoid for loop in the weighting process-->done
 Avoid for loop in the GIS processing
 Allow to import raster file with population
 Show a table and allow user to modify land cover
 Give more visualization options in the map
 When the user input study area, show point in the map
 Improve explanation
-Improve hoverinfo
-Import protected areas
+Improve hoverinfo, round values
+Import protected areas-->done
 
 
 ######clustering#######
-Show also outliers in the map
+Show also outliers in the map -->done
 Show tables with values
 Subcluster with MILP to find secondary substations
 
