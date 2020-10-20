@@ -22,6 +22,7 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
     else:
         os.chdir(r'Output//Grids')
 
+
     substations = substations.to_crs(epsg=4326)
     df = df.to_crs(epsg=4326)
     clusters = df[df['Cluster'] != -1]
@@ -89,22 +90,23 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                    hoverinfo='text',
                                    below="''"
                                    ))
+    line_break('all_connections_opt', fig, 'black')
 
     for cluster_n in clusters_list.Cluster:
 
         if branch == 'yes':
-            line_break('Branch_', cluster_n, fig, 'red')
+            line_break('Branch_'+ str(cluster_n), fig, 'red')
             if grid_resume_opt.loc[cluster_n, 'Branch Length [km]'] != 0:
-                line_break('Collateral_', cluster_n, fig, 'black')
+                line_break('Collateral_'+ str(cluster_n), fig, 'black')
 
-            if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
-                line_break('Connection_', cluster_n, fig, 'blue')
+#            if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
+#               line_break('Connection_'+ str(cluster_n), fig, 'blue')
 
         else:
-            line_break('Grid_', cluster_n, fig, 'red')
+            line_break('Grid_'+ str(cluster_n), fig, 'red')
 
-            if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
-                line_break('Connection_', cluster_n, fig, 'blue')
+#            if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
+#                line_break('Connection_'+ str(cluster_n), fig, 'blue')
 
     if full_ele == 'yes':
         line_break(r'all_link/', 'all_link', fig, 'green')
@@ -124,8 +126,8 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
     return fig
 
 
-def line_break(file, cluster_n, fig, color):
-    lines = gpd.read_file(file + str(cluster_n) + '.shp')
+def line_break(file, fig, color):
+    lines = gpd.read_file(file + '.shp')
     lines = lines.to_crs(epsg=4326)
     coordinates = pd.DataFrame(columns=['x', 'y'], dtype='int64')
     count = 0
@@ -138,7 +140,7 @@ def line_break(file, cluster_n, fig, color):
         coordinates = coordinates.append(pd.Series(), ignore_index=True)
         count += 2
 
-    fig.add_trace(go.Scattermapbox(name=file + str(cluster_n),
+    fig.add_trace(go.Scattermapbox(name=file,
                                    lat=list(coordinates.y),
                                    lon=list(coordinates.x),
                                    mode='lines',
@@ -147,7 +149,7 @@ def line_break(file, cluster_n, fig, color):
                                        color=color,
                                        opacity=1
                                    ),
-                                   text=file + str(cluster_n),
+                                   text=file,
                                    hoverinfo='text',
                                    below="''"
                                    ))

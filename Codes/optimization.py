@@ -280,6 +280,12 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
         grid_resume.loc[index, 'Substation ID'] = 'Microgrid'
 
     for row in con_out.iterrows():
+        #check if grid resume of that cluster has already been filled
+        if not np.isnan(grid_resume.loc[
+            grid_resume['Cluster'] == int(row[1][0].split('C')[1]), 'Connection Length [km]'].values[0]):
+            swap=row[1][1]
+            row[1][1]=row[1][0]
+            row[1][0]=swap
         index = grid_resume.loc[
             grid_resume['Cluster'] == int(row[1][0].split('C')[1])].index
 
@@ -322,7 +328,7 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
         p1 = geo_df_clustered[geo_df_clustered['ID'] == dist_2d.min().idxmin()]
         p2 = geo_df_clustered[geo_df_clustered['ID'] ==
                               dist_2d.min(axis=1).idxmin()]
-
+        # recompute dijsktra on the selected connection, it would be better to save its value from before
         connection, connection_cost, connection_length, _ = \
             dijkstra.dijkstra_connection(geo_df_clustered, p1, p2,
                                          c_grid_points, line_bc, resolution)
@@ -342,3 +348,5 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
     total_connections_opt.to_file('all_connections_opt.shp')
     os.chdir('../..')
     return grid_resume
+
+
