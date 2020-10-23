@@ -27,6 +27,7 @@ Process Michele data and show different things
 Try different possibilities of Michele and allow user to change input data
 
 ####### lcoe analysis #######
-improve financial evaluation
+check if grid for some clusters was not created: this 
+improve financial evaluation --> now is a minimization of npc but need to communicate better with michele the microgrid lifetime
 give more information in the final tab
 give different scenarios to evaluate solutions
