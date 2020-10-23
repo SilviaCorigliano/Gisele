@@ -1,6 +1,6 @@
 ![Screenshot](logo.PNG)
 
-> Geographic Information Systems for Electrification
+> GIS for Electrification
 
 # About
 
