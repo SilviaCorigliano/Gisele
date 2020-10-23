@@ -1420,10 +1420,7 @@ def analysis(cluster_analysis, bt_merge_clusters):
             clustering.analysis(pop_points, geo_df, pop_load,
                                 eps_final, pts_final)
 
-        gdf_clustered_clean = geo_df_clustered[
-            geo_df_clustered['Cluster'] != -1]
-
-        fig_clusters = clustering.plot_clusters(gdf_clustered_clean,
+        fig_clusters = clustering.plot_clusters(geo_df_clustered,
                                                 clusters_list)
         clusters_list.to_csv(r"Output/Clusters/clusters_list.csv",
                              index=False)
@@ -1436,14 +1433,13 @@ def analysis(cluster_analysis, bt_merge_clusters):
             gpd.read_file(r"Output/Clusters/geo_df_clustered.json")
         geo_df_clustered.loc[geo_df_clustered['Cluster'] ==
                              c2_merge, 'Cluster'] = c1_merge
-        gdf_clustered_clean = geo_df_clustered[
-            geo_df_clustered['Cluster'] != -1]
+
         clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
         drop_index = \
             clusters_list.index[clusters_list['Cluster'] == c2_merge][0]
         clusters_list = clusters_list.drop(index=drop_index)
 
-        fig_merged = clustering.plot_clusters(gdf_clustered_clean,
+        fig_merged = clustering.plot_clusters(geo_df_clustered,
                                               clusters_list)
 
         clusters_list.to_csv(r"Output/Clusters/clusters_list.csv",
@@ -1580,6 +1576,8 @@ def lcoe_computation(lcoe_btn):
         else:
             grid_resume = pd.read_csv(r'Output/Grids/grid_resume.csv')
             grid_resume.index = grid_resume.Cluster.values
+            all_connections_opt = \
+                gpd.read_file(r'Output/Grids/all_connections_opt.shp')
 
         grid_resume_opt = \
             optimization.milp_lcoe(geo_df_clustered, grid_resume,
