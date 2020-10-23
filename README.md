@@ -1,6 +1,5 @@
 ![Screenshot](logo.PNG)
 
-> GIS for Electrification
 
 # About
 
