@@ -1,5 +1,5 @@
+[![Documentation Status](https://readthedocs.org/projects/gisele/badge/?version=main)](https://gisele.readthedocs.io/en/main/?badge=main)
 ![Screenshot](logo.PNG)
-
 
 # About
 
@@ -25,12 +25,21 @@ Gisele is provided by a user interface which can be accessed by clicking on the 
 For more information see the documentation in Gisele/docs
 
 # Documentation
+Documentation is available at: https://gisele.readthedocs.io/en/main/
 
 # Contributing
+Anybody is welcome to contribute to the project! The main steps to follow are:
+
+* Fork the project on GitHub
+* Create a feature branch to work on in your fork (git checkout -b new-feature)
+* Add your name to the AUTHORS file
+* Commit your changes to the feature branch
+* Push the branch to GitHub (git push origin my-new-feature)
+* On GitHub, create a new pull request from the feature branch
 
 # Citing 
 Please cite Gisele referring to the following journal publication:
-Corigliano, S., Carnovali, T., Edeme, D., & Merlo, M. (2020). Holistic geospatial data-based procedure for electric network design and least-cost energy strategy. Energy for Sustainable Development, 58, 1-15.
+Corigliano, S., Carnovali, T., Edeme, D., & Merlo, M. (2020). Holistic geospatial data-based procedure for electric network design and least-cost energy strategy. Energy for Sustainable Development, 58, 1-15. https://doi.org/10.1016/j.esd.2020.06.008
 
 # Licencing
 
@@ -40,7 +49,7 @@ Corigliano, S., Carnovali, T., Edeme, D., & Merlo, M. (2020). Holistic geospatia
 
 <img src="./images/logo.sample.png" alt="Logo of the project" align="right">
 
-# Name of the project &middot; [![Build Status](https://img.shields.io/travis/npm/npm/latest.svg?style=flat-square)](https://travis-ci.org/npm/npm) [![npm](https://img.shields.io/npm/v/npm.svg?style=flat-square)](https://www.npmjs.com/package/npm) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/your/your-project/blob/master/LICENSE)
+# Name of the project &middot; [![Build Status](https://img.shields.io/travis/npm/npm/latest.svg?style=flat-square)](https://travis-ci.org/npm/npm) [![npm](https://img.shields.io/npm/v/npm.svg?style=flat-square)](https://www.npmjs.com/package/npm) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) 
 > Additional information or tag line
 
 A brief description of your project, what it is used for.
