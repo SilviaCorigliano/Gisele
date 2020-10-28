@@ -16,8 +16,6 @@ Welcome to Gisele's documentation!
    user/running
    user/analysing
    user/tutorials
-   user/advanced_constraints
-   user/advanced_features
    user/config_defaults
    user/troubleshooting
    user/reference
