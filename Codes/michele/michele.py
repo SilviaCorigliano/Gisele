@@ -1,9 +1,9 @@
 from pyomo.environ import AbstractModel, Var, value
 
-from Codes.michele.Michele_model_creation import Model_Creation
-from Codes.michele.Michele_model_resolution import Model_Resolution
-from Codes.michele.Michele_results import Load_results
-from Codes.michele.Michele_initialize import importing
+from Codes.michele.components_creation import Model_Creation
+from Codes.michele.model_solve import Model_Resolution
+from Codes.michele.results import Load_results
+from Codes.michele.components_initialization import importing
 
 
 def start(load_profile, pv_avg, wt_avg):

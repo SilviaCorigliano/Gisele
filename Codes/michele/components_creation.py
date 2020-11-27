@@ -1,6 +1,8 @@
-from pyomo.environ import Param, RangeSet, Set, Var, NonNegativeReals, NonNegativeIntegers, Binary
+from pyomo.environ import Param, RangeSet, Set, Var, Objective, Constraint, minimize,\
+    NonNegativeReals, NonNegativeIntegers, Binary
 
-from Codes.michele.Michele_initialize import *
+from Codes.michele.constraints_definition import *
+from Codes.michele.components_initialization import *
 
 def Model_Creation(model, input_load, wt_prod, pv_prod):
     '''
@@ -139,6 +141,43 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.reserve = Var(model.hours, within=NonNegativeReals) #total reserve needed per hour [kW]
     model.reserve_dg = Var(model.hours,model.dg, within=NonNegativeReals) #reserve provided by DG [kW]
     model.reserve_bess = Var(model.hours, model.bess, within=NonNegativeReals)  # reserve provided by BESS [kW]
+
+    # OBJETIVE FUNTION:
+    model.ObjectiveFuntion = Objective(rule=total_net_present_cost, sense=minimize)
+
+    # CONSTRAINTS
+    # to compute OF
+    model.TotalInitialInvestment = Constraint(rule=total_initial_investment)
+    model.TotalReplacementCost = Constraint(rule=total_replacement_cost)
+    model.TotalOMCost = Constraint(rule=total_OM_cost)
+    model.TotalSalvageValue = Constraint(rule=total_salvage_value)
+    # to design the system
+    model.TotalLoad = Constraint(model.hours, rule=total_load)
+    model.PvInstalled = Constraint(model.pv, rule=pv_installed)
+    model.WtInstalled = Constraint(model.wt, rule=wt_installed)
+    model.BessInstalled = Constraint(model.bess, rule=bess_installed)
+    model.DgInstalled = Constraint(model.dg, rule=dg_installed)
+    model.ResEnergy = Constraint(model.hours, rule=res_energy)
+    model.SystemBalance = Constraint(model.hours, rule=system_balance)
+    model.TotalEnergyReq = Constraint(model.hours, rule=total_energy_req)
+    model.TotalLostLoad = Constraint(model.hours, rule=total_lost_load)
+    model.LimitLostLoad = Constraint(model.hours, rule=limit_lost_load)
+    model.TotalReserveReq = Constraint(model.hours, rule=total_reserve_req)
+    model.ReserveAllocation = Constraint(model.hours, rule=reserve_allocation)
+    # constraints related to diesel generators
+    model.FuelConsumptionCurve = Constraint(model.hours,model.dg, rule=fuel_consumption_curve)
+    model.DgPowerMax = Constraint(model.hours, model.dg, rule=dg_power_max)
+    model.DgPowerMin = Constraint(model.hours, model.dg, rule=dg_power_min)
+    model.DgOnline = Constraint(model.hours, model.dg, rule=dg_online)
+    # constraints related to batteries
+    model.BatteryPowerMax = Constraint(model.hours,model.bess, rule=battery_power_max)
+    model.BessCondition1 = Constraint(model.hours, model.bess, rule=bess_condition1)
+    model.BessCondition2 = Constraint(model.hours, model.bess, rule=bess_condition2)
+    model.BessChargingLevel = Constraint(model.hours,model.bess, rule=bess_charging_level)
+    model.BessChargingLevelMin = Constraint(model.hours,model.bess, rule=bess_charging_level_min)
+    model.BessChargingLevelMax = Constraint(model.hours,model.bess, rule=bess_charging_level_max)
+    model.BessChPowerMax = Constraint(model.hours,model.bess, rule=bess_ch_power_max)
+    model.BessDisPowerMax = Constraint(model.hours, model.bess, rule=bess_dis_power_max)
 
 
 

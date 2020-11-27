@@ -15,7 +15,7 @@ def Load_results(instance):
 
     
 
-    # Load the variables that depend of the periods in python dyctionarys a
+    # Load the variables that depend of the periods in python dictionaries a
 
     project_duration = int(instance.project_duration.extract_values()[None])
     num_days = int(instance.num_days.extract_values()[None])

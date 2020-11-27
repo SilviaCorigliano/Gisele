@@ -1,5 +1,4 @@
 #-----------------OBJECTIVE FUNTION
-from pyomo.environ import Constraint
 
 def total_net_present_cost(model):
       return  model.initial_investment + model.OM_cost + model.replacement_cost - model.salvage_value

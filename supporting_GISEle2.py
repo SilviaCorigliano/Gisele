@@ -17,7 +17,7 @@ from scipy.spatial import distance_matrix
 from scipy.spatial.distance import cdist
 from shapely.geometry import Point, box, LineString, MultiPoint
 from shapely.ops import split
-from Codes.michele.Michele_run import start
+from Codes.michele.michele import start
 from Codes.data_import import import_pv_data, import_wind_data
 
 
