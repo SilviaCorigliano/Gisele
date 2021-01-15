@@ -15,6 +15,7 @@ Running Gisele requires four things:
 2. A number of Python add-on modules .
 3. A solver: Gisele has been tested with CBC, GLPK, Gurobi, and CPLEX. Any other solver that is compatible with Pyomo should also work.
 4. The Gisele software itself.
+5. Login to Earth Engine website if GIS data need to be downloaded automatically
 
 Recommended installation method
 ===============================
@@ -53,4 +54,22 @@ CBC
 
 GLPK
 ____
+
+Google Earth Engine
+===============================
+When the option, automatic data download is activated in Gisele, GIS data are
+downloaded from free APIs.
+Many of the data come from Google Earth Engine database that can be accessed via the following steps:
+
+1. Sign up into Google Earth Engine: https://signup.earthengine.google.com/
+2. Install earth engine Python package in gisele environment (if the environment has been created through the environment.yml file, skip this step)
+
+    .. code-block:: fishshell
+
+        $ conda install -c conda-forge earthengine-api
+3. Authenticate:  from Python terminal, once gisele environment is activated, type:
+
+    .. code-block:: fishshell
+
+        $ earthengine authenticate
 

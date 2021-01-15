@@ -33,6 +33,7 @@ def Load_results(instance):
     bess_ch = pd.DataFrame.from_dict(instance.bess_ch_power.get_values(), orient='index')
     lost_load = pd.DataFrame.from_dict(instance.lost_load.get_values(), orient='index')
     load = pd.DataFrame.from_dict(instance.Load.get_values(), orient='index')
+    dg_fuel = pd.DataFrame.from_dict(instance.dg_fuel_consumption.get_values(), orient='index') #[L]
 
     load_tot_y=[] # list of yearly load [MWh]
     for y in range(num_years):
@@ -136,7 +137,7 @@ def Load_results(instance):
     print('salvage value='+str(salvage_value))
 
     return inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
-        rep_cost, om_cost, salvage_value, gen_energy, load_energy
+        rep_cost, om_cost, salvage_value, gen_energy, load_energy, dg_fuel
 
     '''
     Number_Years = int(instance.project_duration.extract_values()[None]/8760)

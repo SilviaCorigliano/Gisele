@@ -5,7 +5,7 @@ import osmnx as ox
 import geopandas as gpd
 import requests
 import pandas as pd
-import supporting_GISEle2
+import functions
 from shapely.geometry import Point, LineString
 import numpy as np
 import shapely
@@ -43,7 +43,7 @@ def data_gathering(crs, study_area):
         image = ee.Image("USGS/SRTMGL1_003")
         out_path = str('Output\Datasets\Elevation\Elevation.zip')
         scale = 30
-        supporting_GISEle2.download_tif(study_area, crs, scale, image, out_path)
+        functions.download_tif(study_area, crs, scale, image, out_path)
     else:
         shutil.move('Input\Datasets\Elevation\Elevation.zip',
                     'Output\Datasets\Elevation\Elevation.zip')
@@ -63,7 +63,7 @@ def data_gathering(crs, study_area):
             .first()
         out_path = 'Output\Datasets\LandCover\LandCover.zip'
         scale = 100
-        supporting_GISEle2.download_tif(study_area, crs, scale, image, out_path)
+        functions.download_tif(study_area, crs, scale, image, out_path)
     else:
         shutil.move('Input\Datasets\LandCover\LandCover.zip',
                     'Output\Datasets\LandCover\LandCover.zip')
@@ -76,7 +76,7 @@ def data_gathering(crs, study_area):
             ee.Filter.date('2015-01-01', '2015-12-31')).select('population')
         image = image.reduce(ee.Reducer.median())
         out_path = 'Output\Datasets\Population\Population.zip'
-        supporting_GISEle2.download_tif(study_area, crs, scale, image, out_path)
+        functions.download_tif(study_area, crs, scale, image, out_path)
     else:
         input_raster='Input/Datasets/Population/'+os.listdir('Input\Datasets\Population')[0]
 

@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 import osmnx as ox
-from supporting_GISEle2 import *
+from functions import *
 from shapely.geometry import Point
-from Codes import Steinerman, Spiderman, dijkstra
+from gisele import Steinerman, Spiderman, dijkstra
 
 
 def routing(geo_df_clustered, geo_df, clusters_list, resolution,

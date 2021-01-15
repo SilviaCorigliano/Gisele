@@ -3,8 +3,8 @@ import itertools
 import pandas as pd
 import geopandas as gpd
 import numpy as np
-from supporting_GISEle2 import line_to_points, distance_2d, l, nearest
-from Codes import dijkstra, lcoe_optimization
+from functions import line_to_points, distance_2d, l, nearest
+from gisele import dijkstra, lcoe_optimization
 
 
 def connections(geo_df, grid_resume, resolution, line_bc, branch, input_sub,

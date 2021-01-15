@@ -15,7 +15,7 @@ def Model_Resolution(model):
     :return: The solution inside an object call instance.
     '''
 
-    instance = model.create_instance(r'Codes\michele\Inputs\data.dat')  # load parameters
+    instance = model.create_instance(r'gisele\michele\Inputs\data.dat')  # load parameters
     #opt = SolverFactory('cplex',executable=r'C:\Program Files\IBM\ILOG\CPLEX_Studio1210\cplex\bin\x64_win64\cplex')
     opt = SolverFactory('gurobi')  # Solver use during the optimization
     opt.options['mipgap'] = 0.05

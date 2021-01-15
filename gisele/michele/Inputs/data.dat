@@ -87,6 +87,7 @@ param: dg_RU :=
 param: dg_RD :=
 1 8.0;
 
+
 param: inflation_rate := 0.02;
 
 param: nominal_interest_rate := 0.08;

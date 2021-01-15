@@ -14,8 +14,8 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 from dash.exceptions import PreventUpdate
 from shapely.geometry import Point
-from supporting_GISEle2 import load, sizing, lcoe_analysis
-from Codes import initialization, clustering, processing, collecting, \
+from functions import load, sizing, lcoe_analysis
+from gisele import initialization, clustering, processing, collecting, \
     optimization, results, grid, branches
 import pyutilib.subprocess.GlobalData
 
@@ -1588,6 +1588,7 @@ def lcoe_computation(lcoe_btn):
         fig_grid = results.graph(geo_df_clustered, clusters_list, branch,
                                  grid_resume_opt, substations, pop_thresh,
                                  full_ele)
+        results.line_break('all_connections_opt', fig_grid, 'black')
 
         final_lcoe = lcoe_analysis(clusters_list, total_energy,
                                    grid_resume_opt, mg, coe, grid_ir, grid_om,

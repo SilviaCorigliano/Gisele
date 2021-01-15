@@ -12,8 +12,8 @@ import math
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
-from supporting_GISEle2 import l, s
-from Codes import collecting, processing
+from functions import l, s
+from gisele import collecting, processing
 
 
 def weighting(df, resolution, landcover_option):

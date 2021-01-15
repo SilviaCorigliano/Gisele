@@ -90,7 +90,7 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
                                    hoverinfo='text',
                                    below="''"
                                    ))
-    line_break('all_connections_opt', fig, 'black')
+    #line_break('all_connections_opt', fig, 'black')
 
     for cluster_n in clusters_list.Cluster:
 

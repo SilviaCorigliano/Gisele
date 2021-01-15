@@ -150,7 +150,7 @@ def _slotnames(cls):
 # if it is a registered extension code for it.  Extension codes are
 # universal, so that the meaning of a pickle does not depend on
 # context.  (There are also some codes reserved for local use that
-# don't have this restriction.)  Codes are positive ints; 0 is
+# don't have this restriction.)  gisele are positive ints; 0 is
 # reserved.
 
 _extension_registry = {}                # key -> code

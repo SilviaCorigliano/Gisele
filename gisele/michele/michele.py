@@ -1,9 +1,9 @@
 from pyomo.environ import AbstractModel, Var, value
 
-from Codes.michele.components_creation import Model_Creation
-from Codes.michele.model_solve import Model_Resolution
-from Codes.michele.results import Load_results
-from Codes.michele.components_initialization import importing
+from gisele.michele.components_creation import Model_Creation
+from gisele.michele.model_solve import Model_Resolution
+from gisele.michele.results import Load_results
+from gisele.michele.components_initialization import importing
 
 
 def start(load_profile, pv_avg, wt_avg):
@@ -20,11 +20,11 @@ def start(load_profile, pv_avg, wt_avg):
     print('Show results')
 
     inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, rep_cost, \
-        om_cost, salvage_value, gen_energy, load_energy \
+        om_cost, salvage_value, gen_energy, load_energy, dg_fuel \
         = Load_results(instance)
 
     return inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
-        rep_cost, om_cost, salvage_value, gen_energy, load_energy
+        rep_cost, om_cost, salvage_value, gen_energy, load_energy, dg_fuel
 
 
 
