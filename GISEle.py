@@ -1576,8 +1576,8 @@ def lcoe_computation(lcoe_btn):
         else:
             grid_resume = pd.read_csv(r'Output/Grids/grid_resume.csv')
             grid_resume.index = grid_resume.Cluster.values
-            all_connections_opt = \
-                gpd.read_file(r'Output/Grids/all_connections_opt.shp')
+            # all_connections_opt = \
+                # gpd.read_file(r'Output/Grids/all_connections_opt.shp')
 
         grid_resume_opt = \
             optimization.milp_lcoe(geo_df_clustered, grid_resume,
