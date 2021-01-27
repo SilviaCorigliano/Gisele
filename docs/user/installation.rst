@@ -50,10 +50,31 @@ You need at least one of the solvers supported by Pyomo installed. CBC (open-sou
 CBC
 ---
 
-`CBC <https://projects.coin-or.org/Cbc>`_ is our recommended option if you want a free and open-source solver. CBC can be installed via conda on Linux and macOS by running ```conda install -c conda-forge coincbc```. Windows binary packages are somewhat more difficult to install, due to limited information on `the CBC website <https://projects.coin-or.org/Cbc>`_. We recommend you download the relevant binary for `CBC 2.9.9 <https://bintray.com/coin-or/download/Cbc/2.9.9>`_ and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
-
 GLPK
-____
+----
+GLPK is a free solver, easily integrable inside python. It is less powerful than
+the other solvers and might easily have convergence isssues.
+To install it, write in the command prompt:
+
+.. code-block:: fishshell
+
+    $ conda install -c conda-forge glpk
+
+
+
+Gurobi
+------
+Gurobi is a powerful commercial solver, that can be downloaded with a free academic
+licence if the user is a student.
+To install it register on the website: https://www.gurobi.com/ (Academic registration for free products)
+and follow the instruction for downloading Gurobi solver: https://www.gurobi.com/downloads/gurobi-optimizer-eula/
+Finally, request and activate the Licence (https://www.gurobi.com/downloads/end-user-license-agreement-academic/)
+Gurobi solver should be automatically saved within the environment variables and python should be able to use it automatically
+
+CPLEX
+-----
+
+
 
 Google Earth Engine
 ===============================
