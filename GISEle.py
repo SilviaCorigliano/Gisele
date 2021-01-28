@@ -1588,7 +1588,24 @@ def lcoe_computation(lcoe_btn):
         fig_grid = results.graph(geo_df_clustered, clusters_list, branch,
                                  grid_resume_opt, substations, pop_thresh,
                                  full_ele)
-        results.line_break('all_connections_opt', fig_grid, 'black')
+        if branch=='yes':
+            file='Output/Branches/all_connections_opt'
+            if os.path.isfile(file+'.shp'):
+                results.line_break(file, fig_grid, 'black')
+
+        else:
+            file='Output/Grids/all_connections_opt'
+            if os.path.isfile(file+'.shp'):
+                results.line_break(file, fig_grid, 'black')
+        # else:
+        #     file = 'Output/Grids/all_connections_opt'
+        #     try:
+        #         f = open(file + 'shp')
+        #         results.line_break(file, fig_grid, 'black')
+        #     except IOError:
+        #         print("File not accessible")
+        #     finally:
+        #         f.close()
 
         final_lcoe = lcoe_analysis(clusters_list, total_energy,
                                    grid_resume_opt, mg, coe, grid_ir, grid_om,
