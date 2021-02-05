@@ -133,8 +133,8 @@ def dijkstra_connection_roads(geo_df, connecting_point, assigned_substation,
         for x in range(df_box_segments.shape[0]):
             # re-add segment of the road to the graph, with weight=distance[km]
             graph.add_edge(
-                df_box.index[df_box['ID'] == df_box_segments.loc[x, 'ID1']][0],
-                df_box.index[df_box['ID'] == df_box_segments.loc[x, 'ID2']][0],
+                df_box.index[df_box['ID'] == int(df_box_segments.loc[x, 'ID1'])][0],
+                df_box.index[df_box['ID'] == int(df_box_segments.loc[x, 'ID2'])][0],
                 weight=df_box_segments.loc[x, 'length']*line_bc)
 
         source = df_box.loc[df_box['ID'] == int(assigned_substation['ID']), :]
@@ -145,10 +145,25 @@ def dijkstra_connection_roads(geo_df, connecting_point, assigned_substation,
         if nx.is_connected(graph):
             path = nx.dijkstra_path(graph, source, target, weight='weight')
         else:
-            connection = pd.DataFrame()
-            connection_cost = 999999
-            connection_length = 999999
-            return connection, connection_cost, connection_length, pts
+            # se grafo non è connesso tolgo le parti del grafo che non contengono source e target
+            #potrebbero essere nodi delle strade tagliati e rimasti dentro
+            for component in list(nx.connected_components(graph)):
+                if source not in component or target not in component:
+                    for node in component:
+                        graph.remove_node(node)
+            if nx.is_empty(graph): #possibile che in questo modo grafo venga svuotato totalmente,
+                # aggiungo questo pezzo per evitare errori
+                connection = pd.DataFrame()
+                connection_cost = 999999
+                connection_length = 999999
+                return connection, connection_cost, connection_length, pts
+            elif nx.is_connected(graph):
+                path = nx.dijkstra_path(graph, source, target, weight='weight')
+            else:
+                connection = pd.DataFrame()
+                connection_cost = 999999
+                connection_length = 999999
+                return connection, connection_cost, connection_length, pts
 
         steps = len(path)
         new_path = []

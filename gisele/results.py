@@ -6,6 +6,17 @@ import plotly.graph_objs as go
 
 def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
           full_ele='no'):
+    '''
+    Create graph for the Grid Routing Tab and for the LCOE analysis tab
+    :param df:
+    :param clusters_list:
+    :param branch:
+    :param grid_resume_opt:
+    :param substations:
+    :param pop_thresh:
+    :param full_ele:
+    :return:
+    '''
     print('Plotting results..')
     if os.path.isfile(r'Input/study_area.shp'):
         study_area = gpd.read_file(r'Input/study_area.shp')
@@ -95,18 +106,20 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
     for cluster_n in clusters_list.Cluster:
 
         if branch == 'yes':
-            line_break('Branch_'+ str(cluster_n), fig, 'red')
+            if os.path.isfile('Grid_' + str(cluster_n) + '.shp'):
+                line_break('Branch_'+ str(cluster_n), fig, 'red')
             if grid_resume_opt.loc[cluster_n, 'Branch Length [km]'] != 0:
                 line_break('Collateral_'+ str(cluster_n), fig, 'black')
 
-#            if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
-#               line_break('Connection_'+ str(cluster_n), fig, 'blue')
+            # if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
+            #    line_break('Connection_'+ str(cluster_n), fig, 'blue')
 
         else:
-            line_break('Grid_'+ str(cluster_n), fig, 'red')
+            if os.path.isfile('Grid_'+ str(cluster_n) + '.shp'):
+                line_break('Grid_'+ str(cluster_n), fig, 'red')
 
-#            if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
-#                line_break('Connection_'+ str(cluster_n), fig, 'blue')
+            # if os.path.isfile('Connection_' + str(cluster_n) + '.shp'):
+            #     line_break('Connection_'+ str(cluster_n), fig, 'blue')
 
     if full_ele == 'yes':
         line_break(r'all_link/', 'all_link', fig, 'green')
@@ -155,3 +168,54 @@ def line_break(file, fig, color):
                                    ))
 
     return
+
+
+def graph_mg(mg,geo_df_clustered, clusters_list):
+    '''
+    Create graph for the Microgrids tab
+    :param df:
+    :param clusters_list:
+    :param branch:
+    :param grid_resume_opt:
+    :param substations:
+    :param pop_thresh:
+    :param full_ele:
+    :return:
+    '''
+    print('Plotting microgrid results..')
+    gdf_clustered_clean = geo_df_clustered[
+        geo_df_clustered['Cluster'] != -1]
+    gdf_clustered_clean['NPC']=pd.Series()
+    fig = go.Figure()
+
+    for cluster_n in clusters_list.Cluster:
+        gdf_clustered_clean.loc[gdf_clustered_clean['Cluster']==cluster_n,'NPC']=mg.loc[cluster_n,'Total Cost [k€]']
+    plot_cluster = gdf_clustered_clean
+    plot_cluster = plot_cluster.to_crs(epsg=4326)
+    plot_cluster.X = plot_cluster.geometry.x
+    plot_cluster.Y = plot_cluster.geometry.y
+    fig.add_trace(go.Scattermapbox(
+        lat=plot_cluster.Y,
+        lon=plot_cluster.X,
+        mode='markers',
+        name='Cluster ' + str(cluster_n),
+        marker=go.scattermapbox.Marker(
+            size=10,
+            color=plot_cluster['NPC'],
+            opacity=0.9,
+            colorbar=dict(title='NPC [k$]')
+        ),
+        text=list(
+            zip(plot_cluster.Cluster, plot_cluster.NPC)),
+        hoverinfo='text',
+        below="''"
+    ))
+    fig.update_layout(mapbox_style="carto-positron",
+                      mapbox_zoom=8.5)
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
+                      mapbox_center={"lat": plot_cluster.Y.values[0],
+                                     "lon": plot_cluster.X.values[0]})
+
+    fig.update_layout(clickmode='event+select')
+
+    return fig

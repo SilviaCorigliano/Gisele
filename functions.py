@@ -135,6 +135,15 @@ def line_to_points(line, df):
 
 
 def create_roads(gdf_roads, geo_df):
+    '''
+    Creates two geodataframes
+    :param gdf_roads: geodataframe with all roads in the area, as imported from OSM
+    :param geo_df: geodataframe with the grid of points
+    :return:line_gdf: point geodataframe containing verteces of the roads (in all the area)
+            segments: geodataframe containing all the roads segments (in all the area)
+    the GeoDataframes are also saves as shapefiles
+
+    '''
     w = geo_df.shape[0]
     line_vertices = pd.DataFrame(
         index=pd.Series(range(w, w + len(gdf_roads.index))),
@@ -175,6 +184,8 @@ def create_roads(gdf_roads, geo_df):
                 zip(line_vertices['X'], line_vertices['Y'])]
     line_gdf = gpd.GeoDataFrame(line_vertices, crs=geo_df.crs,
                                 geometry=geometry)
+    line_gdf.to_file('Output/Datasets/Roads/gdf_roads.shp')
+    segments.to_file('Output/Datasets/Roads/roads_segments.shp')
     return line_gdf, segments
 
 
@@ -424,81 +435,81 @@ def download_tif(area, crs, scale, image, out_path):
     return
 
 
-def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
-                  grid_ir, grid_om, grid_lifetime):
-    """
-     Computes the LCOE of the on-grid and off-grid and compares both of them
-     to find the best solution.
-     :param clusters_list: List of clusters ID numbers
-     :param total_energy: Energy provided by the grid in its lifetime [kWh]
-     :param grid_resume: Table summarizing grid and connection costs
-     :param mg: Table summarizing all the microgrids and its costs.
-     :param coe: Cost of electricity in the market [€/kWh]
-     :param grid_ir: Inflation rate for the grid investments [%]
-     :param grid_om: Operation and maintenance cost of grid [% of invest cost]
-     :param grid_lifetime: Number of years the grid will operate
-     :return final_lcoe: Table summary of all LCOEs and the proposed solution
-     """
-
-    final_lcoe = pd.DataFrame(index=clusters_list.Cluster,
-                              columns=['Grid NPC [k€]', 'MG NPC [k€]',
-                                       'Grid Energy Consumption [MWh]',
-                                       'MG LCOE [€/kWh]',
-                                       'Grid LCOE [€/kWh]'],
-                              dtype=float)
-    for i in clusters_list.Cluster:
-        final_lcoe.at[i, 'Grid Energy Consumption [MWh]'] = \
-            total_energy.loc[i, 'Energy'] / 1000
-
-        # finding the npv of the cost of O&M for the whole grid lifetime
-
-        total_grid_om = grid_om * (grid_resume.loc[i, 'Grid Cost [k€]'] +
-                                   grid_resume.loc
-                                   [i, 'Connection Cost [k€]']) * 1000
-        total_grid_om = [total_grid_om] * grid_lifetime
-        total_grid_om = np.npv(grid_ir, total_grid_om)
-
-        cluster_grid_om = grid_om * grid_resume.loc[i, 'Grid Cost [k€]'] * 1000
-        cluster_grid_om = [cluster_grid_om] * grid_lifetime
-        cluster_grid_om = np.npv(grid_ir, cluster_grid_om)
-        cluster_grid_npc = cluster_grid_om / 1000 + \
-                           grid_resume.loc[i, 'Grid Cost [k€]']
-        cluster_grid_lcoe = \
-            cluster_grid_npc / final_lcoe.loc[
-                i, 'Grid Energy Consumption [MWh]']
-        final_lcoe.at[i, 'Grid NPC [k€]'] = \
-            (grid_resume.loc[i, 'Grid Cost [k€]'] +
-             grid_resume.loc[i, 'Connection Cost [k€]']) \
-            + total_grid_om / 1000
-
-        final_lcoe.at[i, 'MG NPC [k€]'] = mg.loc[i, 'Total Cost [k€]']
-        final_lcoe.at[i, 'MG LCOE [€/kWh]'] = mg.loc[i, 'LCOE [€/kWh]'] + \
-                                              cluster_grid_lcoe
-
-        grid_lcoe = final_lcoe.loc[i, 'Grid NPC [k€]'] / final_lcoe.loc[
-            i, 'Grid Energy Consumption [MWh]'] + coe
-
-        final_lcoe.at[i, 'Grid LCOE [€/kWh]'] = grid_lcoe
-
-        if mg.loc[i, 'LCOE [€/kWh]'] + cluster_grid_lcoe > grid_lcoe:
-            ratio = grid_lcoe / (mg.loc[i, 'LCOE [€/kWh]'] + cluster_grid_lcoe)
-            if ratio < 0.95:
-                proposal = 'ON-GRID'
-            else:
-                proposal = 'BOTH'
-
-        else:
-            ratio = (mg.loc[i, 'LCOE [€/kWh]'] + cluster_grid_lcoe) / grid_lcoe
-            if ratio < 0.95:
-                proposal = 'OFF-GRID'
-            else:
-                proposal = 'BOTH'
-
-        final_lcoe.at[i, 'Best Solution'] = proposal
-    final_lcoe = final_lcoe.round(decimals=4)
-    l()
-    print(final_lcoe)
-
-    final_lcoe.to_csv(r'Output/Microgrids/LCOE_Analysis.csv')
-
-    return final_lcoe
+# def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
+#                   grid_ir, grid_om, grid_lifetime):
+#     """
+#      Computes the LCOE of the on-grid and off-grid and compares both of them
+#      to find the best solution.
+#      :param clusters_list: List of clusters ID numbers
+#      :param total_energy: Energy provided by the grid in its lifetime [kWh]
+#      :param grid_resume: Table summarizing grid and connection costs
+#      :param mg: Table summarizing all the microgrids and its costs.
+#      :param coe: Cost of electricity in the market [€/kWh]
+#      :param grid_ir: Inflation rate for the grid investments [%]
+#      :param grid_om: Operation and maintenance cost of grid [% of invest cost]
+#      :param grid_lifetime: Number of years the grid will operate
+#      :return final_lcoe: Table summary of all LCOEs and the proposed solution
+#      """
+#
+#     final_lcoe = pd.DataFrame(index=clusters_list.Cluster,
+#                               columns=['Grid NPC [k€]', 'MG NPC [k€]',
+#                                        'Grid Energy Consumption [MWh]',
+#                                        'MG LCOE [€/kWh]',
+#                                        'Grid LCOE [€/kWh]'],
+#                               dtype=float)
+#     for i in clusters_list.Cluster:
+#         final_lcoe.at[i, 'Grid Energy Consumption [MWh]'] = \
+#             total_energy.loc[i, 'Energy'] / 1000
+#
+#         # finding the npv of the cost of O&M for the whole grid lifetime
+#
+#         total_grid_om = grid_om * (grid_resume.loc[i, 'Grid Cost [k€]'] +
+#                                    grid_resume.loc
+#                                    [i, 'Connection Cost [k€]']) * 1000
+#         total_grid_om = [total_grid_om] * grid_lifetime
+#         total_grid_om = np.npv(grid_ir, total_grid_om)
+#
+#         cluster_grid_om = grid_om * grid_resume.loc[i, 'Grid Cost [k€]'] * 1000
+#         cluster_grid_om = [cluster_grid_om] * grid_lifetime
+#         cluster_grid_om = np.npv(grid_ir, cluster_grid_om)
+#         cluster_grid_npc = cluster_grid_om / 1000 + \
+#                            grid_resume.loc[i, 'Grid Cost [k€]']
+#         cluster_grid_lcoe = \
+#             cluster_grid_npc / final_lcoe.loc[
+#                 i, 'Grid Energy Consumption [MWh]']
+#         final_lcoe.at[i, 'Grid NPC [k€]'] = \
+#             (grid_resume.loc[i, 'Grid Cost [k€]'] +
+#              grid_resume.loc[i, 'Connection Cost [k€]']) \
+#             + total_grid_om / 1000
+#
+#         final_lcoe.at[i, 'MG NPC [k€]'] = mg.loc[i, 'Total Cost [k€]']
+#         final_lcoe.at[i, 'MG LCOE [€/kWh]'] = mg.loc[i, 'LCOE [€/kWh]'] + \
+#                                               cluster_grid_lcoe
+#
+#         grid_lcoe = final_lcoe.loc[i, 'Grid NPC [k€]'] / final_lcoe.loc[
+#             i, 'Grid Energy Consumption [MWh]'] + coe
+#
+#         final_lcoe.at[i, 'Grid LCOE [€/kWh]'] = grid_lcoe
+#
+#         if mg.loc[i, 'LCOE [€/kWh]'] + cluster_grid_lcoe > grid_lcoe:
+#             ratio = grid_lcoe / (mg.loc[i, 'LCOE [€/kWh]'] + cluster_grid_lcoe)
+#             if ratio < 0.95:
+#                 proposal = 'ON-GRID'
+#             else:
+#                 proposal = 'BOTH'
+#
+#         else:
+#             ratio = (mg.loc[i, 'LCOE [€/kWh]'] + cluster_grid_lcoe) / grid_lcoe
+#             if ratio < 0.95:
+#                 proposal = 'OFF-GRID'
+#             else:
+#                 proposal = 'BOTH'
+#
+#         final_lcoe.at[i, 'Best Solution'] = proposal
+#     final_lcoe = final_lcoe.round(decimals=4)
+#     l()
+#     print(final_lcoe)
+#
+#     final_lcoe.to_csv(r'Output/Microgrids/LCOE_Analysis.csv')
+#
+#     return final_lcoe

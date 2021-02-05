@@ -14,7 +14,7 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 from dash.exceptions import PreventUpdate
 from shapely.geometry import Point
-from functions import load, sizing, lcoe_analysis
+from functions import load, sizing
 from gisele import initialization, clustering, processing, collecting, \
     optimization, results, grid, branches
 import pyutilib.subprocess.GlobalData
@@ -953,33 +953,7 @@ app.layout = html.Div([
                                         figure=fig,
                                     )]
                                 ),
-                        dbc.Tab(label='LCOE',
-                                label_style={"color": "#55b298"},
-                                children=[
-                                    dash_table.DataTable(
-                                        id='datatable_lcoe',
-                                        columns=[
-                                            {"name": i, "id": i} for i in
-                                            lcoe_columns.columns
-                                        ],
-                                        style_header={
-                                            'whiteSpace': 'normal',
-                                            'height': 'auto',
-                                            'width': '30px',
-                                            'textAlign': 'center'
-                                        },
-                                        style_table={'height': '450px'},
-                                        page_count=1,
-                                        page_current=0,
-                                        page_size=13,
-                                        page_action='custom',
-                                        sort_action='custom',
-                                        sort_mode='single',
-                                        sort_by=[]
-                                    )
 
-                                ]
-                                ),
                         dbc.Tab(label='Table',
                                 label_style={"color": "#55b298"},
                                 children=[
@@ -1344,6 +1318,7 @@ def create_dataframe(create_df, import_pop_value):
                 initialization.creating_geodataframe(df_weighted, crs,
                                                      unit, input_csv, step)
             geo_df.to_file(r"Output/Datasets/geo_df_json", driver='GeoJSON')
+            initialization.roads_import(geo_df,crs)
         geo_df = geo_df.to_crs(epsg=4326)
         fig2 = go.Figure(go.Scattermapbox(
 
@@ -1532,8 +1507,10 @@ def microgrid_size(mg_sizing):
                                                    input_profile)
 
         mg = sizing(yearly_profile, clusters_list, geo_df_clustered, wt, years)
+        fig_mg=results.graph_mg(mg,geo_df_clustered,clusters_list)
+        return fig_mg
+    else:
         return fig
-    return fig
 
 
 @app.callback(Output('output_lcoe', 'figure'),
@@ -1607,9 +1584,9 @@ def lcoe_computation(lcoe_btn):
         #     finally:
         #         f.close()
 
-        final_lcoe = lcoe_analysis(clusters_list, total_energy,
-                                   grid_resume_opt, mg, coe, grid_ir, grid_om,
-                                   grid_lifetime)
+        # final_lcoe = lcoe_analysis(clusters_list, total_energy,
+        #                            grid_resume_opt, mg, coe, grid_ir, grid_om,
+        #                            grid_lifetime)
 
         return fig_grid
     else:
@@ -1708,27 +1685,6 @@ def update_table(datatable_load_profile, output_mg):
     return graph
 
 
-@app.callback(Output('datatable_lcoe', 'data'),
-              [Input('datatable_lcoe', "page_current"),
-               Input('datatable_lcoe', "page_size"),
-               Input('datatable_lcoe', 'sort_by'),
-               Input('output_lcoe', "figure")])
-def update_table(page_current, page_size, sort_by, output_mg):
-    if os.path.isfile(r'Output/Microgrids/LCOE_Analysis.csv'):
-        geo_df2 = pd.read_csv(r'Output/Microgrids/LCOE_Analysis.csv')
-        geo_df2 = geo_df2.round(2)
-
-        if len(sort_by):
-            geo_df2 = geo_df2.sort_values(
-                sort_by[0]['column_id'],
-                ascending=sort_by[0]['direction'] == 'asc',
-                inplace=False)
-    else:
-        geo_df2 = pd.DataFrame()
-    return geo_df2.iloc[
-           page_current * page_size:(page_current + 1) * page_size
-           ].to_dict('records')
-
 
 @app.callback([Output('datatable_grid_final', 'data'),
                Output('datatable_grid_final', 'columns')],
@@ -1792,4 +1748,4 @@ def update_output(contents, filename, last_modified):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=False)

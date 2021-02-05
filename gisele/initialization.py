@@ -13,7 +13,28 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 from functions import l, s
+import osmnx as ox
 from gisele import collecting, processing
+
+def roads_import(geo_df,crs):
+    '''
+    Download road layers from OpenStreetMaps, and simplify geometries to use
+    them for the grid routing algorithms
+    :param df:
+    :return:
+    '''
+    geo_df.to_crs(epsg=4326,inplace=True)
+    bounds = geo_df.geometry.total_bounds
+    print('Downloading roads, from OpenStreetMap..')
+    graph = ox.graph_from_bbox(bounds[1], bounds[3],
+                               bounds[0], bounds[2], network_type='drive_service')
+    ox.save_graph_shapefile(graph,
+                            filepath='Output/Datasets/Roads')  # crs is 4326
+    #simplify geometry
+    roads = gpd.read_file('Output/Datasets/Roads/edges.shp')
+    roads_simple = roads.geometry.simplify(tolerance=0.0005)
+    roads_simple = roads_simple.to_crs(epsg=int(crs))
+    roads_simple.to_file('Output/Datasets/Roads/roads.shp')
 
 
 def weighting(df, resolution, landcover_option):

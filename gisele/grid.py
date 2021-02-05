@@ -28,14 +28,15 @@ def routing(geo_df_clustered, geo_df, clusters_list, resolution,
     substations = gpd.GeoDataFrame(substations, geometry=geometry,
                                    crs=geo_df.crs)
 
-    roads = gpd.read_file(r'roads_namanjavira.shp')
+    # roads = gpd.read_file(r'roads_namanjavira.shp')
     # roads = gpd.read_file(r'roads_cavalcante.shp')
-    roads = roads[roads.geometry != None]
-    roads = roads[(roads.fclass != 'residential') & (roads.fclass != 'path') &
-                  (roads.fclass != 'footway')]
-
-    gdf_roads, roads_segments = create_roads(roads, geo_df)
+    # roads = roads[roads.geometry != None]
+    # roads = roads[(roads.fclass != 'residential') & (roads.fclass != 'path') &
+    #               (roads.fclass != 'footway')]
     os.chdir(r'..')
+    roads = gpd.read_file('Output/Datasets/Roads/roads.shp')
+    print('create points along roads')
+    gdf_roads, roads_segments = create_roads(roads, geo_df)
     os.chdir(r'Output//Grids')
 
     for cluster_n in clusters_list.Cluster:
