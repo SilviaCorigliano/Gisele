@@ -106,7 +106,7 @@ def graph(df, clusters_list, branch, grid_resume_opt, substations, pop_thresh,
     for cluster_n in clusters_list.Cluster:
 
         if branch == 'yes':
-            if os.path.isfile('Grid_' + str(cluster_n) + '.shp'):
+            if os.path.isfile('Branch_' + str(cluster_n) + '.shp'):
                 line_break('Branch_'+ str(cluster_n), fig, 'red')
             if grid_resume_opt.loc[cluster_n, 'Branch Length [km]'] != 0:
                 line_break('Collateral_'+ str(cluster_n), fig, 'black')
