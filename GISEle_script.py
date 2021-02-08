@@ -72,7 +72,7 @@ STEPS
 { 1: 'GIS Data Processing', 2: 'Clustering',3: 'Grid Routing', 
 4: 'Microgrid Sizing', 5: 'LCOE Analysis'},
 """
-step = 4
+step = 1
 
 if step <2:
     '-------------------------------------------------------------------------'
@@ -88,7 +88,7 @@ if step <2:
     landcover_option = (config.iloc[27, 1])
     unit = 1
     step = 1
-
+    download_roads=False
     if data_import == 'yes':
         collecting.data_gathering(crs, study_area)
         landcover_option = 'CGLS'
@@ -115,7 +115,8 @@ if step <2:
             initialization.creating_geodataframe(df_weighted, crs,
                                                  unit, input_csv, step)
         geo_df.to_file(r"Output/Datasets/geo_df_json", driver='GeoJSON')
-        initialization.roads_import(geo_df, crs)
+        if download_roads:
+            initialization.roads_import(geo_df, crs)
     geo_df = geo_df.to_crs(epsg=4326)
     fig2 = go.Figure(go.Scattermapbox(
 
@@ -149,7 +150,7 @@ if step <2:
 if step <3:
     "2.Clustering"
 #decide wether to perform sensitivity analysis ('yes' or 'no')
-    sensitivity='yes'
+    sensitivity='no'
     if sensitivity=='yes':
         resolution = float(config.iloc[4, 1])
         eps = list(config.iloc[20, 1])
@@ -176,7 +177,6 @@ if step <3:
     geo_df_clustered, clusters_list = \
         clustering.analysis(pop_points, geo_df, pop_load,
                             eps_final, pts_final)
-
     fig_clusters = clustering.plot_clusters(geo_df_clustered,
                                             clusters_list)
     clusters_list.to_csv(r"Output/Clusters/clusters_list.csv",
@@ -184,6 +184,32 @@ if step <3:
     geo_df_clustered.to_file(r"Output/Clusters/geo_df_clustered.json",
                              driver='GeoJSON')
     fig_clusters.show()
+    # Cluster merging procedure
+    merge_clusters=input('Would you like to start merging clusters? Enter Yes or No (case sensitive)')
+    keep_merging='Yes'
+    while merge_clusters == 'Yes':
+        c1=int(input('Select the first cluster: '))
+        c2 = int(input('Select the second cluster: '))
+        geo_df_clustered = gpd.read_file(r"Output/Clusters/geo_df_clustered.json")
+        geo_df_clustered.loc[geo_df_clustered['Cluster'] ==c2, 'Cluster'] = c1
+
+        clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
+        drop_index = clusters_list[clusters_list['Cluster'] == c2].index[0]
+        index1 = clusters_list[clusters_list['Cluster'] == c1].index[0]
+        new_pop=clusters_list.iloc[index1]['Population']+ clusters_list.iloc[drop_index]['Population']
+        clusters_list.loc[index1,'Population']= new_pop
+        new_load =clusters_list.iloc[index1]['Load [kW]']+clusters_list.iloc[drop_index]['Load [kW]']
+        clusters_list.loc[index1,'Load [kW]']=new_load
+        clusters_list = clusters_list.drop(index=drop_index)
+
+        clusters_list.to_csv(r"Output/Clusters/clusters_list.csv",
+                             index=False)
+        geo_df_clustered.to_file(r"Output/Clusters/geo_df_clustered.json",
+                                 driver='GeoJSON')
+        merged_clusters = clustering.plot_clusters(geo_df_clustered,
+                                                   clusters_list)
+        merged_clusters.show()
+        merge_clusters=input('Would you like to keep merging? Enter Yes or No (case sensitive)')
 
 # todo->insert cluster merging options
     '-------------------------------------------------------------------------'
