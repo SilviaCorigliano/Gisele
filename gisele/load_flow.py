@@ -54,17 +54,22 @@ for col_name,row in substations.iterrows():
         # create the pp network)
             network = pp.create_empty_network()
             pp.create_std_types(network, data=linetypes, element="line")
+
+        substation_point = Point(row.X, row.Y)
+        nearest_p = Nodes['geometry'] == shapely.ops.nearest_points(substation_point, Nodes.unary_union)[1]
+        # Get the corresponding value from df2 (matching is based on the geometry)
+        value = Nodes.loc[nearest_p].values[0]
+        # substation_point = Nodes[Nodes['ID']==value[0]]
+        substation_point = value[0]
+        substation_point_X = value[1]
+        substation_point_Y = value[2]
+        print(substation_point)
+        pp.create_bus(net=network, vn_kv=vn, name=str(substation_point), index=substation_point,
+                         geodata=(substation_point_X, substation_point_Y))
+        pp.create_ext_grid(net=network, bus=substation_point, s_sc_max_mva=10000)
         for j in pom: #this for cycle is because multiple grids could be connected to one single substation
             # this part corelates the substation with the grid of points ( finds the closest point )
-            substation_point=Point(row.X,row.Y)
-            nearest_p = Nodes['geometry'] == shapely.ops.nearest_points(substation_point,  Nodes.unary_union)[1]
-            # Get the corresponding value from df2 (matching is based on the geometry)
-            value = Nodes.loc[nearest_p].values[0]
-            #substation_point = Nodes[Nodes['ID']==value[0]]
-            substation_point=value[0]
-            substation_point_X=value[1]
-            substation_point_Y=value[2]
-            print(substation_point)
+
             #substation_point['ID']=substation_point['ID'].astype(int)
             #substation_point.set_index('ID',inplace=True)
             bool1 = os.path.isfile('Output/Branches/Branch_' + str(j) + '.shp')
@@ -86,7 +91,12 @@ for col_name,row in substations.iterrows():
                 Network_nodes=Nodes[Nodes['ID'].isin(Collaterals.ID1) | Nodes['ID'].isin(Collaterals.ID2)]
             else:
                 skip=True # i don't think this can happen, a cluster without any branches
-
+            bool3 = os.path.isfile('Output/Branches/Connection_' + str(j) + '.shp')
+            if bool3:
+                Connection = gpd.read_file('Output/Branches/Connection_'+ str(j)+'.shp')
+                Connection['ID1'] = Connection['ID1'].astype(int)
+                Connection['ID2'] = Connection['ID2'].astype(int)
+                Network_nodes=Nodes[Nodes['ID'].isin(Connection.ID1) | Nodes['ID'].isin(Connection.ID2) | Nodes['ID'].isin(Network_nodes.ID)]
 
             Network_nodes.reset_index(inplace=True)
 
@@ -97,45 +107,48 @@ for col_name,row in substations.iterrows():
 
             # Create nodes, main branches and collaterals
             for col_name, node in Network_nodes.iterrows():
-                pp.create_bus(net=network,vn_kv=vn,name=str(node.ID),index=node.ID,geodata=(node.X,node.Y))
+                try:
+                    pp.create_bus(net=network,vn_kv=vn,name=str(node.ID),index=node.ID,geodata=(node.X,node.Y))
+                except:
+                    print('Node exists')
+
             if bool1:
                 for col_name, main_branch in Main_branches.iterrows():
                     pp.create_line(net=network,from_bus=main_branch.ID1,to_bus=main_branch.ID2,length_km=main_branch.Length/1000
-                               ,std_type='94-AL1/15-ST1A 10.0') #Inom=140A
+                               ,std_type='34-AL1/6-ST1A 10.0') #Inom=140A
 
             if bool2:
                 for col_name, collateral in Collaterals.iterrows():
                     pp.create_line(net=network, from_bus=collateral.ID1, to_bus=collateral.ID2,
                                 length_km=collateral.Length / 1000, std_type='34-AL1/6-ST1A 10.0')#Inom=105A
+
+            if bool3:
+                for col_name, connection in Connection.iterrows():
+                    pp.create_line(net=network,from_bus=connection.ID1,to_bus=connection.ID2,length_km=connection.Length/1000
+                               ,std_type='24-AL1/4-ST1A 0.4')
+
             for col_name, node in Network_nodes.iterrows():
                 pp.create_load(net=network, bus=node.ID,p_mw=node.Population*pop_load/1000,
                                q_mvar=0.5*node.Population*pop_load/1000)
 
-            if create_substation_node: # Check if new nodes need to be added, in case multiple lines exist.
-                if substation_point in Network_nodes.ID:
-                    pp.create_bus(net=network, vn_kv=vn, name=str(substation_point), index=substation_point,
-                                geodata=(substation_point_X, substation_point_Y))
-                Connection = gpd.read_file('Output/Branches/Connection_' + str(j) + '.shp')
-                Connection['ID1'] = Connection['ID1'].astype(int)
-                Connection['ID2'] = Connection['ID2'].astype(int)
-                for col_name, connection in Connection.iterrows():
-                    pp.create_line(net=network,from_bus=connection.ID1,to_bus=connection.ID2,length_km=connection.Length/1000
-                               ,std_type='94-AL1/15-ST1A 10.0')
-            pp.create_ext_grid(net=network, bus=substation_point, s_sc_max_mva=10000)
+            #if create_substation_node: # Check if new nodes need to be added, in case multiple lines exist.
+             #   if substation_point in Network_nodes.ID:
+              #      pp.create_bus(net=network, vn_kv=vn, name=str(substation_point), index=substation_point,
+               #                 geodata=(substation_point_X, substation_point_Y))
 
-            #print(network)
-            if not all_clusters_together:
-                pp.runpp(network, algorithm='nr')
-            #transformer = Transformer.from_crs(4326, 32723)
-                plot=simple_plotly(network,on_map=True,projection='epsg:32723')
-                plotly.offline.plot(plot, filename='Cluster'+str(j)+'.html')
-                pp.to_excel(network, 'Resuts_cluster'+str(j)+'.xlsx')
-                #simple_plot(network)
-                pp.plotting.plot_voltage_profile(network)
-                pp.plotting.plotly.pf_res_plotly(network,
-                                                 filename='Results_cluster'+str(j)+'.html',climits_volt=(0.85, 1.15))
+        #print(network)
+        if not all_clusters_together:
+            pp.runpp(network, algorithm='nr')
+        #transformer = Transformer.from_crs(4326, 32723)
+            plot=simple_plotly(network,on_map=True,projection='epsg:32723')
+            plotly.offline.plot(plot, filename='Cluster'+str(j)+'.html')
+            pp.to_excel(network, 'Resuts_cluster'+str(j)+'.xlsx')
+            #simple_plot(network)
+            pp.plotting.plot_voltage_profile(network)
+            pp.plotting.plotly.pf_res_plotly(network,
+                                                filename='Results_cluster'+str(j)+'.html',climits_volt=(0.85, 1.15))
             # plt.show()
-            #pf_res_plotly(network)
+            #pf_res_plotly(network
 if all_clusters_together:
     pp.runpp(network, algorithm='nr')
     plot=simple_plotly(network,on_map=True,projection='epsg:32723')
