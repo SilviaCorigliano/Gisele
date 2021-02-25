@@ -342,9 +342,11 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
                                'BESS [kWh]', 'Inverter [kW]',
                                'Investment Cost [k€]', 'OM Cost [k€]',
                                'Replace Cost [k€]', 'Total Cost [k€]',
-                               'Energy Produced [MWh]',
-                               'Energy Consumed [MWh]', 'LCOE [€/kWh]'],
+                               'Energy Demand [MWh]',
+                               'Energy Consumed [MWh]', 'LCOE [€/kWh]','CO2 [kg]'],
+                      
                       dtype=float)
+    
     for cluster_n in clusters_list.Cluster:
 
         l()
@@ -391,10 +393,11 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'OM Cost [k€]'] = om_cost
         mg.loc[cluster_n, 'Replace Cost [k€]'] = rep_cost
         mg.loc[cluster_n, 'Total Cost [k€]'] = rep_cost + om_cost + init_cost
-        mg.loc[cluster_n, 'Energy Produced [MWh]'] = gen_energy
+        mg.loc[cluster_n, 'Energy Demand [MWh]'] = gen_energy
         mg.loc[cluster_n, 'Energy Consumed [MWh]'] = load_energy
         mg.loc[cluster_n, 'LCOE [€/kWh]'] = (
                                                     rep_cost + om_cost + init_cost) / gen_energy
+        mg.loc[cluster_n, 'CO2 [kg]'] = emissions
         print(mg)
     mg = mg.round(decimals=4)
     mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
