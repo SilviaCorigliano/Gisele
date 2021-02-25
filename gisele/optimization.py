@@ -392,7 +392,7 @@ def milp_lcoe(geo_df_clustered, grid_resume, substations, mg, total_energy,
             gpd.GeoDataFrame(pd.concat([total_connections_opt,
                                         connection], sort=True))
 
-        con_out.drop(index=con_out[(con_out['id1']==k) & (con_out['id2']==k1)].index,inplace=True)
+        con_out.drop(index=con_out[(((con_out['id1']==k) & (con_out['id2']==k1))|((con_out['id2']==k) & (con_out['id1']==k1)))].index,inplace=True)
 
     grid_resume.to_csv('grid_resume_opt.csv', index=False)
     if total_connections_opt.empty == False:
