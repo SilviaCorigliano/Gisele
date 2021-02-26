@@ -72,7 +72,7 @@ STEPS
 { 1: 'GIS Data Processing', 2: 'Clustering',3: 'Grid Routing', 
 4: 'Microgrid Sizing',5: 'Clusters interconnections' 6: 'LCOE Analysis'},
 """
-step = 6
+step = 5
 
 if step <2:
     '-------------------------------------------------------------------------'
@@ -82,7 +82,7 @@ if step <2:
     import_pop_value = 'no'
 
     data_import = config.iloc[0, 1]
-    input_csv = 'imported_csv'
+    input_csv = config.iloc[1, 1]
     crs = int(config.iloc[3, 1])
     resolution = float(config.iloc[4, 1])
     landcover_option = (config.iloc[27, 1])
@@ -149,7 +149,7 @@ if step <2:
 if step <3:
     "2.Clustering"
 #decide wether to perform sensitivity analysis ('yes' or 'no')
-    sensitivity='yes'
+    sensitivity='no'
     if sensitivity=='yes':
         resolution = float(config.iloc[4, 1])
         eps = list(config.iloc[20, 1])
@@ -190,8 +190,8 @@ if step <3:
 if step <4:
     "3. Grid creation"
 
-    input_csv = 'imported_csv'
-    input_sub = 'imported_subs'
+    input_csv = config.iloc[1, 1]
+    input_sub = config.iloc[2, 1]
     resolution = float(config.iloc[4, 1])
     pop_load = float(config.iloc[6, 1])
     pop_thresh = float(config.iloc[7, 1])
@@ -260,7 +260,7 @@ if step <6:
 
     branch = config.iloc[11, 1]
     full_ele = config.iloc[14, 1]
-    input_sub = 'imported_subs'
+    input_sub = config.iloc[2, 1]
     pop_thresh = float(config.iloc[7, 1])
     coe = float(config.iloc[16, 1])
     grid_om = float(config.iloc[18, 1])
@@ -307,7 +307,7 @@ if step < 7:
     p_max_lines =10000
     branch = config.iloc[11, 1]
     full_ele = config.iloc[14, 1]
-    input_sub = 'imported_subs'
+    input_sub = config.iloc[2, 1]
     pop_thresh = float(config.iloc[7, 1])
     coe = float(config.iloc[16, 1])
     grid_om = float(config.iloc[18, 1])

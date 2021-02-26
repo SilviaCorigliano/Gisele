@@ -117,6 +117,10 @@ def cost_optimization(p_max_lines, coe, nation_emis):
     model.emission = Param(model.clusters)
     data.load(filename='Output/LCOE/emissions.csv', param=model.emission)
 
+    # CO2 emission related to construction of power infrastructure
+    model.em_links = Param(model.links)
+    data.load(filename='Output/LCOE/em_links.csv', param=model.em_links)
+
     # poximum power flowing on lines
     # model.p_max_lines = Param()  # max power flowing on MV lines
     # data.load(filename='Input/data_procedure2.dat')
@@ -204,6 +208,7 @@ def cost_optimization(p_max_lines, coe, nation_emis):
     # total direct emissions over microgrid lifetime
     def ObjectiveFunctionEmis(model):
         return model.obj['emis'] == summation(model.emission, model.z) +\
+               summation(model.em_links, model.x)+\
                sum(model.energy[i] * (1-model.z[i]) for i in model.clusters) * nation_emis
 
     model.Obj2 = Constraint(rule=ObjectiveFunctionEmis)

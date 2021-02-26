@@ -115,8 +115,17 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
     milp_links.drop(milp_links[milp_links['Cost'] == 999999].index,
                     inplace=True)
     milp_links.reset_index(inplace=True, drop=True)
+    #includo un valore fittizio per le emissioni legate alla costruzione dei link:
+    #todo -> aggiornare con valore sensato di emissioni per combustibile prese da letteratura
+
+    em_links = milp_links.copy()
+    em_links['emission'] =(em_links['Cost']-min(em_links['Cost']))/(max(em_links['Cost'])-min(em_links['Cost']))*10
+    em_links.drop('Cost',axis=1,inplace=True)
+
     os.chdir('../..')
     milp_links.to_csv(r'Output/LCOE/milp_links.csv', index=False)
+    # aggiunto un valore di emissione legato alla lunghezza dei link
+    em_links.to_csv(r'Output/LCOE/em_links.csv', index=False)
     sets.to_csv(r'Output/LCOE/set.csv', index=False)
     milp_links.loc[:, ['0', '1']].to_csv(r'Output/LCOE/possible_links.csv',
                                          index=False)
@@ -160,8 +169,8 @@ def milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line
 
     # run the effective optimization
     nation_emis = 1000  # kgCO2 emission per kWh given country energy mix
-    country = 'Brazil'
-    nation_emis = emission_factor(country) #kg CO2/MWh
+    country = 'Mozambique'
+    nation_emis = emission_factor(country)  # kgCO2/kWh
 
     lcoe_optimization.cost_optimization(p_max_lines, coe, nation_emis)
 

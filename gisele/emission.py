@@ -14,7 +14,7 @@ def emission_factor(country):
         energy_mix.loc['Gas', 'Value (TWh)'] * emission_factors.loc['Gas','emission_factor']/emission_factors.loc['Gas','efficiency']+\
         energy_mix.loc['Biomass and waste', 'Value (TWh)'] * emission_factors.loc['Wood','emission_factor']/emission_factors.loc['Wood','efficiency']+\
         energy_mix.loc['Other fossil', 'Value (TWh)'] * emission_factors.loc['Oil','emission_factor']/emission_factors.loc['Oil','efficiency']
-    country_specific_emission_factor = country_emission_factor/energy_mix.loc['Production', 'Value (TWh)']*1000 #kg CO2/MWh
+    country_specific_emission_factor = country_emission_factor/energy_mix.loc['Production', 'Value (TWh)']*1000000  # kgCO2/kWh
 
     return country_specific_emission_factor
 
