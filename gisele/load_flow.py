@@ -17,6 +17,13 @@ linetypes = {"Alumoweld 4 AWG - 25 mm2": {"r_ohm_per_km": 0.01, "x_ohm_per_km": 
 
 set_mapbox_token('pk.eyJ1IjoibmExMjAzMTMyIiwiYSI6ImNrYW9qYThxMzFvb3cyc3A2cWJyaHdhdTMifQ.bfRDDy-DV4-VuVWjDNzodg')
 all_clusters_together=False # this variable decides if we will create 1 grid (true) or separate grids for each cluster
+branching_strategy=True
+if branching_strategy:
+    directory='Output/Branches'
+    directory_main_branch = 'Output/Branches/Grid_'
+else:
+    directory='Output/Grids'
+    directory_main_branch='Output/Branches/Branch_'
 """ STEP 1 - LOAD the nodes, find which clusters are grid-connected and filter the nodes from those clusters only"""
 os.chdir('..')
 substations=pd.read_csv('Input/Substations-Cavalcante.csv')
@@ -26,7 +33,7 @@ config = pd.read_csv('Input/Configuration.csv') # this part will be changed when
 pop_load = 0.4
 Nodes=gpd.read_file('Output/Clusters/geo_df_clustered.json')
 print(Nodes['ID'][0])
-grid_resume_opt=pd.read_csv('Output/Branches/grid_resume_opt.csv')
+grid_resume_opt=pd.read_csv(directory+'/grid_resume_opt.csv')
 grid_resume_opt=grid_resume_opt[grid_resume_opt['Connection Type']!='Microgrid']
 grid_resume_opt['Substation ID']=grid_resume_opt['Substation ID'].astype(int)
 grid_resume_opt['Cluster']=grid_resume_opt['Cluster'].astype(int)
@@ -72,10 +79,10 @@ for col_name,row in substations.iterrows():
 
             #substation_point['ID']=substation_point['ID'].astype(int)
             #substation_point.set_index('ID',inplace=True)
-            bool1 = os.path.isfile('Output/Branches/Branch_' + str(j) + '.shp')
+            bool1 = os.path.isfile(directory_main_branch + str(j) + '.shp')
             bool2 = os.path.isfile('Output/Branches/Collateral_' + str(j) + '.shp')
             if bool1:
-                Main_branches = gpd.read_file('Output/Branches/Branch_'+ str(j)+'.shp')
+                Main_branches = gpd.read_file(directory_main_branch+ str(j)+'.shp')
                 Main_branches['ID1'] = Main_branches['ID1'].astype(int)
                 Main_branches['ID2'] = Main_branches['ID2'].astype(int)
             if bool2:
@@ -91,9 +98,9 @@ for col_name,row in substations.iterrows():
                 Network_nodes=Nodes[Nodes['ID'].isin(Collaterals.ID1) | Nodes['ID'].isin(Collaterals.ID2)]
             else:
                 skip=True # i don't think this can happen, a cluster without any branches
-            bool3 = os.path.isfile('Output/Branches/Connection_' + str(j) + '.shp')
+            bool3 = os.path.isfile(directory+'/Connection_' + str(j) + '.shp')
             if bool3:
-                Connection = gpd.read_file('Output/Branches/Connection_'+ str(j)+'.shp')
+                Connection = gpd.read_file(directory+'/Connection_'+ str(j)+'.shp')
                 Connection['ID1'] = Connection['ID1'].astype(int)
                 Connection['ID2'] = Connection['ID2'].astype(int)
                 Network_nodes=Nodes[Nodes['ID'].isin(Connection.ID1) | Nodes['ID'].isin(Connection.ID2) | Nodes['ID'].isin(Network_nodes.ID)]
@@ -115,7 +122,7 @@ for col_name,row in substations.iterrows():
             if bool1:
                 for col_name, main_branch in Main_branches.iterrows():
                     pp.create_line(net=network,from_bus=main_branch.ID1,to_bus=main_branch.ID2,length_km=main_branch.Length/1000
-                               ,std_type='34-AL1/6-ST1A 10.0') #Inom=140A
+                               ,std_type='94-AL1/15-ST1A 10.0') #Inom=140A
 
             if bool2:
                 for col_name, collateral in Collaterals.iterrows():
@@ -125,7 +132,7 @@ for col_name,row in substations.iterrows():
             if bool3:
                 for col_name, connection in Connection.iterrows():
                     pp.create_line(net=network,from_bus=connection.ID1,to_bus=connection.ID2,length_km=connection.Length/1000
-                               ,std_type='24-AL1/4-ST1A 0.4')
+                               ,std_type='94-AL1/15-ST1A 10.0')
 
             for col_name, node in Network_nodes.iterrows():
                 pp.create_load(net=network, bus=node.ID,p_mw=node.Population*pop_load/1000,
