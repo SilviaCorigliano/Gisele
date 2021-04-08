@@ -19,7 +19,7 @@ from collections import Counter
 from statistics import mean
 from math import ceil
 from shapely import ops
-from initialization import weighting
+from gisele import initialization
 # Define the function resample
 def resample(raster, resolution,options):
 
@@ -344,5 +344,5 @@ df_clustering=df.drop(['Slope','Land_cover', 'Road_dist',
 df_clustering = df_clustering.drop(df_clustering[df_clustering.Population==0].index)
 df_clustering.to_csv(dir+'/Input/'+case_study+'_clustering'+'.csv',index=False)
 
-df_weighted= weighting(df, resolution, landcover_option)
+df_weighted= initialization.weighting(df, resolution, landcover_option)
 df_weighted.to_csv(dir+'/Input/'+case_study+'_weighted.csv', index=False)
