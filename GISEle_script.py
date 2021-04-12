@@ -11,6 +11,7 @@ from shapely.geometry import Point
 from functions import load, sizing
 from gisele import initialization, clustering, processing, collecting, \
     optimization, results, grid, branches
+from gisele import QGIS_processing_polygon as qgis_imp
 import pyutilib.subprocess.GlobalData
 
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
@@ -65,11 +66,7 @@ lat_point_list = [-17.880592240953966, -17.86581365258916, -18.065431449408248,
 polygon_geom = Polygon(zip(lon_point_list, lat_point_list))
 study_area = gpd.GeoDataFrame(index=[0], crs=4326,
                               geometry=[polygon_geom])
-#global_dir=r'C:/Users/alekd/Politecnico di Milano' # this needs to be changed by the user for now ( later it should be in Gisele's folder )
-#db_dir =r'/Silvia Corigliano - Gisele shared/8.Case_Study/'
-#case_study='Uganda'
-#Administrative = gpd.read_file(global_dir+db_dir+case_study+'/Administrative/gadm36_UGA_1.shp')
-#study_area=Administrative.loc[21,'geometry']
+
 
 """
 STEPS
@@ -85,14 +82,15 @@ if step <2:
 # decide whether to import population data from csv ('yes or 'no')
     import_pop_value = 'no'
 
-    data_import = config.iloc[0, 1]
-    input_csv = config.iloc[1,1]
+    #data_import = config.iloc[0, 1]
+    data_import='yes_from_database'
+    input_csv = 'imported_csv'
     crs = int(config.iloc[3, 1])
     resolution = float(config.iloc[4, 1])
     landcover_option = (config.iloc[27, 1])
     unit = 1
     step = 1
-    download_roads=False
+
     if data_import == 'yes':
         collecting.data_gathering(crs, study_area)
         landcover_option = 'CGLS'
@@ -110,6 +108,8 @@ if step <2:
                                                  unit, input_csv, step)
         geo_df.to_file(r"Output/Datasets/geo_df_json",
                        driver='GeoJSON')
+    elif data_import=='yes_from_database':
+        df_weighted = qgis_imp.input_file_creation()
     else:
         df = pd.read_csv(r'Input/' + input_csv + '.csv', sep=',')
         print("Input files successfully imported.")
@@ -119,7 +119,6 @@ if step <2:
             initialization.creating_geodataframe(df_weighted, crs,
                                                  unit, input_csv, step)
         geo_df.to_file(r"Output/Datasets/geo_df_json", driver='GeoJSON')
-    if download_roads:
         initialization.roads_import(geo_df, crs)
     geo_df = geo_df.to_crs(epsg=4326)
     fig2 = go.Figure(go.Scattermapbox(
@@ -154,17 +153,12 @@ if step <2:
 if step <3:
     "2.Clustering"
 #decide wether to perform sensitivity analysis ('yes' or 'no')
-    sensitivity=input('Would you like to perform sensitivity analysis? yes or no')
+    sensitivity='yes'
     if sensitivity=='yes':
         resolution = float(config.iloc[4, 1])
-        #eps = list(config.iloc[20, 1])
-        #pts = list(config.iloc[21, 1])
-        #spans = int(config.iloc[22, 1])
-        eps1, eps2 = input('Select the range of distance that you would like to analyze (example. 100 300)').split()
-        eps=[int(eps1), int(eps2)]
-        pts1, pts2 = input('Select the range of population that you would like to analyze (example. 100 300)').split()
-        pts=[int(eps1), int(eps2)]
-        spans = int(input('Select the number of spans to consider'))
+        eps = list(config.iloc[20, 1])
+        pts = list(config.iloc[21, 1])
+        spans = int(config.iloc[22, 1])
 
         geo_df = gpd.read_file(r"Output/Datasets/geo_df_json")
         loc = {'x': geo_df['X'], 'y': geo_df['Y'], 'z': geo_df['Elevation']}
@@ -173,13 +167,9 @@ if step <3:
                                           pts,
                                           int(spans))
         fig_sens.show()
-        eps_final = float(input('What is the value for distance that you would like to adopt?'))
-        pts_final= float(input('What is the value for population that you would like to adopt?'))
-    else:
-        eps_final = float(config.iloc[23, 1])
-        pts_final = float(config.iloc[24, 1])
 
-
+    eps_final = int(config.iloc[23, 1])
+    pts_final = int(config.iloc[24, 1])
     c1_merge = int(config.iloc[25, 1])
     c2_merge = int(config.iloc[26, 1])
     pop_load = float(config.iloc[6, 1])
@@ -190,6 +180,7 @@ if step <3:
     geo_df_clustered, clusters_list = \
         clustering.analysis(pop_points, geo_df, pop_load,
                             eps_final, pts_final)
+
     fig_clusters = clustering.plot_clusters(geo_df_clustered,
                                             clusters_list)
     clusters_list.to_csv(r"Output/Clusters/clusters_list.csv",
@@ -197,32 +188,6 @@ if step <3:
     geo_df_clustered.to_file(r"Output/Clusters/geo_df_clustered.json",
                              driver='GeoJSON')
     fig_clusters.show()
-    # Cluster merging procedure
-    merge_clusters=input('Would you like to start merging clusters? Enter Yes or No (case sensitive)')
-    keep_merging='Yes'
-    while merge_clusters == 'Yes':
-        c1=int(input('Select the first cluster: '))
-        c2 = int(input('Select the second cluster: '))
-        geo_df_clustered = gpd.read_file(r"Output/Clusters/geo_df_clustered.json")
-        geo_df_clustered.loc[geo_df_clustered['Cluster'] ==c2, 'Cluster'] = c1
-
-        clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
-        drop_index = clusters_list[clusters_list['Cluster'] == c2].index[0]
-        index1 = clusters_list[clusters_list['Cluster'] == c1].index[0]
-        new_pop=clusters_list.iloc[index1]['Population']+ clusters_list.iloc[drop_index]['Population']
-        clusters_list.loc[index1,'Population']= new_pop
-        new_load =clusters_list.iloc[index1]['Load [kW]']+clusters_list.iloc[drop_index]['Load [kW]']
-        clusters_list.loc[index1,'Load [kW]']=new_load
-        clusters_list = clusters_list.drop(index=drop_index)
-
-        clusters_list.to_csv(r"Output/Clusters/clusters_list.csv",
-                             index=False)
-        geo_df_clustered.to_file(r"Output/Clusters/geo_df_clustered.json",
-                                 driver='GeoJSON')
-        merged_clusters = clustering.plot_clusters(geo_df_clustered,
-                                                   clusters_list)
-        merged_clusters.show()
-        merge_clusters=input('Would you like to keep merging? Enter Yes or No (case sensitive)')
 
 # todo->insert cluster merging options
     '-------------------------------------------------------------------------'
@@ -233,14 +198,12 @@ if step <4:
     input_sub = 'imported_subs'
     resolution = float(config.iloc[4, 1])
     pop_load = float(config.iloc[6, 1])
-    #pop_thresh = float(config.iloc[7, 1])
-    pop_thresh=int(input('What is the general population threshold that you would like to consider?'))
+    pop_thresh = float(config.iloc[7, 1])
     line_bc = float(config.iloc[8, 1])
     sub_cost_hv = float(config.iloc[9, 1])
     sub_cost_mv = float(config.iloc[10, 1])
-    #branch = config.iloc[11, 1]
-    branch=input('Would you like to use the branching strategy? yes or no')
-    #pop_thresh_lr = float(config.iloc[12, 1])
+    branch = config.iloc[11, 1]
+    pop_thresh_lr = float(config.iloc[12, 1])
     line_bc_col = float(config.iloc[13, 1])
     full_ele = config.iloc[14, 1]
     geo_df = gpd.read_file(r"Output/Datasets/geo_df_json")
@@ -261,7 +224,6 @@ if step <4:
                                  full_ele)
 
     elif branch == 'yes':
-        pop_thresh_lr=int(input('What is the population threshhold that you would like to consider for the main branches?'))
         gdf_lr = branches.reduce_resolution(input_csv, geo_df, resolution,
                                             geo_df_clustered,
                                             clusters_list)

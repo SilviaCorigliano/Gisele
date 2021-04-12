@@ -200,149 +200,147 @@ def rasters_to_points(study_area,crs,resolution_points,dir,protected_areas,stree
 
 
 '''Set parameters for the analysis - by the user'''
-crs=21095
-resolution=500
-resolution_population=30
-country='Uganda'
-case_study='Area in Uganda'
-landcover_option='ESACCI'
-'''Data processing'''
-#database=r'Database/'+country
-database = r'C:/Users/alekd/Politecnico di Milano/Silvia Corigliano - Gisele shared/8.Case_Study/'+country
-crs_str=r'epsg:'+str(crs)
-study_area = gpd.read_file(database+'/Study_area/Study_area.shp')
-protected_areas = gpd.read_file(database+'/Protected_areas/Protected_area-Uganda.shp')
-protected_areas = protected_areas.to_crs(crs)
-streets = gpd.read_file(database+'/Roads/uga_trs_roads_osm.shp')
-streets = streets.to_crs(crs)
-files_present=False # set this to True if you already have all the .shp and raster files locally
-study_area_crs=study_area.to_crs(crs)
-dir=r'Case studies/'+case_study
-if not os.path.exists(dir):
-    os.makedirs(dir)
-    os.makedirs(dir+'/Input')
-    os.makedirs(dir + '/Output')
-#ROADS
-study_area_buffered=study_area.buffer((resolution*0.1/11250)/2)
+def input_file_creation(crs=21095, resolution=500, country='Uganda', case_study='Area in Uganda', landcover_option='ESACCI'):
+    resolution_population = 30
 
-study_area_buffered_list=[study_area_buffered] # this is to fix the issue with Polygon not being iterable when using rasterio
-'''Clip the protected areas'''
-protected_areas_clipped=gpd.clip(protected_areas,study_area_crs)
-streets_clipped = gpd.clip(streets,study_area_crs)
-if not files_present:
-    if not streets_clipped.empty:
-        streets_clipped.to_file(dir+'/Input/Roads.shp')
+    '''Data processing'''
+    #database=r'Database/'+country
+    database = r'C:\Users\silvi\OneDrive - Politecnico di Milano\Documents\2020-2021\Gisele shared\8.Case_Study/'+country
+    crs_str=r'epsg:'+str(crs)
+    study_area = gpd.read_file(database+'/Study_area/Study_area.shp')
+    protected_areas = gpd.read_file(database+'/Protected_areas/Protected_area-Uganda.shp')
+    protected_areas = protected_areas.to_crs(crs)
+    streets = gpd.read_file(database+'/Roads/uga_trs_roads_osm.shp')
+    streets = streets.to_crs(crs)
+    files_present=False # set this to True if you already have all the .shp and raster files locally
+    study_area_crs=study_area.to_crs(crs)
+    dir=r'Case studies/'+case_study
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+        os.makedirs(dir+'/Input')
+        os.makedirs(dir + '/Output')
+    #ROADS
+    study_area_buffered=study_area.buffer((resolution*0.1/11250)/2)
 
-    if not protected_areas_clipped.empty:
-        protected_areas_clipped.to_file(dir+'/Input/protected_area.shp')
+    study_area_buffered_list=[study_area_buffered] # this is to fix the issue with Polygon not being iterable when using rasterio
+    '''Clip the protected areas'''
+    protected_areas_clipped=gpd.clip(protected_areas,study_area_crs)
+    streets_clipped = gpd.clip(streets,study_area_crs)
+    if not files_present:
+        if not streets_clipped.empty:
+            streets_clipped.to_file(dir+'/Input/Roads.shp')
 
-    '''Clip the elevation and then change the crs'''
-    with rasterio.open(database+'/Elevation/Elevation_new.tif',
-            mode='r') as src:
-        out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
-        print(src.crs)
+        if not protected_areas_clipped.empty:
+            protected_areas_clipped.to_file(dir+'/Input/protected_area.shp')
 
-    out_meta = src.meta
-    out_meta.update({"driver": "GTiff",
-                     "height": out_image.shape[1],
-                     "width": out_image.shape[2],
-                     "transform": out_transform})
+        '''Clip the elevation and then change the crs'''
+        with rasterio.open(database+'/Elevation/Elevation_new.tif',
+                mode='r') as src:
+            out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
+            print(src.crs)
 
-    with rasterio.open(dir+'/Input/Elevation.tif', "w", **out_meta) as dest:
-        dest.write(out_image)
-    input_raster = gdal.Open(dir+'/Input/Elevation.tif')
-    output_raster = dir+'/Input/Elevation_' + str(crs) + '.tif'
-    warp = gdal.Warp(output_raster, input_raster, dstSRS=crs_str)
-    warp = None  # Closes the files
+        out_meta = src.meta
+        out_meta.update({"driver": "GTiff",
+                         "height": out_image.shape[1],
+                         "width": out_image.shape[2],
+                         "transform": out_transform})
 
-    '''Clip the slope and then change the crs'''
-    with rasterio.open(
-            database+'/Slope/Slope_4326.tif',
-            mode='r') as src:
-        out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
-        print(src.crs)
+        with rasterio.open(dir+'/Input/Elevation.tif', "w", **out_meta) as dest:
+            dest.write(out_image)
+        input_raster = gdal.Open(dir+'/Input/Elevation.tif')
+        output_raster = dir+'/Input/Elevation_' + str(crs) + '.tif'
+        warp = gdal.Warp(output_raster, input_raster, dstSRS=crs_str)
+        warp = None  # Closes the files
 
-    out_meta = src.meta
-    out_meta.update({"driver": "GTiff",
-                     "height": out_image.shape[1],
-                     "width": out_image.shape[2],
-                     "transform": out_transform})
+        '''Clip the slope and then change the crs'''
+        with rasterio.open(
+                database+'/Slope/Slope_4326.tif',
+                mode='r') as src:
+            out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
+            print(src.crs)
 
-    with rasterio.open(dir+'/Input/Slope.tif', "w", **out_meta) as dest:
-        dest.write(out_image)
-    input_raster = gdal.Open(dir+'/Input/Slope.tif')
-    output_raster = dir+'/Input/Slope_' + str(crs) + '.tif'
-    warp = gdal.Warp(output_raster, input_raster, dstSRS=crs_str)
-    warp = None  # Closes the files
+        out_meta = src.meta
+        out_meta.update({"driver": "GTiff",
+                         "height": out_image.shape[1],
+                         "width": out_image.shape[2],
+                         "transform": out_transform})
 
-    '''Clip the population and then change the crs'''
-    with rasterio.open(
-            database+'/Population/Population-fb/hrsl_uga_zeros.tif',
-            mode='r') as src:
-        out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
-        print(src.crs)
+        with rasterio.open(dir+'/Input/Slope.tif', "w", **out_meta) as dest:
+            dest.write(out_image)
+        input_raster = gdal.Open(dir+'/Input/Slope.tif')
+        output_raster = dir+'/Input/Slope_' + str(crs) + '.tif'
+        warp = gdal.Warp(output_raster, input_raster, dstSRS=crs_str)
+        warp = None  # Closes the files
 
-    out_meta = src.meta
-    out_meta.update({"driver": "GTiff",
-                     "height": out_image.shape[1],
-                     "width": out_image.shape[2],
-                     "transform": out_transform})
+        '''Clip the population and then change the crs'''
+        with rasterio.open(
+                database+'/Population/Population-fb/hrsl_uga_zeros.tif',
+                mode='r') as src:
+            out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
+            print(src.crs)
 
-    with rasterio.open(dir+'/Input/Population.tif', "w", **out_meta) as dest:
-        dest.write(out_image)
-    # for now there is no need since the population is already in the desired crs
-    input_raster = gdal.Open(dir+'/Input/Population.tif')
-    output_raster = dir+'/Input/Population_' + str(crs) + '.tif'
-    warp = gdal.Warp(output_raster, input_raster, dstSRS=crs_str)
-    warp = None  # Closes the files
+        out_meta = src.meta
+        out_meta.update({"driver": "GTiff",
+                         "height": out_image.shape[1],
+                         "width": out_image.shape[2],
+                         "transform": out_transform})
 
-    '''Clip the land cover and then change the crs'''
-    with rasterio.open(
-            database+'/LandCover/Uganda.tif',
-            mode='r') as src:
-        out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
-        print(src.crs)
+        with rasterio.open(dir+'/Input/Population.tif', "w", **out_meta) as dest:
+            dest.write(out_image)
+        # for now there is no need since the population is already in the desired crs
+        input_raster = gdal.Open(dir+'/Input/Population.tif')
+        output_raster = dir+'/Input/Population_' + str(crs) + '.tif'
+        warp = gdal.Warp(output_raster, input_raster, dstSRS=crs_str)
+        warp = None  # Closes the files
 
-    out_meta = src.meta
-    out_meta.update({"driver": "GTiff",
-                     "height": out_image.shape[1],
-                     "width": out_image.shape[2],
-                     "transform": out_transform})
+        '''Clip the land cover and then change the crs'''
+        with rasterio.open(
+                database+'/LandCover/Uganda.tif',
+                mode='r') as src:
+            out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
+            print(src.crs)
 
-    with rasterio.open(dir+'/Input/LandCover.tif', "w", **out_meta) as dest:
-        dest.write(out_image)
-    input_raster = gdal.Open(dir+'/Input/LandCover.tif')
-    output_raster = dir+'/Input/LandCover_' + str(crs) + '.tif'
-    warp = gdal.Warp(output_raster, input_raster, dstSRS=crs_str)
-    warp = None  # Closes the files
-'''This part transforms the roads from lines to multi points, we will see if it's needed'''
-streets_points = []
-for line in streets_clipped['geometry']:
-    # print(line.geometryType)
-    if line.geometryType() == 'MultiLineString':
-        for line1 in line:
-            for x in list(zip(line1.xy[0], line1.xy[1])):
-                # print(line1)
+        out_meta = src.meta
+        out_meta.update({"driver": "GTiff",
+                         "height": out_image.shape[1],
+                         "width": out_image.shape[2],
+                         "transform": out_transform})
+
+        with rasterio.open(dir+'/Input/LandCover.tif', "w", **out_meta) as dest:
+            dest.write(out_image)
+        input_raster = gdal.Open(dir+'/Input/LandCover.tif')
+        output_raster = dir+'/Input/LandCover_' + str(crs) + '.tif'
+        warp = gdal.Warp(output_raster, input_raster, dstSRS=crs_str)
+        warp = None  # Closes the files
+    '''This part transforms the roads from lines to multi points, we will see if it's needed'''
+    streets_points = []
+    for line in streets_clipped['geometry']:
+        # print(line.geometryType)
+        if line.geometryType() == 'MultiLineString':
+            for line1 in line:
+                for x in list(zip(line1.xy[0], line1.xy[1])):
+                    # print(line1)
+                    streets_points.append(x)
+        else:
+            for x in list(zip(line.xy[0], line.xy[1])):
+                # print(line)
                 streets_points.append(x)
-    else:
-        for x in list(zip(line.xy[0], line.xy[1])):
-            # print(line)
-            streets_points.append(x)
-streets_multipoint = MultiPoint(streets_points)
+    streets_multipoint = MultiPoint(streets_points)
 
-df, geo_df = rasters_to_points(study_area_crs, crs, resolution, dir,protected_areas_clipped,streets_multipoint,resolution_population)
-geo_df.to_file(dir+'/Input/'+case_study+'.shp')
-geo_df=geo_df.reset_index(drop=True)
-geo_df['ID']=geo_df.index
-df=df.reset_index(drop=True)
-df['ID']=df.index
-df.to_csv(dir+'/Input/'+case_study+'.csv', index=False)
+    df, geo_df = rasters_to_points(study_area_crs, crs, resolution, dir,protected_areas_clipped,streets_multipoint,resolution_population)
+    geo_df.to_file(dir+'/Input/'+case_study+'.shp')
+    geo_df=geo_df.reset_index(drop=True)
+    geo_df['ID']=geo_df.index
+    df=df.reset_index(drop=True)
+    df['ID']=df.index
+    df.to_csv(dir+'/Input/'+case_study+'.csv', index=False)
 
-'''cleaning the dataframe for easier clustering'''
-df_clustering=df.drop(['Slope','Land_cover', 'Road_dist',
-                        'River_flow', 'Protected_area','geometry'],axis=1)
-df_clustering = df_clustering.drop(df_clustering[df_clustering.Population==0].index)
-df_clustering.to_csv(dir+'/Input/'+case_study+'_clustering'+'.csv',index=False)
+    '''cleaning the dataframe for easier clustering'''
+    df_clustering=df.drop(['Slope','Land_cover', 'Road_dist',
+                            'River_flow', 'Protected_area','geometry'],axis=1)
+    df_clustering = df_clustering.drop(df_clustering[df_clustering.Population==0].index)
+    df_clustering.to_csv(dir+'/Input/'+case_study+'_clustering'+'.csv',index=False)
 
-df_weighted= initialization.weighting(df, resolution, landcover_option)
-df_weighted.to_csv(dir+'/Input/'+case_study+'_weighted.csv', index=False)
+    df_weighted= initialization.weighting(df, resolution, landcover_option)
+    df_weighted.to_csv(dir+'/Input/'+case_study+'_weighted.csv', index=False)
+    return df_weighted
