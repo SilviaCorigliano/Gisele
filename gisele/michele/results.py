@@ -56,7 +56,7 @@ def Load_results(instance):
         lost_load_y = 0.001 * h_weight * sum(lost_load.iloc[(y*num_days*24+h),0] for h in range(num_days*24))
         lost_load_tot_y.append(lost_load_y)
 
-    em_tot_y=[] # list of yearly emissions [g CO2]
+    em_tot_y=[] # list of yearly emissions [kg CO2]
     for y in range(num_years):
         em_y = 0.001 * h_weight * sum(emissions.iloc[(y*num_days*24+h),0] for h in range(num_days*24))
         em_tot_y.append(em_y)

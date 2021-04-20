@@ -1,0 +1,8 @@
+﻿fuel,emission_factor,efficiency
+Diesel,0.267,0.5
+Coal,0.34,0.5
+Gas,0.202,0.5
+Oil,0.279,0.5
+Wood,0.403,0.5
+Bio-Diesel,0,0.5
+Bio-Ethanol,0,0.5

@@ -5,7 +5,7 @@ import geopandas as gpd
 import numpy as np
 from functions import line_to_points, distance_2d, l, nearest
 from gisele import dijkstra, lcoe_optimization
-from gisele.emission import emission_factor
+from gisele.multi_obj_factor import emission_factor, reliability_grid, line_reliability
 
 
 def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, total_energy,
@@ -36,7 +36,7 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
     sets = milp_clusters['Cluster'].append(milp_subs['ID'], ignore_index=True)
     combinations = list(itertools.combinations(sets, 2))
     milp_links = pd.DataFrame(index=range(combinations.__len__()),
-                              columns=['0', '1'])
+                              columns=['0', '1','Cost','Length'])
     milp_links['0'] = [i[0] for i in combinations]
     milp_links['1'] = [i[1] for i in combinations]
     milp_links['Cost'] = 999999
@@ -112,23 +112,67 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
                              (grid_lifetime-20)/(grid_lifetime) #controllare costo
         milp_links.loc[row[0], 'Cost'] = (connection_cost / 1000) \
             + connection_om - connection_salvage
+        milp_links.loc[row[0], 'Length'] = (connection_length / 1000)  # in km
     milp_links.drop(milp_links[milp_links['Cost'] == 999999].index,
                     inplace=True)
+    milp_links.reset_index(inplace=True, drop=True)
+
+
+    os.chdir('../..')
+    milp_links.to_csv(r'Output/LCOE/milp_links.csv', index=False)
+    # aggiunto un valore di emissione legato alla lunghezza dei link
+    sets.to_csv(r'Output/LCOE/set.csv', index=False)
+    milp_links.loc[:, ['0', '1']].to_csv(r'Output/LCOE/possible_links.csv',
+                                         index=False)
+    # duplicate connections to have the possibility of links in two directions
+    # but with positive power flow
+    milp_links_duplicate = milp_links.copy(deep=True)
+    # switch indices
+    milp_links_duplicate['2'] = milp_links_duplicate['1']
+    milp_links_duplicate['1'] = milp_links_duplicate['0']
+    milp_links_duplicate['0'] = milp_links_duplicate['2']
+    milp_links = milp_links.append(milp_links_duplicate)
+
     milp_links.reset_index(inplace=True, drop=True)
     #includo un valore fittizio per le emissioni legate alla costruzione dei link:
     #todo -> aggiornare con valore sensato di emissioni per combustibile prese da letteratura
 
     em_links = milp_links.copy()
     em_links['emission'] =(em_links['Cost']-min(em_links['Cost']))/(max(em_links['Cost'])-min(em_links['Cost']))*10
-    em_links.drop('Cost',axis=1,inplace=True)
+    em_links.drop(['Cost','Length'],axis=1,inplace=True)
 
-    os.chdir('../..')
-    milp_links.to_csv(r'Output/LCOE/milp_links.csv', index=False)
-    # aggiunto un valore di emissione legato alla lunghezza dei link
-    em_links.to_csv(r'Output/LCOE/em_links.csv', index=False)
+
+    milp_links.loc[:, ['0', '1', 'Cost']].to_csv(
+        r'Output/LCOE/cost_links_complete.csv',
+        index=False)
+    milp_links.loc[:, ['0', '1', 'Length']].to_csv(
+        r'Output/LCOE/len_links_complete.csv',
+        index=False)
     sets.to_csv(r'Output/LCOE/set.csv', index=False)
-    milp_links.loc[:, ['0', '1']].to_csv(r'Output/LCOE/possible_links.csv',
-                                         index=False)
+    milp_links.loc[:, ['0', '1']].to_csv(
+        r'Output/LCOE/possible_links_complete.csv',
+        index=False)
+    em_links.loc[:, ['0', '1', 'emission']].to_csv(r'Output/LCOE/em_links.csv', index=False)
+
+
+    # add columns to set related to cluster radius (for estimating voltage drops)
+    # todo-> improve this step, evaluating different possibilities for cluster radius
+    d_nodes=pd.DataFrame(sets)
+    d_nodes['length']=0
+    d_nodes.set_index(0,inplace=True)
+    for i, row in d_nodes.iterrows():
+        if 'C' in i:
+            max_x=geo_df_clustered[geo_df_clustered['Cluster'] == int(i.split('C')[1])]['geometry'].x.max()
+            min_x = geo_df_clustered[geo_df_clustered['Cluster'] == int(i.split('C')[1])][
+                'geometry'].x.min()
+            max_y = geo_df_clustered[geo_df_clustered['Cluster'] == int(i.split('C')[1])][
+                'geometry'].y.max()
+            min_y = geo_df_clustered[geo_df_clustered['Cluster'] == int(i.split('C')[1])][
+                'geometry'].y.min()
+            d_nodes.loc[i,'length'] = ((max_x-min_x)**2+(max_y-min_y)**2)**0.5/1000 # [km]
+
+        d_nodes.to_csv(r'Output/LCOE/len_nodes.csv')
+
 
     milp_subs.loc[:, ['ID', 'PowerAvailable']].to_csv(
         r'Output/LCOE/sub_power.csv', index=False)
@@ -156,11 +200,36 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
                                mg_energy['Cluster'].iteritems()]
     mg_energy.to_csv(r'Output/LCOE/energy.csv', index=False)
 
+    #save emissions for multi_obj optimization
     mg_emissions=mg[['Cluster','CO2 [kg]']]
     mg_emissions['Cluster'] = ['C' + str(i[0]) for i in
                                mg_emissions['Cluster'].iteritems()]
     mg_emissions.to_csv(r'Output/LCOE/emissions.csv', index=False)
 
+    #compute energy not provided by microgrid (multiply unavailability of component
+    #times repair time times power of component)
+    #overestimation, need to find a way to better compute it
+    comp_reliability=pd.read_csv('Input/Datasets/Reliability/reliability_components.csv',index_col='Unnamed: 0')
+    mg_reliability = mg.copy()
+    mg_reliability['lol [MWh]'] =1
+    for i, row in mg.iterrows():
+        mg_reliability.loc[i,'lol [MWh]'] = \
+        row['Energy Demand [MWh]']/8760/20 *(
+        row['PV [kW]'] * comp_reliability.loc['PV', 'unavailability [h/year]']+
+        row['Wind [kW]']* comp_reliability.loc['Wind','unavailability [h/year]']+
+        row['Diesel [kW]']* comp_reliability.loc['DG','unavailability [h/year]']+
+        row['Inverter [kW]'] * comp_reliability.loc['Converter','unavailability [h/year]']
+        )/(row['PV [kW]']+row['Wind [kW]']+row['Diesel [kW]']+row['Inverter [kW]'])
+
+    mg_reliability['Cluster'] = ['C' + str(i[0]) for i in
+                               mg_emissions['Cluster'].iteritems()]
+
+    mg_reliability.loc[:,['Cluster','lol [MWh]']].to_csv(r'Output/LCOE/mg_rel.csv', index=False)
+
+    #create a column with max loss of load of each cluster (now it is set to a random number,
+    #need to automatize with GIS data)
+    mg_reliability['max_unav'] = 2
+    mg_reliability.loc[:,['Cluster','max_unav']].to_csv(r'Output/LCOE/max_unav.csv', index=False)
     return
 
 def milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line_bc,
@@ -170,9 +239,13 @@ def milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line
     # run the effective optimization
     nation_emis = 1000  # kgCO2 emission per kWh given country energy mix
     country = 'Mozambique'
-    nation_emis = emission_factor(country)  # kgCO2/kWh
+    emission_type ='direct'
+    nation_emis = emission_factor(country,emission_type)  # kgCO2/MWh
+    nation_rel = reliability_grid(country)
+    line_rel = line_reliability()
 
-    lcoe_optimization.cost_optimization(p_max_lines, coe, nation_emis)
+    lcoe_optimization.cost_optimization(p_max_lines, coe, nation_emis,
+                                        nation_rel, line_rel)
 
     gdf_roads = gpd.read_file('Output/Datasets/Roads/gdf_roads.shp')
     roads_segments = gpd.read_file('Output/Datasets/Roads/roads_segments.shp')
@@ -287,6 +360,10 @@ def milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line
                                                c_grid_points, line_bc,
                                                resolution, gdf_roads,
                                                roads_segments)
+        #remove files created during previous simulations
+        if os.path.exists('Connection_' + k.split('C')[1] + '.shp'):
+            os.remove('Connection_' + k.split('C')[1] + '.shp')
+        #check if the connection exists and save it
         if not connection.empty:
             connection.to_file(
                 'Connection_' + k.split('C')[1] + '.shp')
@@ -304,6 +381,8 @@ def milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line
     if total_connections_opt.empty == False:
         total_connections_opt.crs = geo_df_clustered.crs
         total_connections_opt.to_file('all_connections_opt.shp')
+    else:
+        os.remove('all_connections_opt.shp')
     os.chdir('../..')
     return grid_resume
 

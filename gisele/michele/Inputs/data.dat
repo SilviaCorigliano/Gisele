@@ -100,7 +100,7 @@ param: lost_load_max := 0.05;
 
 param: lost_load_value := 1;
 
-param: ren_fraction := 0.5;
+param: ren_fraction := 0.8;
 
 param: fuel_cost := 0.75;
 

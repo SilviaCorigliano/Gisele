@@ -10,7 +10,7 @@ import numpy as np
 from datetime import datetime
 
 
-def cost_optimization(p_max_lines, coe, nation_emis):
+def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     # Initialize model
     model = AbstractModel()
     data = DataPortal()
@@ -18,7 +18,7 @@ def cost_optimization(p_max_lines, coe, nation_emis):
     # Define sets
 
 #    model.of = Set(initialize=[1,2])  # Set of objective functions
-    model.of = Set(initialize=['cost', 'emis'])  # Set of objective functions
+    model.of = Set(initialize=['cost', 'emis','rel'])  # Set of objective functions
 
     model.N = Set()  # Set of all nodes, clusters and substations
     data.load(filename=r'Output/LCOE/set.csv', set=model.N)
@@ -31,7 +31,7 @@ def cost_optimization(p_max_lines, coe, nation_emis):
 
     model.links = Set(dimen=2,
                       within=model.N * model.N)  # in the csv the values must be delimited by commas
-    data.load(filename='Output/LCOE/possible_links.csv', set=model.links)
+    data.load(filename='Output/LCOE/possible_links_complete.csv', set=model.links)
 
     # Nodes are divided into two sets, as suggested in https://pyomo.readthedocs.io/en/stable/pyomo_modeling_components/Sets.html:
     # NodesOut[nodes] gives for each node all nodes that are connected to it via outgoing links
@@ -80,6 +80,7 @@ def cost_optimization(p_max_lines, coe, nation_emis):
     # Weight of objective functions in multi-objective optimization, range 0-1, sum over model.of has to be 1
     model.weight = Param(model.of)
 
+
     data.load(filename='Output/LCOE/data_MO.dat')
 
     # Parameters identifying the range of variation of each objective function (needed for normalization)
@@ -107,7 +108,7 @@ def cost_optimization(p_max_lines, coe, nation_emis):
 
     # Connection cost of the possible links
     model.c_links = Param(model.links)
-    data.load(filename='Output/LCOE/milp_links.csv', param=model.c_links)
+    data.load(filename='Output/LCOE/cost_links_complete.csv', param=model.c_links)
 
     # Energy consumed by each cluster in microgrid lifetime
     model.energy = Param(model.clusters)
@@ -121,9 +122,29 @@ def cost_optimization(p_max_lines, coe, nation_emis):
     model.em_links = Param(model.links)
     data.load(filename='Output/LCOE/em_links.csv', param=model.em_links)
 
+    #lol due to microgrid components_failure
+    model.rel_mg = Param(model.clusters)
+    data.load(filename='Output/LCOE/mg_rel.csv', param=model.rel_mg)
+
+    #maximum hours of unavailability during the year [h/yr]
+    model.max_unav = Param(model.clusters)
+    data.load(filename='Output/LCOE/max_unav.csv', param=model.max_unav)
+
+    # Connection length associated to the nodes
+    model.d_nodes = Param(model.N)
+    data.load(filename='Output/LCOE/len_nodes.csv', param=model.d_nodes)
+
+    # Connection length of the possible links
+    model.d_links = Param(model.links)
+    data.load(filename='Output/LCOE/len_links_complete.csv', param=model.d_links)
+
     # poximum power flowing on lines
     # model.p_max_lines = Param()  # max power flowing on MV lines
     # data.load(filename='Input/data_procedure2.dat')
+
+    # M_max and M_min, values required to linearize the problem
+    model.M_max = Param(initialize=10000)
+    model.M_min = Param(initialize=-10000)
 
     #####################Define variables#####################
 
@@ -140,9 +161,15 @@ def cost_optimization(p_max_lines, coe, nation_emis):
     # binary variable z[i]: 1 if a microgrid is installed in node i, 0 otherwise,initialize=z_rule
     model.z = Var(model.clusters, within=Binary)
     # power[i,j] is the power flow of connection i-j
-    model.P = Var(model.links)
+    model.P = Var(model.links, within=NonNegativeReals)
     # power[i] is the power provided by substation i
     model.p_substations = Var(model.substations, within=NonNegativeReals)
+    # # variables k(i,j) is the variable necessary to linearize
+    model.k = Var(model.links)
+    #distance of cluster from substation
+    model.dist = Var(model.N, within=NonNegativeReals)
+    #lol due to MV lines
+    model.lol_line = Var (model.clusters, within=NonNegativeReals)
 
     #####################Define constraints###############################
 
@@ -194,6 +221,71 @@ def cost_optimization(p_max_lines, coe, nation_emis):
     model.Number_substation = Constraint(model.substations,
                                                      rule=Number_substations_rule)
 
+    #### Distance constraints #####
+    def distance_balance_rule(model, i, j):
+        return model.k[i, j] == (-model.d_links[i, j] -model.d_nodes[i])*model.x[i, j]
+
+    model.distance_balance_rule = Constraint(model.links,
+                                            rule=distance_balance_rule)
+
+    def distance_linearization_rule_1(model, i, j):
+        return model.k[i, j] <= model.M_max * model.x[i, j]
+
+    model.distance_linearization_rule_1 = Constraint(model.links,
+                                                    rule=distance_linearization_rule_1)
+    #
+    def distance_linearization_rule_2(model, i, j):
+        return model.k[i, j] >= model.M_min * model.x[i, j]
+
+    model.distance_linearization_rule_2 = Constraint(model.links,
+                                                    rule=distance_linearization_rule_2)
+    #
+    def distance_linearization_rule_3(model, i, j):
+        return model.dist[i] - model.dist[j] - (1 - model.x[i, j]) * model.M_max <= \
+               model.k[i, j]
+
+    model.distance_linearization_rule_3 = Constraint(model.links,
+                                                    rule=distance_linearization_rule_3)
+
+    def distance_linearization_rule_4(model, i, j):
+        return model.dist[i] - model.dist[j] - (1 - model.x[i, j]) * model.M_min >= \
+               model.k[i, j]
+
+    model.distance_linearization_rule_4 = Constraint(model.links,
+                                                    rule=distance_linearization_rule_4)
+
+    def distance_linearization_rule_5(model, i, j):
+        return model.dist[i] - model.dist[j] + (1 - model.x[i, j]) * model.M_max >= \
+               model.k[i, j]
+
+    model.distance_linearization_rule_5 = Constraint(model.links,
+                                                    rule=distance_linearization_rule_5)
+
+    #if a cluster is electrified with a microgrid, its distance is 0,
+    #otherwise it must be less than a max treshold
+    def distance_upper_bound_rule(model, i):
+        return 50 *(1-model.z[i])>= model.dist[i]
+
+    model.distance_upper_bound = Constraint(model.clusters,
+                                           rule=distance_upper_bound_rule)
+
+    def distance_primary_substation_rule(model, i):
+        return model.dist[i] == 0
+
+    model.distance_primary_substation = Constraint(model.substations,
+                                                  rule=distance_primary_substation_rule)
+
+    #define loss of load  dependent on distance from connection point
+    def lol_calculation_rule(model,i):
+        return model.lol_line[i] == model.dist[i]*line_rel*model.energy[i]/8760/20
+
+    model.lol_calculation = Constraint(model.clusters, rule =lol_calculation_rule)
+    #
+    #define maximum loss of load for each clusters, it is an input dependent on the type of cluster (hours/year)
+    def max_lol_rule(model,i):
+        return ((model.rel_mg[i]* (model.z[i]))  +model.lol_line[i])/(model.energy[i]/8760/20)+\
+               (1-model.z[i])  * nation_rel<=model.max_unav[i]*100  #100 is a random value to check this equation, it should be removed later
+    model.max_lol =Constraint(model.clusters, rule =max_lol_rule)
 
     ####################Define objective function##########################
 
@@ -212,6 +304,16 @@ def cost_optimization(p_max_lines, coe, nation_emis):
                sum(model.energy[i] * (1-model.z[i]) for i in model.clusters) * nation_emis
 
     model.Obj2 = Constraint(rule=ObjectiveFunctionEmis)
+
+    # total energy not supplied [MWh]
+    def ObjectiveFunctionRel(model):
+        return model.obj['rel'] == \
+               sum(model.rel_mg[i]* (model.z[i])*100 for i in model.clusters)  +\
+               summation(model.lol_line)+\
+               sum(model.energy[i] /8760/20* (1-model.z[i]) for i in model.clusters) * nation_rel
+
+    model.Obj3 = Constraint(rule=ObjectiveFunctionRel)
+
 
     # auxiliary variable to allow the activation and deactivation of OF in the for loop
     def AuxiliaryNorm(model, of):
@@ -325,12 +427,17 @@ def cost_optimization(p_max_lines, coe, nation_emis):
 
     print(payoff_table)
 
+    multi_obj=True
     print('Find ranges of variation of each objective function:')
     for of in obj_list:
         instance.min_obj[of] = min(payoff_table[of])
         instance.max_obj[of] = max(payoff_table[of])
         print('min' + str(of) + '=' + str(min(payoff_table[of])))
         print('max' + str(of) + '=' + str(max(payoff_table[of])))
+        #do not make multiobjective optimization if there is a unique solution
+        if instance.min_obj[of] == instance.max_obj[of]:
+            multi_obj =False
+            print('Multi-obj not needed')
 
 
     # for the second step, MultiObj is the OF to be used
@@ -340,11 +447,12 @@ def cost_optimization(p_max_lines, coe, nation_emis):
     instance.MultiObj.activate()
     instance.DefNormObj.activate()
 
-    print('2) Multi-objective optimization: Weighted sum approach')
-    opt.solve(instance, tee=True)
+    if multi_obj:
+        print('2) Multi-objective optimization: Weighted sum approach')
+        opt.solve(instance, tee=True)
 
-    for of in obj_list:
-        print(str(of)+'='+str(instance.obj.get_values()[of]))
+        for of in obj_list:
+            print(str(of)+'='+str(instance.obj.get_values()[of]))
 
     time_f = datetime.now()
     print('Time required for the two steps is', time_f - time_i)
@@ -353,9 +461,12 @@ def cost_optimization(p_max_lines, coe, nation_emis):
     links = instance.x
     power = instance.P
     microgrids = instance.z
+    distance =instance.dist
+    lol_line=instance.lol_line
     connections_output = pd.DataFrame(columns=[['id1', 'id2']])
     microgrids_output = pd.DataFrame(columns=['ID'])
     power_output = pd.DataFrame(columns=[['id1', 'id2', 'P']])
+    dist_output = pd.DataFrame(columns=[['ID','dist','lol']])
     k = 0
     for index in links:
         if int(round(value(links[index]))) == 1:
@@ -375,7 +486,18 @@ def cost_optimization(p_max_lines, coe, nation_emis):
             power_output.loc[k, 'P'] = value(power[index])
             k = k + 1
 
+    k = 0
+    for index in distance:
+        if value(distance[index]) != 0:
+            dist_output.loc[k, 'ID'] = index
+            dist_output.loc[k, 'Length'] = value(distance[index])
+            dist_output.loc[k, 'lol'] = value(lol_line[index])
+            k = k + 1
+
+
+
     connections_output.to_csv('Output/LCOE/MV_connections_output.csv', index=False)
     microgrids_output.to_csv('Output/LCOE/MV_SHS_output.csv', index=False)
     power_output.to_csv('Output/LCOE/MV_power_output.csv', index=False)
+    dist_output.to_csv('Output/LCOE/MV_dist_output.csv', index=False)
     return microgrids_output, connections_output
