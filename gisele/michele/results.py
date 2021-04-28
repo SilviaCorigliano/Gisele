@@ -116,7 +116,7 @@ def Load_results(instance):
     bess_nominal_capacity = float(instance.bess_nominal_capacity.extract_values()[1])
     wt_nominal_capacity = float(instance.wt_nominal_capacity.extract_values()[1])
     pv_nominal_capacity = float(instance.pv_nominal_capacity.extract_values()[1])
-    inv_nominal_capacity = float(instance.bess_power_max.extract_values()[1])
+    inv_nominal_capacity = float(instance.bess_power_max.extract_values()[1])+pv_nominal_capacity
 
     unit_type=['DG', 'PV', 'WT', 'BESS']
     installed_units=[Number_Generator*dg_nominal_capacity, Number_PV*pv_nominal_capacity,
