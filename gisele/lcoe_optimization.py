@@ -261,8 +261,8 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     model.distance_linearization_rule_5 = Constraint(model.links,
                                                     rule=distance_linearization_rule_5)
 
-    #if a cluster is electrified with a microgrid, its distance is 0,
-    #otherwise it must be less than a max treshold
+    # if a cluster is electrified with a microgrid, its distance is 0,
+    # otherwise it must be less than a max treshold
     def distance_upper_bound_rule(model, i):
         return 50 *(1-model.z[i])>= model.dist[i]
 
@@ -275,17 +275,17 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     model.distance_primary_substation = Constraint(model.substations,
                                                   rule=distance_primary_substation_rule)
 
-    #define loss of load  dependent on distance from connection point
+    # define loss of load  dependent on distance from connection point
     def lol_calculation_rule(model,i):
         return model.lol_line[i] == model.dist[i]*line_rel*model.energy[i]/8760/20
 
     model.lol_calculation = Constraint(model.clusters, rule =lol_calculation_rule)
     #
-    #define maximum loss of load for each clusters, it is an input dependent on the type of cluster (hours/year)
+    # define maximum loss of load for each clusters, it is an input dependent on the type of cluster (hours/year)
     def max_lol_rule(model,i):
-        return ((model.rel_mg[i]* (model.z[i]))  +model.lol_line[i])/(model.energy[i]/8760/20)+\
-               (1-model.z[i])  * nation_rel<=model.max_unav[i]*100  #100 is a random value to check this equation, it should be removed later
-    model.max_lol =Constraint(model.clusters, rule =max_lol_rule)
+        return ((model.rel_mg[i] * (model.z[i])) + model.lol_line[i])/(model.energy[i]/8760/20)+\
+               (1-model.z[i]) * nation_rel <= model.max_unav[i]*100  # 100 is a random value to check this equation, it should be removed later
+    model.max_lol = Constraint(model.clusters, rule =max_lol_rule)
 
     ####################Define objective function##########################
 
@@ -361,7 +361,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     obj_list = list(instance.of)  # list of the objective functions
     print(obj_list)
     num_of = len(obj_list)  # number of objective functions
-    #payoff_table = np.empty((num_of,num_of))  # table of the ranges of variations of objective functions
+    # payoff_table = np.empty((num_of,num_of))  # table of the ranges of variations of objective functions
     payoff_table = pd.DataFrame(index=obj_list,columns=obj_list)
     payoff_table.index.name = 'optimization'
 
@@ -434,7 +434,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
         instance.max_obj[of] = max(payoff_table[of])
         print('min' + str(of) + '=' + str(min(payoff_table[of])))
         print('max' + str(of) + '=' + str(max(payoff_table[of])))
-        #do not make multiobjective optimization if there is a unique solution
+        # do not make multiobjective optimization if there is a unique solution
         if instance.min_obj[of] == instance.max_obj[of]:
             multi_obj =False
             print('Multi-obj not needed')

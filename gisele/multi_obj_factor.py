@@ -5,7 +5,7 @@ def emission_factor(country, emission_type):
     energy_mix = pd.read_csv(
         'Input/Datasets/Emission/country_electricity_mix.csv')
     emission_factors = pd.read_csv(
-        'Input/Datasets/Emission/emission_factor.csv',index_col='fuel') #ton CO2/MWh
+        'Input/Datasets/Emission/emission_factor.csv',index_col='fuel') # ton CO2/MWh
     if emission_type=='direct':
         column='dir_em'
     else:
@@ -35,6 +35,6 @@ def reliability_grid(country):
 
 def line_reliability():
     rel_components = pd.read_csv('Input/Datasets/Reliability/reliability_components.csv',index_col='Unnamed: 0')
-    line_rel=rel_components.loc['Line','unavailability [h/year]']
+    line_rel=rel_components.loc['Line','unavailability [h/year]'] # h/km/year
     return line_rel
 

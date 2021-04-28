@@ -120,7 +120,6 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
 
     os.chdir('../..')
     milp_links.to_csv(r'Output/LCOE/milp_links.csv', index=False)
-    # aggiunto un valore di emissione legato alla lunghezza dei link
     sets.to_csv(r'Output/LCOE/set.csv', index=False)
     milp_links.loc[:, ['0', '1']].to_csv(r'Output/LCOE/possible_links.csv',
                                          index=False)
@@ -219,7 +218,7 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
         row['Wind [kW]']* comp_reliability.loc['Wind','unavailability [h/year]']+
         row['Diesel [kW]']* comp_reliability.loc['DG','unavailability [h/year]']+
         row['Inverter [kW]'] * comp_reliability.loc['Converter','unavailability [h/year]']
-        )/(row['PV [kW]']+row['Wind [kW]']+row['Diesel [kW]']+row['Inverter [kW]'])
+        )/(row['PV [kW]']+row['Wind [kW]']+row['Diesel [kW]']+row['Inverter [kW]'])  # MWh/year
 
     mg_reliability['Cluster'] = ['C' + str(i[0]) for i in
                                mg_emissions['Cluster'].iteritems()]

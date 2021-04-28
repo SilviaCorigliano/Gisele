@@ -1,0 +1,8 @@
+﻿,failure rate [f/yr],repair time [h],unavailability [h/year],,
+PV,0.15,80,12,,
+Hydro,0.1,80,8,,
+Wind,0.1,80,8,,
+DG,0.1,80,8,,
+Converter,0.1,80,8,,
+Line,0.05,4,0.2,,
+Trafo,0.015,20,0.3,,

@@ -13,8 +13,8 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     '''
 
     # Parameters related to set definition
-    model.num_days = Param() #number of representative days of 1 year
-    model.num_years = Param() #number of years of the project
+    model.num_days = Param()  # number of representative days of 1 year
+    model.num_years = Param()  # number of years of the project
     model.project_duration = Param(initialize=initialize_project_duration)
     model.h_weight = Param(initialize=initialize_h_weight) # weight of 1 hour (different from 1 if representative days are used)
     model.pv_types = Param()
