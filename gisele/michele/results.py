@@ -6,14 +6,12 @@ import matplotlib.pyplot as plt
 
 def Load_results(instance):
     '''
-    This function loads the results that depend of the periods in to a dataframe and creates a excel file with it.
+    This function loads and plots the results.
 
     :param instance: The instance of the project resolution created by PYOMO.
-
-    :return: A dataframe called Time_series with the values of the variables that depend of the periods.
     '''
 
-    
+
 
     # Load the variables that depend of the periods in python dictionaries a
 
