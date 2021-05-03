@@ -19,11 +19,11 @@ def start(load_profile, pv_avg, wt_avg):
 
     print('Show results')
 
-    inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, rep_cost, \
+    inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, rep_cost, \
         om_cost, salvage_value, gen_energy, load_energy, emissions \
         = Load_results(instance)
 
-    return inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
+    return inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, \
         rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions
 
 

@@ -379,7 +379,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         wt_avg.reset_index(drop=True, inplace=True)
         wt_avg = shift_timezone(wt_avg, time_shift)
 
-        inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
+        inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, \
         rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions = \
             start(load_profile_cluster, pv_avg, wt_avg)
 
@@ -391,11 +391,10 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'Investment Cost [k€]'] = init_cost
         mg.loc[cluster_n, 'OM Cost [k€]'] = om_cost
         mg.loc[cluster_n, 'Replace Cost [k€]'] = rep_cost
-        mg.loc[cluster_n, 'Total Cost [k€]'] = rep_cost + om_cost + init_cost - salvage_value
+        mg.loc[cluster_n, 'Total Cost [k€]'] = npc
         mg.loc[cluster_n, 'Energy Produced [MWh]'] = gen_energy
         mg.loc[cluster_n, 'Energy Demand [MWh]'] = load_energy
-        mg.loc[cluster_n, 'LCOE [€/kWh]'] = (
-                                                    rep_cost + om_cost + init_cost - salvage_value) / gen_energy
+        mg.loc[cluster_n, 'LCOE [€/kWh]'] = npc / gen_energy
         mg.loc[cluster_n, 'CO2 [kg]'] = emissions
         print(mg)
     mg = mg.round(decimals=4)

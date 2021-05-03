@@ -145,8 +145,8 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.reserve_dg = Var(model.hours,model.dg, within=NonNegativeReals) #reserve provided by DG [kW]
     model.reserve_bess = Var(model.hours, model.bess, within=NonNegativeReals)  # reserve provided by BESS [kW]
 
-    # OBJETIVE FUNTION:
-    model.ObjectiveFuntion = Objective(rule=total_net_present_cost, sense=minimize)
+    # OBJECTIVE FUNCTION:
+    model.ObjectiveFunction = Objective(rule=total_net_present_cost, sense=minimize)
 
     # CONSTRAINTS
     # to compute OF

@@ -114,7 +114,7 @@ def Load_results(instance):
     bess_nominal_capacity = float(instance.bess_nominal_capacity.extract_values()[1])
     wt_nominal_capacity = float(instance.wt_nominal_capacity.extract_values()[1])
     pv_nominal_capacity = float(instance.pv_nominal_capacity.extract_values()[1])
-    inv_nominal_capacity = float(instance.bess_power_max.extract_values()[1])+pv_nominal_capacity
+    inv_bess_nominal_capacity = float(instance.bess_power_max.get_values()[1])
 
     unit_type=['DG', 'PV', 'WT', 'BESS']
     installed_units=[Number_Generator*dg_nominal_capacity, Number_PV*pv_nominal_capacity,
@@ -122,6 +122,7 @@ def Load_results(instance):
     plt.bar(unit_type,installed_units)
     # plt.show()
 
+    npc = instance.ObjectiveFunction.expr()
     init_cost = float(instance.initial_investment.get_values()[None])
     rep_cost = float(instance.replacement_cost.get_values()[None])
     om_cost = float(instance.OM_cost.get_values()[None])
@@ -131,14 +132,15 @@ def Load_results(instance):
     inst_wind = Number_WT*wt_nominal_capacity
     inst_dg = Number_Generator*dg_nominal_capacity
     inst_bess = Number_BESS*bess_nominal_capacity
-    inst_inv = inv_nominal_capacity
+    inst_inv = inv_bess_nominal_capacity+inst_pv
 
     print('PV installed=' + str(inst_pv))
     print('wind installed=' + str(inst_wind))
     print('diesel installed=' + str(inst_dg))
     print('bess installed=' + str(inst_bess))
-    print('inv installed=' + str(inv_nominal_capacity))
+    print('inv installed=' + str(inst_inv))
 
+    print('npc='+str(npc))
     print('initial investment='+str(init_cost))
     print('replacement cost='+str(rep_cost))
     print('OM cost='+str(om_cost))
@@ -148,7 +150,7 @@ def Load_results(instance):
     dg_fuel_tot = h_weight * dg_fuel.sum(axis=0)
     print('total fuel consumption='+str(dg_fuel_tot))
 
-    return inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
+    return inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, \
         rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions
 
     '''
