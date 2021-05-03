@@ -225,11 +225,6 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
 
     mg_reliability.loc[:,['Cluster','lol [MWh]']].to_csv(r'Output/LCOE/mg_rel.csv', index=False)
 
-    #create a column with max loss of load of each cluster (now it is set to a random number,
-    #need to automatize with GIS data)
-    mg_reliability['max_unav'] = 2
-    mg_reliability.loc[:,['Cluster','max_unav']].to_csv(r'Output/LCOE/max_unav.csv', index=False)
-    return
 
 def milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line_bc,
               resolution,p_max_lines):

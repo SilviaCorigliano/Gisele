@@ -126,10 +126,6 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     model.rel_mg = Param(model.clusters)
     data.load(filename='Output/LCOE/mg_rel.csv', param=model.rel_mg)
 
-    #maximum hours of unavailability during the year [h/yr]
-    model.max_unav = Param(model.clusters)
-    data.load(filename='Output/LCOE/max_unav.csv', param=model.max_unav)
-
     # Connection length associated to the nodes
     model.d_nodes = Param(model.N)
     data.load(filename='Output/LCOE/len_nodes.csv', param=model.d_nodes)
@@ -280,12 +276,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
         return model.lol_line[i] == model.dist[i]*line_rel*model.energy[i]/8760/20
 
     model.lol_calculation = Constraint(model.clusters, rule =lol_calculation_rule)
-    #
-    # define maximum loss of load for each clusters, it is an input dependent on the type of cluster (hours/year)
-    def max_lol_rule(model,i):
-        return ((model.rel_mg[i] * (model.z[i])) + model.lol_line[i])/(model.energy[i]/8760/20)+\
-               (1-model.z[i]) * nation_rel <= model.max_unav[i]*100  # 100 is a random value to check this equation, it should be removed later
-    model.max_lol = Constraint(model.clusters, rule =max_lol_rule)
+
 
     ####################Define objective function##########################
 
