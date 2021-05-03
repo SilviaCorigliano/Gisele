@@ -96,7 +96,7 @@ param: nominal_interest_rate := 0.08;
 
 param: derating_factor := 0.9;
 
-param: lost_load_max := 0.05;
+param: lost_load_max := 0.0;
 
 param: lost_load_value := 1;
 
