@@ -29,7 +29,7 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
                                 milp_clusters['Cluster'].iteritems()]
     # energy_mismatch = \
     #     (total_energy['Energy'] / 1000) / mg['Energy Produced [MWh]']
-    milp_clusters['mg_npc'] = mg['Total Cost [k€]']
+    milp_clusters['mg_npc'] = mg['Total Cost [kEUR]']
     milp_subs = substations[['ID', 'PowerAvailable']].copy()
     milp_subs['ID'] = ['S' + str(i[1]) for i in milp_subs['ID'].iteritems()]
     milp_subs['subs_npc'] = 10 #da cambiare

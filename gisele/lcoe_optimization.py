@@ -142,7 +142,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     model.M_min = Param(initialize=-10000)
 
     data.load(filename='Output/Microgrids/microgrids.csv',
-              select=('Cluster','Total Cost','Energy Demand [MWh]','CO2 [kg]'),
+              select=('Cluster','Total Cost [kEUR]','Energy Demand [MWh]','CO2 [kg]'),
               param=(model.c_microgrids,model.energy,model.emission), index=model.clusters)
 
     #####################Define variables#####################

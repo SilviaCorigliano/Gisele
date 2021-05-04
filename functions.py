@@ -340,10 +340,10 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
     mg = pd.DataFrame(index=clusters_list.index,
                       columns=['PV [kW]', 'Wind [kW]', 'Diesel [kW]',
                                'BESS [kWh]', 'Inverter [kW]',
-                               'Investment Cost [k€]', 'OM Cost [k€]',
-                               'Replace Cost [k€]', 'Total Cost [k€]',
+                               'Investment Cost [kEUR]', 'OM Cost [kEUR]',
+                               'Replace Cost [kEUR]', 'Total Cost [kEUR]',
                                'Energy Demand [MWh]', 'Energy Produced [MWh]',
-                               'LCOE [€/kWh]','CO2 [kg]'],
+                               'LCOE [EUR/kWh]','CO2 [kg]'],
                       dtype=float)
 
     for cluster_n in clusters_list.Cluster:
@@ -388,13 +388,13 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'Diesel [kW]'] = inst_dg
         mg.loc[cluster_n, 'BESS [kWh]'] = inst_bess
         mg.loc[cluster_n, 'Inverter [kW]'] = inst_inv
-        mg.loc[cluster_n, 'Investment Cost [k€]'] = init_cost
-        mg.loc[cluster_n, 'OM Cost [k€]'] = om_cost
-        mg.loc[cluster_n, 'Replace Cost [k€]'] = rep_cost
-        mg.loc[cluster_n, 'Total Cost [k€]'] = npc
+        mg.loc[cluster_n, 'Investment Cost [kEUR]'] = init_cost
+        mg.loc[cluster_n, 'OM Cost [kEUR]'] = om_cost
+        mg.loc[cluster_n, 'Replace Cost [kEUR]'] = rep_cost
+        mg.loc[cluster_n, 'Total Cost [kEUR]'] = npc
         mg.loc[cluster_n, 'Energy Produced [MWh]'] = gen_energy
         mg.loc[cluster_n, 'Energy Demand [MWh]'] = load_energy
-        mg.loc[cluster_n, 'LCOE [€/kWh]'] = npc / gen_energy
+        mg.loc[cluster_n, 'LCOE [EUR/kWh]'] = npc / gen_energy
         mg.loc[cluster_n, 'CO2 [kg]'] = emissions
         print(mg)
     mg = mg.round(decimals=4)
