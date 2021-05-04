@@ -185,27 +185,6 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
         r'Output/LCOE/c_power.csv', index=False)
 
 
-    #compute energy not provided by microgrid (multiply unavailability of component
-    #times repair time times power of component)
-    #overestimation, need to find a way to better compute it
-    comp_reliability=pd.read_csv('Input/Datasets/Reliability/reliability_components.csv',index_col='Unnamed: 0')
-    mg_reliability = mg.copy()
-    mg_reliability['lol [MWh]'] =1
-    for i, row in mg.iterrows():
-        mg_reliability.loc[i,'lol [MWh]'] = \
-        row['Energy Demand [MWh]']/8760/20 *(
-        row['PV [kW]'] * comp_reliability.loc['PV', 'unavailability [h/year]']+
-        row['Wind [kW]']* comp_reliability.loc['Wind','unavailability [h/year]']+
-        row['Diesel [kW]']* comp_reliability.loc['DG','unavailability [h/year]']+
-        row['Inverter [kW]'] * comp_reliability.loc['Converter','unavailability [h/year]']
-        )/(row['PV [kW]']+row['Wind [kW]']+row['Diesel [kW]']+row['Inverter [kW]'])  # MWh/year
-
-    mg_reliability['Cluster'] = ['C' + str(i[0]) for i in
-                               mg_emissions['Cluster'].iteritems()]
-
-    mg_reliability.loc[:,['Cluster','lol [MWh]']].to_csv(r'Output/LCOE/mg_rel.csv', index=False)
-
-
 def milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line_bc,
               resolution,p_max_lines):
     total_connections_opt = pd.DataFrame()

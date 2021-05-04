@@ -123,7 +123,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
 
     #lol due to microgrid components_failure
     model.rel_mg = Param(model.clusters)
-    data.load(filename='Output/LCOE/mg_rel.csv', param=model.rel_mg)
+    # data.load(filename='Output/LCOE/mg_rel.csv', param=model.rel_mg)
 
     # Connection length associated to the nodes
     model.d_nodes = Param(model.N)
@@ -142,8 +142,8 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     model.M_min = Param(initialize=-10000)
 
     data.load(filename='Output/Microgrids/microgrids.csv',
-              select=('Cluster','Total Cost [kEUR]','Energy Demand [MWh]','CO2 [kg]'),
-              param=(model.c_microgrids,model.energy,model.emission), index=model.clusters)
+              select=('Cluster','Total Cost [kEUR]','Energy Demand [MWh]','CO2 [kg]','Unavailability [MWh/y]'),
+              param=(model.c_microgrids,model.energy,model.emission,model.rel_mg), index=model.clusters)
 
     #####################Define variables#####################
 
