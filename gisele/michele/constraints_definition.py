@@ -105,6 +105,15 @@ def min_ren_frac(model):
     return sum(sum(model.dg_power[h,g] for g in model.dg) for h in model.hours) <= \
            (1 - model.ren_fraction) * sum(model.Load[h] for h in model.hours)
 
+# this constraint computes hours of unavailability due to failures
+def tot_unavailabilty(model):
+    return model.unav == 0.001 * (
+        + sum(model.pv_units[p] * model.pv_unav[p] for p in model.pv)
+        + sum(model.wt_units[w] * model.wt_unav[w] for w in model.wt)
+        + sum(model.dg_units[g] * model.dg_unav[p] for g in model.dg)
+        + (sum(model.pv_units[p] for p in model.pv) + sum(model.bess_bess_power_max[b] for b in model.bess)) * model.inverter_unav
+    )
+
 # these constraints set the reserve requirement and its allocation among DG and BESS
 def total_reserve_req(model,h):
     return model.reserve[h] == model.load_forecast_error*model.Load[h]+model.pv_forecast_error\

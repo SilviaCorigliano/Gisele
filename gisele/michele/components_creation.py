@@ -40,7 +40,8 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.pv_investment_cost = Param(model.pv)  # Cost of solar panel in €/unit
     model.pv_OM_cost = Param(model.pv)  # Cost of O&M solar panel in €/unit/y
     model.pv_max_units = Param(model.pv)  # Maximum number of installed units [-]
-    model.pv_life = Param(model.pv) #Lifetime of panels [y]
+    model.pv_life = Param(model.pv)  # Lifetime of panels [y]
+    model.pv_unav = Param(model.pv)  # PV unavailability due to failure [h/year]
 
     # Parameters of the Wind Turbine
     model.wt_nominal_capacity = Param(model.wt)  # Nominal capacity of the WT in kW/unit
@@ -48,6 +49,7 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.wt_OM_cost = Param(model.wt)  # Cost of O&M WT in €/unit/y
     model.wt_max_units = Param(model.wt)  # Maximum number of installed units [-]
     model.wt_life = Param(model.wt)  # Lifetime of WT [y]
+    model.wt_unav = Param(model.wt)  # WT unavailability due to failure [h/year]
 
     # Parameters of the Storage System
     model.bess_nominal_capacity = Param(model.bess)  # Nominal capacity of the BESS in kWh/unit
@@ -80,6 +82,7 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.dg_RD = Param(model.dg) #ramp down limit [kW/h]
     model.dg_spec_emis = Param(model.dg)  # CO2 emissions per liter of fuel [g/L]
     model.dg_repl_cost = Param(model.dg, initialize=Initialize_dg_repl_cost)  # unitary replacement dg cost [€/h ON]
+    model.dg_unav = Param(model.dg)  # DG unavailability due to failure [h/year]
 
     # Scalars
     model.inflation_rate = Param()  # inflation rate [0-1]
@@ -93,6 +96,7 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.fuel_cost = Param()  # cost of diesel [€/l]
     model.inverter_cost = Param()  # investment cost of inverter [€/kW]
     model.inverter_life = Param()  # lifetime of inverter [y]
+    model.inverter_unav = Param()  # inverter unavailability due to failure [h/year]
     model.load_forecast_error = Param()  # [0-1]
     model.pv_forecast_error = Param()  # error on power produced from pv panels[0-1]
     model.wt_forecast_error = Param()  # [0-1]
@@ -139,6 +143,7 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.lost_load = Var(model.hours, within=NonNegativeReals)  # Power not supplied by the system [kW]
     model.load_total = Var(model.hours, within=NonNegativeReals)  # Cumulative energy requirement of the project [kWh]
     model.lost_load_total = Var(model.hours, within=NonNegativeReals)  # Cumulative power not supplied by the system [kWh]
+    model.unav = Var(within=NonNegativeReals)  # Energy unavailability of the system [MWh/year]
 
     # Variables associated to reserve needs
     model.reserve = Var(model.hours, within=NonNegativeReals) #total reserve needed per hour [kW]
@@ -166,6 +171,7 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.TotalLostLoad = Constraint(model.hours, rule=total_lost_load)
     model.LimitLostLoad = Constraint(model.hours, rule=limit_lost_load)
     model.MinRenFrac = Constraint(rule=min_ren_frac)
+    model.TotUnav = Constraint(rule=tot_unavailabilty)
     model.TotalReserveReq = Constraint(model.hours, rule=total_reserve_req)
     model.ReserveAllocation = Constraint(model.hours, rule=reserve_allocation)
     # constraints related to diesel generators
