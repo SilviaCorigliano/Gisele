@@ -4,13 +4,20 @@ from pyomo.environ import Param, RangeSet, Set, Var, Objective, Constraint, mini
 from gisele.michele.constraints_definition import *
 from gisele.michele.components_initialization import *
 
-def Model_Creation(model, input_load, wt_prod, pv_prod):
+def Model_Creation(model, input_load, wt_prod, pv_prod,input_michele):
     '''
     This function creates the instance for the resolution of the optimization in Pyomo.
 
     :param model: Pyomo model as defined in the Micro-Grids library.
 
     '''
+    #Data related to set definition
+
+    pv_types = list(range(1,input_michele['pv_types']+1))
+    wt_types = list(range(1,input_michele['wt_types']+1))
+    bess_types = list(range(1,input_michele['bess_types']+1))
+    dg_types = list(range(1,input_michele['dg_types']+1))
+
 
     # Parameters related to set definition
     model.num_days = Param()  # number of representative days of 1 year
@@ -27,10 +34,11 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.hours = RangeSet(1, model.project_duration)
     model.hours_last = Set(initialize=initialize_hours_last) #set of last hour of each year
     model.years = RangeSet(1, model.num_years)
-    model.pv = RangeSet(1, model.pv_types)
-    model.wt = RangeSet(1, model.wt_types)
-    model.bess = RangeSet(1, model.bess_types)
-    model.dg = RangeSet(1, model.dg_types)
+    #model.pv = RangeSet(1, model.pv_types)
+    model.pv =Set(initialize=[str(n) for n in pv_types])
+    model.wt = Set(initialize=[str(n) for n in wt_types])
+    model.bess = Set(initialize=[str(n) for n in bess_types])
+    model.dg = Set(initialize=[str(n) for n in dg_types])
 
 
     #PARAMETERS

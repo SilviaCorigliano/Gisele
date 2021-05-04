@@ -105,21 +105,64 @@ def Load_results(instance):
     plt.legend(loc='upper left')
     # plt.show()
 
-    Number_PV = int(instance.pv_units.get_values()[1])
-    Number_WT = int(instance.wt_units.get_values()[1])
-    Number_BESS=int(instance.bess_units.get_values()[1])
-    Number_Generator = int(instance.dg_units.get_values()[1])
+    PV_types=instance.pv_types.extract_values()[None]
+    WT_types = instance.wt_types.extract_values()[None]
+    BESS_types = instance.bess_types.extract_values()[None]
+    Generator_types = instance.dg_types.extract_values()[None]
 
-    dg_nominal_capacity=float(instance.dg_nominal_capacity.extract_values()[1])
-    bess_nominal_capacity = float(instance.bess_nominal_capacity.extract_values()[1])
-    wt_nominal_capacity = float(instance.wt_nominal_capacity.extract_values()[1])
-    pv_nominal_capacity = float(instance.pv_nominal_capacity.extract_values()[1])
-    inv_bess_nominal_capacity = float(instance.bess_power_max.get_values()[1])
+    inst_pv = 0
+    inst_wind = 0
+    inst_bess = 0
+    inst_dg = 0
+    inst_inv_bess = 0
 
-    unit_type=['DG', 'PV', 'WT', 'BESS']
-    installed_units=[Number_Generator*dg_nominal_capacity, Number_PV*pv_nominal_capacity,
-                     Number_WT*wt_nominal_capacity, Number_BESS*bess_nominal_capacity]
-    plt.bar(unit_type,installed_units)
+
+    for i in range(1,PV_types+1):
+        Number_PV = int(instance.pv_units.get_values()[str(i)])
+        pv_nominal_capacity = float(
+            instance.pv_nominal_capacity.extract_values()[str(i)])
+        inst_pv=inst_pv+Number_PV*pv_nominal_capacity
+
+
+    for i in range(1,WT_types+1):
+        Number_WT = int(instance.wt_units.get_values()[str(i)])
+        wt_nominal_capacity = float(
+            instance.wt_nominal_capacity.extract_values()[str(i)])
+        inst_wind=inst_wind+Number_WT*wt_nominal_capacity
+
+    for i in range(1,BESS_types+1):
+        Number_BESS = int(instance.bess_units.get_values()[str(i)])
+        bess_nominal_capacity = float(
+            instance.bess_nominal_capacity.extract_values()[str(i)])
+        inst_bess=inst_bess+Number_BESS*bess_nominal_capacity
+
+
+    for i in range(1,Generator_types+1):
+        Number_Generator = int(instance.dg_units.get_values()[str(i)])
+        dg_nominal_capacity = float(
+            instance.dg_nominal_capacity.extract_values()[str(i)])
+        inst_dg=inst_dg+Number_Generator*dg_nominal_capacity
+
+    for i in range(1,BESS_types+1):
+        Number_BESS = int(instance.bess_units.get_values()[str(i)])
+        inv_bess_nominal_capacity = float(instance.bess_power_max.get_values()[str(i)])
+        inst_inv_bess=inst_inv_bess + inv_bess_nominal_capacity
+
+    # Number_PV = int(instance.pv_units.get_values()[1])
+    # Number_WT = int(instance.wt_units.get_values()[1])
+    # Number_BESS=int(instance.bess_units.get_values()[1])
+    # Number_Generator = int(instance.dg_units.get_values()[1])
+    #
+    # dg_nominal_capacity=float(instance.dg_nominal_capacity.extract_values()[1])
+    # bess_nominal_capacity = float(instance.bess_nominal_capacity.extract_values()[1])
+    # wt_nominal_capacity = float(instance.wt_nominal_capacity.extract_values()[1])
+    # pv_nominal_capacity = float(instance.pv_nominal_capacity.extract_values()[1])
+    # inv_bess_nominal_capacity = float(instance.bess_power_max.get_values()[1])
+
+    # unit_type=['DG', 'PV', 'WT', 'BESS']
+    # installed_units=[Number_Generator*dg_nominal_capacity, Number_PV*pv_nominal_capacity,
+    #                  Number_WT*wt_nominal_capacity, Number_BESS*bess_nominal_capacity]
+    # plt.bar(unit_type,installed_units)
     # plt.show()
 
     npc = instance.ObjectiveFunction.expr()
@@ -128,11 +171,11 @@ def Load_results(instance):
     om_cost = float(instance.OM_cost.get_values()[None])
     salvage_value = float(instance.salvage_value.get_values()[None])
 
-    inst_pv = Number_PV*pv_nominal_capacity
-    inst_wind = Number_WT*wt_nominal_capacity
-    inst_dg = Number_Generator*dg_nominal_capacity
-    inst_bess = Number_BESS*bess_nominal_capacity
-    inst_inv = inv_bess_nominal_capacity+inst_pv
+    # inst_pv = Number_PV*pv_nominal_capacity
+    # inst_wind = Number_WT*wt_nominal_capacity
+    # inst_dg = Number_Generator*dg_nominal_capacity
+    # inst_bess = Number_BESS*bess_nominal_capacity
+    inst_inv = inst_inv_bess+inst_pv
 
     print('PV installed=' + str(inst_pv))
     print('wind installed=' + str(inst_wind))

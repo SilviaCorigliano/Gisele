@@ -11,6 +11,7 @@ import requests
 import pandas as pd
 import geopandas as gpd
 import numpy as np
+import json
 import shapely.ops
 import iso8601
 from scipy.spatial import distance_matrix
@@ -346,6 +347,12 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
                                'LCOE [EUR/kWh]','CO2 [kg]', 'Unavailability [MWh/y]'],
                       dtype=float)
 
+    #save useful values from michele input data
+    with open('gisele/michele/Inputs/data.json') as f:
+        input_michele = json.load(f)
+    proj_lifetime = input_michele['num_years']
+    num_typ_days = input_michele['num_days']
+
     for cluster_n in clusters_list.Cluster:
 
         l()
@@ -360,28 +367,50 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         tilt_angle = abs(all_angles.loc[abs(all_angles['lat'] - lat).idxmin(),
                                         'opt_tilt'])
         pv_prod = import_pv_data(lat, lon, tilt_angle)
+        wt_prod = import_wind_data(lat, lon, wt)
         utc = pv_prod.local_time[0]
         if type(utc) is pd.Timestamp:
             time_shift = utc.hour
         else:
             utc = iso8601.parse_date(utc)
             time_shift = int(utc.tzinfo.tzname(utc).split(':')[0])
-        pv_avg = pv_prod.groupby([pv_prod.index.month,
-                                  pv_prod.index.hour]).mean()
-        pv_avg = pv_avg.append([pv_avg] * (years - 1), ignore_index=True)
+        div_round = 8760 // (num_typ_days * 24)
+        length = num_typ_days * 24
+        new_length= length *div_round
+        # pv_avg = pv_prod.groupby([pv_prod.index.month,
+        #                           pv_prod.index.hour]).mean()
+
+        pv_avg_new=np.zeros(24*num_typ_days)
+        pv_avg = pv_prod.values[0:new_length,1].reshape(24,div_round*num_typ_days,order='F')
+        wt_avg_new = np.zeros(24 * num_typ_days)
+        wt_avg = wt_prod.values[0:new_length].reshape(24,
+                                                         div_round * num_typ_days,
+                                                         order='F')
+        for i in range(num_typ_days):
+            pv_avg_new[i*24:(i+1)*24] = pv_avg[:,div_round*i:div_round*(i+1)].mean(axis=1)
+
+            wt_avg_new[i * 24:(i + 1) * 24] = wt_avg[:, div_round * i:div_round * (
+                    i + 1)].mean(axis=1)
+
+
+
+        pv_avg = pd.DataFrame(pv_avg_new)
+        pv_avg = pv_avg.append([pv_avg] * (proj_lifetime - 1), ignore_index=True)
         pv_avg.reset_index(drop=True, inplace=True)
         pv_avg = shift_timezone(pv_avg, time_shift)
 
-        wt_prod = import_wind_data(lat, lon, wt)
-        wt_avg = wt_prod.groupby([wt_prod.index.month,
-                                  wt_prod.index.hour]).mean()
-        wt_avg = wt_avg.append([wt_avg] * (years - 1), ignore_index=True)
+
+        # wt_prod = import_wind_data(lat, lon, wt)
+        # wt_avg = wt_prod.groupby([wt_prod.index.month,
+        #                           wt_prod.index.hour]).mean()
+        wt_avg = pd.DataFrame(wt_avg_new)
+        wt_avg = wt_avg.append([wt_avg] * (proj_lifetime - 1), ignore_index=True)
         wt_avg.reset_index(drop=True, inplace=True)
         wt_avg = shift_timezone(wt_avg, time_shift)
 
         inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, \
         rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions, tot_unav = \
-            start(load_profile_cluster, pv_avg, wt_avg)
+            start(load_profile_cluster, pv_avg, wt_avg,input_michele)
 
         mg.loc[cluster_n, 'PV [kW]'] = inst_pv
         mg.loc[cluster_n, 'Wind [kW]'] = inst_wind

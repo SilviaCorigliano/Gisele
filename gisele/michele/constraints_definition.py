@@ -111,7 +111,7 @@ def tot_unavailabilty(model):
         + sum(model.pv_units[p] * model.pv_unav[p] for p in model.pv)
         + sum(model.wt_units[w] * model.wt_unav[w] for w in model.wt)
         + sum(model.dg_units[g] * model.dg_unav[g] for g in model.dg)
-        + (sum(model.pv_units[p] for p in model.pv) + sum(model.bess_bess_power_max[b] for b in model.bess)) * model.inverter_unav
+        + (sum(model.pv_units[p] for p in model.pv) + sum(model.bess_power_max[b] for b in model.bess)) * model.inverter_unav
     )
 
 # these constraints set the reserve requirement and its allocation among DG and BESS
