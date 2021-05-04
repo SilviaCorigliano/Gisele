@@ -339,7 +339,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
     """
     geo_df_clustered = geo_df_clustered.to_crs(4326)
     mg = pd.DataFrame(index=clusters_list.index,
-                      columns=['PV [kW]', 'Wind [kW]', 'Diesel [kW]',
+                      columns=['Cluster','PV [kW]', 'Wind [kW]', 'Diesel [kW]',
                                'BESS [kWh]', 'Inverter [kW]',
                                'Investment Cost [kEUR]', 'OM Cost [kEUR]',
                                'Replace Cost [kEUR]', 'Total Cost [kEUR]',
@@ -412,6 +412,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions, tot_unav = \
             start(load_profile_cluster, pv_avg, wt_avg,input_michele)
 
+        mg.loc[cluster_n, 'Cluster'] = 'C'+str(cluster_n)
         mg.loc[cluster_n, 'PV [kW]'] = inst_pv
         mg.loc[cluster_n, 'Wind [kW]'] = inst_wind
         mg.loc[cluster_n, 'Diesel [kW]'] = inst_dg
@@ -428,7 +429,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'Unavailability [MWh/y]'] = tot_unav
         print(mg)
     mg = mg.round(decimals=4)
-    mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
+    mg.to_csv('Output/Microgrids/microgrids.csv', index=False)
 
     return mg
 
