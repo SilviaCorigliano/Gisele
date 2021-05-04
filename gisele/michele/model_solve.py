@@ -1,7 +1,7 @@
 from pyomo.environ import Objective, minimize, Constraint
 from pyomo.opt import SolverFactory
 from pyomo.dataportal.DataPortal import DataPortal
-
+import pandas as pd
 
 
 
@@ -20,19 +20,29 @@ def Model_Resolution(model):
     opt.options['mipgap'] = 0.05
 
     print('Begin Optimization')
-    '''
-    n=3
-    print('Solving for '+str(n)+' different values of renewable fraction')
 
-    initialize renfr
+    n_ren=3
+    print('Solving for '+str(n_ren)+' different values of minimum renewable fraction, ranging from 0% to 100%')
 
-    for i in range(n):  
-        instance.ren_fraction=i*1/(n-1)   
-        if renfr>instance.ren_fraction:
-            skip
-        else solve
-    '''
-    results = opt.solve(instance, tee=True)  # Solving a model instance
-    instance.solutions.load_from(results)  # Loading solution into instance
-    return instance
+    renfr=-1  # initialize at a value lower than 0
+
+    for i in range(n_ren):
+        min_renfr=i*1/(n_ren-1)
+        instance.ren_fraction=min_renfr
+        print('Solving for minimum renewable fraction of '+str(min_renfr*100)+'%')
+        if renfr>=min_renfr:
+            print('Skipping solve as minimum renewable fraction already fulfilled')
+        else:
+            results = opt.solve(instance, tee=True)  # Solving a model instance
+            instance.solutions.load_from(results)  # Loading solution into instance
+            # Compute renewable fraction
+            project_duration = int(instance.project_duration.extract_values()[None])
+            h_weight = int(instance.h_weight.extract_values()[None])
+            dg_power = pd.DataFrame.from_dict(instance.dg_power.get_values(), orient='index')
+            dg_tot = 0.001 * h_weight * sum(dg_power.iloc[h, 0] for h in range(project_duration))
+            load = pd.DataFrame.from_dict(instance.Load.get_values(), orient='index')
+            load_tot = 0.001 * h_weight * sum(load.iloc[h, 0] for h in range(project_duration))
+            renfr=1-dg_tot/load_tot
+            print('Renewable fraction='+str(renfr*100)+'%')
+            return instance
 

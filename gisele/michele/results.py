@@ -30,8 +30,7 @@ def Load_results(instance):
     lost_load = pd.DataFrame.from_dict(instance.lost_load.get_values(), orient='index')
     load = pd.DataFrame.from_dict(instance.Load.get_values(), orient='index')
     emissions = pd.DataFrame.from_dict(instance.dg_fuel_emission.get_values(), orient='index')  # [gCO2]
-    tot_unav = float(instance.unav.get_values()[None])
-
+    tot_unav = float(instance.unav.get_values()[None])  # [MWh/year]
 
 
     load_tot_y=[] # list of yearly load [MWh]
