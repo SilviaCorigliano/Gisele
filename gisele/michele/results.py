@@ -12,9 +12,6 @@ def Load_results(instance):
     '''
 
 
-
-    # Load the variables that depend of the periods in python dictionaries a
-
     project_duration = int(instance.project_duration.extract_values()[None])
     num_days = int(instance.num_days.extract_values()[None])
     num_years = int(instance.num_years.extract_values()[None])
@@ -33,6 +30,9 @@ def Load_results(instance):
     lost_load = pd.DataFrame.from_dict(instance.lost_load.get_values(), orient='index')
     load = pd.DataFrame.from_dict(instance.Load.get_values(), orient='index')
     emissions = pd.DataFrame.from_dict(instance.dg_fuel_emission.get_values(), orient='index')  # [gCO2]
+    tot_unav = float(instance.unav.get_values()[None])
+
+
 
     load_tot_y=[] # list of yearly load [MWh]
     for y in range(num_years):
@@ -146,12 +146,14 @@ def Load_results(instance):
     print('OM cost='+str(om_cost))
     print('salvage value='+str(salvage_value))
 
-    print('emissions=' + str(emissions))
+    print('emissions= ' + str(emissions))
     dg_fuel_tot = h_weight * dg_fuel.sum(axis=0)
     print('total fuel consumption='+str(dg_fuel_tot))
 
+    print('unavailability= ' + str(tot_unav))
+
     return inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, \
-        rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions
+        rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions, tot_unav
 
     '''
     Number_Years = int(instance.project_duration.extract_values()[None]/8760)

@@ -343,7 +343,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
                                'Investment Cost [kEUR]', 'OM Cost [kEUR]',
                                'Replace Cost [kEUR]', 'Total Cost [kEUR]',
                                'Energy Demand [MWh]', 'Energy Produced [MWh]',
-                               'LCOE [EUR/kWh]','CO2 [kg]'],
+                               'LCOE [EUR/kWh]','CO2 [kg]', 'Unavailability [MWh/y]'],
                       dtype=float)
 
     for cluster_n in clusters_list.Cluster:
@@ -380,7 +380,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         wt_avg = shift_timezone(wt_avg, time_shift)
 
         inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, \
-        rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions = \
+        rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions, tot_unav = \
             start(load_profile_cluster, pv_avg, wt_avg)
 
         mg.loc[cluster_n, 'PV [kW]'] = inst_pv
@@ -396,6 +396,7 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         mg.loc[cluster_n, 'Energy Demand [MWh]'] = load_energy
         mg.loc[cluster_n, 'LCOE [EUR/kWh]'] = npc / gen_energy
         mg.loc[cluster_n, 'CO2 [kg]'] = emissions
+        mg.loc[cluster_n, 'Unavailability [MWh/y]'] = tot_unav
         print(mg)
     mg = mg.round(decimals=4)
     mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
