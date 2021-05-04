@@ -181,29 +181,9 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
 
     milp_subs.loc[:, 'ID'].to_csv(r'Output/LCOE/subs.csv', index=False)
 
-    milp_clusters.loc[:, ['Cluster']].to_csv(r'Output/LCOE/clusters.csv',
-                                             index=False)
-
     milp_clusters.loc[:, ['Cluster', 'Load [kW]']].to_csv(
         r'Output/LCOE/c_power.csv', index=False)
 
-    milp_clusters.loc[:, ['Cluster', 'mg_npc']].to_csv(
-        r'Output/LCOE/c_npc.csv', index=False)
-
-    # total_energy['Cluster'] = ['C' + str(i[0]) for i in
-    #                            total_energy['Cluster'].iteritems()]
-    # total_energy.to_csv(r'Output/LCOE/energy.csv', index=False)
-
-    mg_energy=mg[['Cluster','Energy Demand [MWh]']]
-    mg_energy['Cluster'] = ['C' + str(i[0]) for i in
-                               mg_energy['Cluster'].iteritems()]
-    mg_energy.to_csv(r'Output/LCOE/energy.csv', index=False)
-
-    #save emissions for multi_obj optimization
-    mg_emissions=mg[['Cluster','CO2 [kg]']]
-    mg_emissions['Cluster'] = ['C' + str(i[0]) for i in
-                               mg_emissions['Cluster'].iteritems()]
-    mg_emissions.to_csv(r'Output/LCOE/emissions.csv', index=False)
 
     #compute energy not provided by microgrid (multiply unavailability of component
     #times repair time times power of component)
