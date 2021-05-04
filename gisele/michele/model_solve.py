@@ -18,7 +18,20 @@ def Model_Resolution(model):
     # opt = SolverFactory('cplex',executable=r'C:\Program Files\IBM\ILOG\CPLEX_Studio1210\cplex\bin\x64_win64\cplex')
     opt = SolverFactory('gurobi')  # Solver use during the optimization
     opt.options['mipgap'] = 0.05
+
     print('Begin Optimization')
+    '''
+    n=3
+    print('Solving for '+str(n)+' different values of renewable fraction')
+
+    initialize renfr
+
+    for i in range(n):  
+        instance.ren_fraction=i*1/(n-1)   
+        if renfr>instance.ren_fraction:
+            skip
+        else solve
+    '''
     results = opt.solve(instance, tee=True)  # Solving a model instance
     instance.solutions.load_from(results)  # Loading solution into instance
     return instance

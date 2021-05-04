@@ -89,7 +89,7 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.discount_rate = Param(model.hours, initialize=Initialize_Discount_Rate) #discount rate [0-1]
     model.lost_load_max = Param()  # maximum admitted loss of load [0-1]
     model.lost_load_value = Param()
-    model.ren_fraction = Param()  # share of load supplied by renewable energy [0-1]
+    model.ren_fraction = Param(initialize=0, mutable=True)  # share of load supplied by renewable energy [0-1]
     model.fuel_cost = Param()  # cost of diesel [€/l]
     model.inverter_cost = Param()  # investment cost of inverter [€/kW]
     model.inverter_life = Param()  # lifetime of inverter [y]

@@ -24,7 +24,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     data.load(filename=r'Output/LCOE/set.csv', set=model.N)
 
     model.clusters = Set()  # Set of clusters
-    data.load(filename='Output/LCOE/clusters.csv', set=model.clusters)
+    #data.load(filename='Output/LCOE/clusters.csv', set=model.clusters)
 
     model.substations = Set()  # Set of substations
     data.load(filename='Output/LCOE/subs.csv', set=model.substations)
@@ -98,8 +98,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
 
     # Total net present cost of microgrid to supply each cluster
     model.c_microgrids = Param(model.clusters)
-    data.load(filename='Output/LCOE/c_npc.csv',
-              param=model.c_microgrids)
+    #data.load(filename='Output/LCOE/c_npc.csv', param=model.c_microgrids)
 
     # Total net present cost of substations
     model.c_substations = Param(model.substations)
@@ -112,11 +111,11 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
 
     # Energy consumed by each cluster in microgrid lifetime
     model.energy = Param(model.clusters)
-    data.load(filename='Output/LCOE/energy.csv', param=model.energy)
+    #data.load(filename='Output/LCOE/energy.csv', param=model.energy)
 
     # CO2 emission produced by each cluster in microgrid lifetime
     model.emission = Param(model.clusters)
-    data.load(filename='Output/LCOE/emissions.csv', param=model.emission)
+    #data.load(filename='Output/LCOE/emissions.csv', param=model.emission)
 
     # CO2 emission related to construction of power infrastructure
     model.em_links = Param(model.links)
@@ -141,6 +140,10 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     # M_max and M_min, values required to linearize the problem
     model.M_max = Param(initialize=10000)
     model.M_min = Param(initialize=-10000)
+
+    data.load(filename='Output/Microgrids/microgrids.csv',
+              select=('Cluster','Total Cost','Energy Demand [MWh]','CO2 [kg]'),
+              param=(model.c_microgrids,model.energy,model.emission), index=model.clusters)
 
     #####################Define variables#####################
 
