@@ -3,6 +3,7 @@ import itertools
 import pandas as pd
 import geopandas as gpd
 import numpy as np
+import json
 from functions import line_to_points, distance_2d, l, nearest
 from gisele import dijkstra, lcoe_optimization
 from gisele.multi_obj_factor import emission_factor, reliability_grid, line_reliability
@@ -16,6 +17,8 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
                                      src_column='ID', axis=1))
     gdf_roads = gpd.read_file('Output/Datasets/Roads/gdf_roads.shp')
     roads_segments =gpd.read_file('Output/Datasets/Roads/roads_segments.shp')
+    with open('gisele/michele/Inputs/data.json') as f:
+        input_michele = json.load(f)
 
     if branch == 'yes':
         file = 'Branch_'
@@ -106,13 +109,19 @@ def clusters_interconnections(geo_df_clustered, grid_resume, substations, mg, to
         elif connection.empty:
             connection_cost = 1000
             connection_length = 1000
-        connection_om = [(connection_cost/1000) * grid_om] * 20
+
+        # compute actualized grid cost wrt to microgrids number of years
+
+        connection_om = [(connection_cost/1000) * grid_om] * input_michele['num_years']
         connection_om = np.npv(grid_ir, connection_om)
         connection_salvage = (connection_cost/1000) * \
-                             (grid_lifetime-20)/(grid_lifetime) #controllare costo
+                             (grid_lifetime-input_michele['num_years'])/(grid_lifetime)*\
+                                1/(1+grid_ir)**(input_michele['num_years'])          #controllare costo
+
         milp_links.loc[row[0], 'Cost'] = (connection_cost / 1000) \
             + connection_om - connection_salvage
         milp_links.loc[row[0], 'Length'] = (connection_length / 1000)  # in km
+
     milp_links.drop(milp_links[milp_links['Cost'] == 999999].index,
                     inplace=True)
     milp_links.reset_index(inplace=True, drop=True)

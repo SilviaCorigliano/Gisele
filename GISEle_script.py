@@ -72,7 +72,7 @@ STEPS
 { 1: 'GIS Data Processing', 2: 'Clustering',3: 'Grid Routing', 
 4: 'Microgrid Sizing',5: 'Clusters interconnections' 6: 'LCOE Analysis'},
 """
-step = 6
+step = 3
 
 if step <2:
     '-------------------------------------------------------------------------'
