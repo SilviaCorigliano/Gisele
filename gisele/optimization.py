@@ -1,3 +1,4 @@
+
 import os
 import itertools
 import pandas as pd
@@ -349,6 +350,7 @@ def milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line
         os.remove('all_connections_opt.shp')
     os.chdir('../..')
     return grid_resume
+
 
 
 

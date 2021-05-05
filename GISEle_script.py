@@ -11,6 +11,7 @@ from shapely.geometry import Point
 from functions import load, sizing
 from gisele import initialization, clustering, processing, collecting, \
     optimization, results, grid, branches
+from gisele import QGIS_processing_polygon as qgis_imp
 import pyutilib.subprocess.GlobalData
 
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
@@ -83,6 +84,7 @@ if step <2:
 
     data_import = config.iloc[0, 1]
     input_csv = config.iloc[1, 1]
+
     crs = int(config.iloc[3, 1])
     resolution = float(config.iloc[4, 1])
     landcover_option = (config.iloc[27, 1])
@@ -106,6 +108,8 @@ if step <2:
                                                  unit, input_csv, step)
         geo_df.to_file(r"Output/Datasets/geo_df_json",
                        driver='GeoJSON')
+    elif data_import=='yes_from_database':
+        df_weighted = qgis_imp.input_file_creation()
     else:
         df = pd.read_csv(r'Input/' + input_csv + '.csv', sep=',')
         print("Input files successfully imported.")
@@ -149,7 +153,9 @@ if step <2:
 if step <3:
     "2.Clustering"
 #decide wether to perform sensitivity analysis ('yes' or 'no')
+
     sensitivity='no'
+
     if sensitivity=='yes':
         resolution = float(config.iloc[4, 1])
         eps = list(config.iloc[20, 1])

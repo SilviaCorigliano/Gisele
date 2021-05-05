@@ -67,6 +67,8 @@ def weighting(df, resolution, landcover_option):
             df_weighted.loc[
                 df_weighted['Land_cover'] == row['GLC2000'], 'Weight'] += \
             landcover_csv.loc[i, 'WeightGLC']
+        elif landcover_option == 'ESACCI':
+            df_weighted.loc[df_weighted['Land_cover'] == row['ESACCI'],'Weight'] +=landcover_csv.loc[i,'WeightESACCI']
         else:
             df_weighted.loc[
                 df_weighted['Land_cover'] == row['Other'], 'Weight'] += \

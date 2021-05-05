@@ -20,6 +20,7 @@ from shapely.geometry import Point, box, LineString, MultiPoint
 from shapely.ops import split
 from gisele.michele.michele import start
 from gisele.data_import import import_pv_data, import_wind_data
+from datetime import datetime
 
 
 def l():
@@ -95,7 +96,67 @@ def distance_3d(df1, df2, x, y, z):
     return value
 
 
-def cost_matrix(gdf, dist_3d_matrix, line_bc):
+def river_intersection(gdf,resolution):
+    '''
+    Check which lines in the adjacency matrix cross the rivers and assign
+     a very high weight to those lines
+    :param gdf:
+    :return:
+    '''
+    print('begin river intersection')
+    n = gdf['X'].size
+    weight_columns_x1 = np.repeat(gdf['X'].values[:,np.newaxis], n,1)
+    weight_columns_y1 = np.repeat(gdf['Y'].values[:,np.newaxis], n,1)
+    weight_columns_x2 = np.repeat(gdf['X'].values[np.newaxis,:], n,0)
+    weight_columns_y2 = np.repeat(gdf['Y'].values[np.newaxis,:], n,0)
+
+    weight_columns_x1_res = np.reshape(weight_columns_x1, (n*n, 1), order='F')
+    weight_columns_x2_res = np.reshape(weight_columns_x2, (n*n, 1), order='F')
+    weight_columns_y1_res = np.reshape(weight_columns_y1, (n*n, 1), order='F')
+    weight_columns_y2_res = np.reshape(weight_columns_y2, (n*n, 1), order='F')
+
+    df=pd.DataFrame()
+    df['x1'] = weight_columns_x1_res[:,0]
+    df['x2'] = weight_columns_x2_res[:,0]
+    df['y1'] = weight_columns_y1_res[:,0]
+    df['y2'] = weight_columns_y2_res[:,0]
+    # todo-> very slow passage, need to speed it up, no sense to compute it each time,
+    # it would be better to associate weights in advance,
+    df['2d_dist'] = ((df['x1']-df['x2'])**2+(df['y1']-df['y2'])**2)**0.5
+    # select only short lines and create linestrings
+    df_short_lines = df.loc[(df['2d_dist']<resolution * 1.5) &(df['2d_dist']>0)]
+    df_short_lines['geometry'] = df.apply(
+        lambda x: LineString([(x['x1'], x['y1']), (x['x2'], x['y2'])]), axis=1)
+
+    geodf = gpd.GeoDataFrame(df_short_lines, geometry='geometry')
+    geodf.crs = 'epsg:32737'
+    # intersect short lines
+    test_inters = gpd.read_file('test_inters.shp')
+    a = np.empty(shape=(geodf['geometry'].size, test_inters['geometry'].size))
+    for i, row in test_inters.iterrows():
+        a[:, i] = geodf['geometry'].intersects(row['geometry'])
+    a_tot = np.amax(a, 1)
+
+    geodf['intersection'] = a_tot
+    df['a_tot'] = 0
+    df.loc[geodf.index,'a_tot'] = geodf['intersection']
+    matrix = df['a_tot'].values.reshape((n, n), order='F') * 100
+
+    # df['geometry']=df.apply(lambda x: LineString([(x['x1'], x['y1']),(x['x2'], x['y2']) ]),axis=1)
+    # geodf= gpd.GeoDataFrame(df,geometry='geometry')
+    # geodf.crs = 'epsg:32737'
+    #
+    # test_inters=gpd.read_file('test_inters.shp')
+    # a=np.empty(shape =(geodf['geometry'].size,test_inters['geometry'].size))
+    # for i, row in test_inters.iterrows():
+    #       a[:,i] = geodf['geometry'].intersects(row['geometry'])
+    # a_tot = np.amax(a, 1)
+    # geodf['intersection']=a_tot
+    # matrix=a_tot.reshape((n, n), order='F')*100
+    return matrix
+
+
+def cost_matrix(gdf, dist_3d_matrix, line_bc,resolution):
     """
     Creates the cost matrix in €/km by finding the average weight between
     two points and then multiplying by the distance and the line base cost.
@@ -107,8 +168,10 @@ def cost_matrix(gdf, dist_3d_matrix, line_bc):
     # Altitude distance in meters
     weight = gdf['Weight'].values
     n = gdf['X'].size
+    #river_inters =river_intersection(gdf,resolution)
     weight_columns = np.repeat(weight[:, np.newaxis], n, 1)
     weight_rows = np.repeat(weight[np.newaxis, :], n, 0)
+    #total_weight = (weight_columns + weight_rows) / 2 + river_inters
     total_weight = (weight_columns + weight_rows) / 2
 
     # 3D distance
