@@ -25,7 +25,7 @@ mg_columns = pd.DataFrame(columns=['Cluster', 'PV [kW]', 'Wind [kW]',
                                    'Inverter [kW]', 'Investment Cost [k€]',
                                    'OM Cost [k€]', 'Replace Cost [k€]',
                                    'Total Cost [k€]', 'Energy Produced [MWh]',
-                                   'Energy Consumed [MWh]', 'LCOE [€/kWh]'])
+                                   'Energy consumed [MWh]', 'LCOE [€/kWh]'])
 
 lcoe_columns = pd.DataFrame(columns=['Cluster', 'Grid NPC [k€]', 'MG NPC [k€]',
                                      'Grid Energy Consumption [MWh]',
@@ -49,7 +49,7 @@ config.loc[21, 'Value'] = sorted(list(map(int,
 config.loc[20, 'Value'] = sorted(list(map(int,
                                           config.loc[20, 'Value'].split('-'))))
 
-# empty map to show as initual output
+# empty map to show as initial output
 fig = go.Figure(go.Scattermapbox(
     lat=[''],
     lon=[''],
@@ -71,9 +71,9 @@ study_area = gpd.GeoDataFrame(index=[0], crs=4326,
 """
 STEPS
 { 1: 'GIS Data Processing', 2: 'Clustering',3: 'Grid Routing', 
-4: 'Microgrid Sizing', 5: 'LCOE Analysis'},
+4: 'Microgrid Sizing',5: 'Clusters interconnections' 6: 'LCOE Analysis'},
 """
-step = 1
+step = 4
 
 if step <2:
     '-------------------------------------------------------------------------'
@@ -82,9 +82,9 @@ if step <2:
 # decide whether to import population data from csv ('yes or 'no')
     import_pop_value = 'no'
 
-    #data_import = config.iloc[0, 1]
-    data_import='yes_from_database'
-    input_csv = 'imported_csv'
+    data_import = config.iloc[0, 1]
+    input_csv = config.iloc[1, 1]
+
     crs = int(config.iloc[3, 1])
     resolution = float(config.iloc[4, 1])
     landcover_option = (config.iloc[27, 1])
@@ -153,7 +153,9 @@ if step <2:
 if step <3:
     "2.Clustering"
 #decide wether to perform sensitivity analysis ('yes' or 'no')
-    sensitivity='yes'
+
+    sensitivity='no'
+
     if sensitivity=='yes':
         resolution = float(config.iloc[4, 1])
         eps = list(config.iloc[20, 1])
@@ -194,8 +196,8 @@ if step <3:
 if step <4:
     "3. Grid creation"
 
-    input_csv = 'imported_csv'
-    input_sub = 'imported_subs'
+    input_csv = config.iloc[1, 1]
+    input_sub = config.iloc[2, 1]
     resolution = float(config.iloc[4, 1])
     pop_load = float(config.iloc[6, 1])
     pop_thresh = float(config.iloc[7, 1])
@@ -260,11 +262,11 @@ if step <5:
 
     '-------------------------------------------------------------------------'
 if step <6:
-    "5.LCOE Analysis"
+    "5.MILP input preparations"
 
     branch = config.iloc[11, 1]
     full_ele = config.iloc[14, 1]
-    input_sub = 'imported_subs'
+    input_sub = config.iloc[2, 1]
     pop_thresh = float(config.iloc[7, 1])
     coe = float(config.iloc[16, 1])
     grid_om = float(config.iloc[18, 1])
@@ -296,14 +298,58 @@ if step <6:
     else:
         grid_resume = pd.read_csv(r'Output/Grids/grid_resume.csv')
         grid_resume.index = grid_resume.Cluster.values
-        # all_connections_opt = \
-        # gpd.read_file(r'Output/Grids/all_connections_opt.shp')
+
 
     grid_resume_opt = \
-        optimization.milp_lcoe(geo_df_clustered, grid_resume,
+        optimization.clusters_interconnections(geo_df_clustered, grid_resume,
                                substations, mg, total_energy, grid_om, coe,
                                grid_ir, grid_lifetime, branch, line_bc,
                                resolution)
+
+    '-------------------------------------------------------------------------'
+if step < 7:
+    "6.LCOE Analysis"
+#define p max along MV lines
+    p_max_lines =10000
+    branch = config.iloc[11, 1]
+    full_ele = config.iloc[14, 1]
+    input_sub = config.iloc[2, 1]
+    pop_thresh = float(config.iloc[7, 1])
+    coe = float(config.iloc[16, 1])
+    grid_om = float(config.iloc[18, 1])
+    grid_ir = float(config.iloc[17, 1])
+    grid_lifetime = int(config.iloc[19, 1])
+    resolution = float(config.iloc[4, 1])
+    line_bc = float(config.iloc[8, 1])
+
+    geo_df = gpd.read_file(r"Output/Datasets/geo_df_json")
+    geo_df_clustered = \
+        gpd.read_file(r"Output/Clusters/geo_df_clustered.json")
+    clusters_list = pd.read_csv(r"Output/Clusters/clusters_list.csv")
+    clusters_list.index = clusters_list.Cluster.values
+    substations = pd.read_csv(r'Input/' + input_sub + '.csv')
+    geometry = [Point(xy) for xy in
+                zip(substations['X'], substations['Y'])]
+    substations = gpd.GeoDataFrame(substations, geometry=geometry,
+                                   crs=geo_df.crs)
+
+    mg = pd.read_csv('Output/Microgrids/microgrids.csv')
+    mg.index = mg.Cluster.values
+    total_energy = pd.read_csv('Output/Microgrids/Grid_energy.csv')
+    total_energy.index = total_energy.Cluster.values
+
+    if branch == 'yes':
+        grid_resume = pd.read_csv(r'Output/Branches/grid_resume.csv')
+        grid_resume.index = grid_resume.Cluster.values
+
+    else:
+        grid_resume = pd.read_csv(r'Output/Grids/grid_resume.csv')
+        grid_resume.index = grid_resume.Cluster.values
+
+
+    grid_resume_opt = \
+        optimization.milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line_bc,
+              resolution,p_max_lines)
 
     fig_grid = results.graph(geo_df_clustered, clusters_list, branch,
                              grid_resume_opt, substations, pop_thresh,

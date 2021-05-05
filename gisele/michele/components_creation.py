@@ -4,17 +4,24 @@ from pyomo.environ import Param, RangeSet, Set, Var, Objective, Constraint, mini
 from gisele.michele.constraints_definition import *
 from gisele.michele.components_initialization import *
 
-def Model_Creation(model, input_load, wt_prod, pv_prod):
+def Model_Creation(model, input_load, wt_prod, pv_prod,input_michele):
     '''
     This function creates the instance for the resolution of the optimization in Pyomo.
 
     :param model: Pyomo model as defined in the Micro-Grids library.
 
     '''
+    #Data related to set definition
+
+    pv_types = list(range(1,input_michele['pv_types']+1))
+    wt_types = list(range(1,input_michele['wt_types']+1))
+    bess_types = list(range(1,input_michele['bess_types']+1))
+    dg_types = list(range(1,input_michele['dg_types']+1))
+
 
     # Parameters related to set definition
-    model.num_days = Param() #number of representative days of 1 year
-    model.num_years = Param() #number of years of the project
+    model.num_days = Param()  # number of representative days of 1 year
+    model.num_years = Param()  # number of years of the project
     model.project_duration = Param(initialize=initialize_project_duration)
     model.h_weight = Param(initialize=initialize_h_weight) # weight of 1 hour (different from 1 if representative days are used)
     model.pv_types = Param()
@@ -27,10 +34,11 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.hours = RangeSet(1, model.project_duration)
     model.hours_last = Set(initialize=initialize_hours_last) #set of last hour of each year
     model.years = RangeSet(1, model.num_years)
-    model.pv = RangeSet(1, model.pv_types)
-    model.wt = RangeSet(1, model.wt_types)
-    model.bess = RangeSet(1, model.bess_types)
-    model.dg = RangeSet(1, model.dg_types)
+    #model.pv = RangeSet(1, model.pv_types)
+    model.pv =Set(initialize=[str(n) for n in pv_types])
+    model.wt = Set(initialize=[str(n) for n in wt_types])
+    model.bess = Set(initialize=[str(n) for n in bess_types])
+    model.dg = Set(initialize=[str(n) for n in dg_types])
 
 
     #PARAMETERS
@@ -40,7 +48,7 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.pv_investment_cost = Param(model.pv)  # Cost of solar panel in €/unit
     model.pv_OM_cost = Param(model.pv)  # Cost of O&M solar panel in €/unit/y
     model.pv_max_units = Param(model.pv)  # Maximum number of installed units [-]
-    model.pv_life = Param(model.pv) #Lifetime of panels [y]
+    model.pv_life = Param(model.pv)  # Lifetime of panels [y]
 
     # Parameters of the Wind Turbine
     model.wt_nominal_capacity = Param(model.wt)  # Nominal capacity of the WT in kW/unit
@@ -81,22 +89,23 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.dg_repl_cost = Param(model.dg, initialize=Initialize_dg_repl_cost)  # unitary replacement dg cost [€/h ON]
 
     # Scalars
-    model.inflation_rate=Param() # inflation rate [0-1]
+    model.inflation_rate = Param()  # inflation rate [0-1]
     model.nominal_interest_rate = Param()  # nominal interest rate [0-1]
-    model.derating_factor = Param() # to reduce value at end of life [0-1]
+    model.derating_factor = Param()  # to reduce value at end of life [0-1]
     model.ir = Param(initialize=Initialize_ir) # real interest rate [0-1]
     model.discount_rate = Param(model.hours, initialize=Initialize_Discount_Rate) #discount rate [0-1]
     model.lost_load_max = Param()  # maximum admitted loss of load [0-1]
     model.lost_load_value = Param()
-    model.fuel_cost = Param() #cost of diesel [€/l]
-    model.inverter_cost = Param() #investment cost of inverter [€/kW]
-    model.inverter_life = Param() #lifetime of inverter [y]
-    model.load_forecast_error = Param() #[0-1]
-    model.pv_forecast_error = Param() # error on power produced from pv panels[0-1]
+    model.ren_fraction = Param(initialize=0, mutable=True)  # share of load supplied by renewable energy [0-1]
+    model.fuel_cost = Param()  # cost of diesel [€/l]
+    model.inverter_cost = Param()  # investment cost of inverter [€/kW]
+    model.inverter_life = Param()  # lifetime of inverter [y]
+    model.load_forecast_error = Param()  # [0-1]
+    model.pv_forecast_error = Param()  # error on power produced from pv panels[0-1]
     model.wt_forecast_error = Param()  # [0-1]
-    model.demand_growth = Param() #yearly demand growth [0-1]
-    model.M = Param() #big number
-    model.epsilon = Param() #small number
+    model.demand_growth = Param()  # yearly demand growth [0-1]
+    model.M = Param()  # big number
+    model.epsilon = Param()  # small number
 
     #input profiles
     model.input_load = Param(model.hours, initialize=Initialize_load)  # hourly load profile [kWh]
@@ -121,20 +130,20 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.bess_units = Var(model.bess, within=NonNegativeReals)  # Number of units of batteries
     model.bess_dis_power = Var(model.hours, model.bess, within=NonNegativeReals)  # Battery discharging power in kW
     model.bess_ch_power = Var(model.hours, model.bess, within=NonNegativeReals)  # Battery charging power in kW
-    model.bess_total_energy = Var(model.hours, model.bess, within=NonNegativeReals) #Battery charge level at h [kWh]
-    model.bess_power_max = Var(model.bess, within=NonNegativeReals) #maximum power withdrawn or injected by the batteries [kW]
-    model.bess_bin = Var(model.hours, model.bess, within=Binary) #Binary variable, 1 if charging mode
+    model.bess_total_energy = Var(model.hours, model.bess, within=NonNegativeReals)  # Battery charge level at h [kWh]
+    model.bess_power_max = Var(model.bess, within=NonNegativeReals)  # maximum power withdrawn or injected by the batteries [kW]
+    model.bess_bin = Var(model.hours, model.bess, within=Binary)  # Binary variable, 1 if charging mode
 
     # Variables associated to the diesel generator
-    model.dg_units = Var(model.dg,within=NonNegativeIntegers) # Number of units of diesel generators
-    model.dg_power = Var(model.hours, model.dg, within=NonNegativeReals) #Power level the Diesel generator [kWh]
-    model.dg_fuel_consumption = Var(model.hours,model.dg,within=NonNegativeReals) #diesel consumption [L]
-    model.dg_units_on = Var(model.hours,model.dg, within=NonNegativeIntegers) #number of active DG in h
+    model.dg_units = Var(model.dg,within=NonNegativeIntegers)  # Number of units of diesel generators
+    model.dg_power = Var(model.hours, model.dg, within=NonNegativeReals)  # Power level the Diesel generator [kWh]
+    model.dg_fuel_consumption = Var(model.hours,model.dg,within=NonNegativeReals)  # fuel consumption [L]
+    model.dg_units_on = Var(model.hours,model.dg, within=NonNegativeIntegers)  # number of active DG in h
 
    # Variables associated to the energy balance
     model.Load = Var(model.hours, within=NonNegativeReals)
     model.lost_load = Var(model.hours, within=NonNegativeReals)  # Power not supplied by the system [kW]
-    model.load_total = Var(model.hours, within=NonNegativeReals) # Cumulative energy requirement of the project [kWh]
+    model.load_total = Var(model.hours, within=NonNegativeReals)  # Cumulative energy requirement of the project [kWh]
     model.lost_load_total = Var(model.hours, within=NonNegativeReals)  # Cumulative power not supplied by the system [kWh]
 
     # Variables associated to reserve needs
@@ -142,8 +151,8 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.reserve_dg = Var(model.hours,model.dg, within=NonNegativeReals) #reserve provided by DG [kW]
     model.reserve_bess = Var(model.hours, model.bess, within=NonNegativeReals)  # reserve provided by BESS [kW]
 
-    # OBJETIVE FUNTION:
-    model.ObjectiveFuntion = Objective(rule=total_net_present_cost, sense=minimize)
+    # OBJECTIVE FUNCTION:
+    model.ObjectiveFunction = Objective(rule=total_net_present_cost, sense=minimize)
 
     # CONSTRAINTS
     # to compute OF
@@ -153,15 +162,16 @@ def Model_Creation(model, input_load, wt_prod, pv_prod):
     model.TotalSalvageValue = Constraint(rule=total_salvage_value)
     # to design the system
     model.TotalLoad = Constraint(model.hours, rule=total_load)
-    model.PvInstalled = Constraint(model.pv, rule=pv_installed)
-    model.WtInstalled = Constraint(model.wt, rule=wt_installed)
-    model.BessInstalled = Constraint(model.bess, rule=bess_installed)
-    model.DgInstalled = Constraint(model.dg, rule=dg_installed)
+    # model.PvInstalled = Constraint(model.pv, rule=pv_installed)
+    # model.WtInstalled = Constraint(model.wt, rule=wt_installed)
+    # model.BessInstalled = Constraint(model.bess, rule=bess_installed)
+    # model.DgInstalled = Constraint(model.dg, rule=dg_installed)
     model.ResEnergy = Constraint(model.hours, rule=res_energy)
     model.SystemBalance = Constraint(model.hours, rule=system_balance)
     model.TotalEnergyReq = Constraint(model.hours, rule=total_energy_req)
     model.TotalLostLoad = Constraint(model.hours, rule=total_lost_load)
     model.LimitLostLoad = Constraint(model.hours, rule=limit_lost_load)
+    model.MinRenFrac = Constraint(rule=min_ren_frac)
     model.TotalReserveReq = Constraint(model.hours, rule=total_reserve_req)
     model.ReserveAllocation = Constraint(model.hours, rule=reserve_allocation)
     # constraints related to diesel generators

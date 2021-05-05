@@ -189,7 +189,7 @@ def graph_mg(mg,geo_df_clustered, clusters_list):
     fig = go.Figure()
 
     for cluster_n in clusters_list.Cluster:
-        gdf_clustered_clean.loc[gdf_clustered_clean['Cluster']==cluster_n,'NPC']=mg.loc[cluster_n,'Total Cost [k€]']
+        gdf_clustered_clean.loc[gdf_clustered_clean['Cluster']==cluster_n,'NPC']=mg.loc[cluster_n,'Total Cost [kEUR]']
     plot_cluster = gdf_clustered_clean
     plot_cluster = plot_cluster.to_crs(epsg=4326)
     plot_cluster.X = plot_cluster.geometry.x
