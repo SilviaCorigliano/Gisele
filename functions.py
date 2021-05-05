@@ -408,25 +408,23 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
         wt_avg.reset_index(drop=True, inplace=True)
         wt_avg = shift_timezone(wt_avg, time_shift)
 
-        inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, \
-        rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions, tot_unav = \
-            start(load_profile_cluster, pv_avg, wt_avg,input_michele)
+        results = start(load_profile_cluster, pv_avg, wt_avg,input_michele)
 
         mg.loc[cluster_n, 'Cluster'] = 'C'+str(cluster_n)
-        mg.loc[cluster_n, 'PV [kW]'] = inst_pv
-        mg.loc[cluster_n, 'Wind [kW]'] = inst_wind
-        mg.loc[cluster_n, 'Diesel [kW]'] = inst_dg
-        mg.loc[cluster_n, 'BESS [kWh]'] = inst_bess
-        mg.loc[cluster_n, 'Inverter [kW]'] = inst_inv
-        mg.loc[cluster_n, 'Investment Cost [kEUR]'] = init_cost
-        mg.loc[cluster_n, 'OM Cost [kEUR]'] = om_cost
-        mg.loc[cluster_n, 'Replace Cost [kEUR]'] = rep_cost
-        mg.loc[cluster_n, 'Total Cost [kEUR]'] = npc
-        mg.loc[cluster_n, 'Energy Produced [MWh]'] = gen_energy
-        mg.loc[cluster_n, 'Energy Demand [MWh]'] = load_energy
-        mg.loc[cluster_n, 'LCOE [EUR/kWh]'] = npc / gen_energy
-        mg.loc[cluster_n, 'CO2 [kg]'] = emissions
-        mg.loc[cluster_n, 'Unavailability [MWh/y]'] = tot_unav
+        mg.loc[cluster_n, 'PV [kW]'] = results['inst_pv']
+        mg.loc[cluster_n, 'Wind [kW]'] = results['inst_wind']
+        mg.loc[cluster_n, 'Diesel [kW]'] = results['inst_dg']
+        mg.loc[cluster_n, 'BESS [kWh]'] = results['inst_bess']
+        mg.loc[cluster_n, 'Inverter [kW]'] = results['inst_inv']
+        mg.loc[cluster_n, 'Investment Cost [kEUR]'] = results['init_cost']
+        mg.loc[cluster_n, 'OM Cost [kEUR]'] = results['om_cost']
+        mg.loc[cluster_n, 'Replace Cost [kEUR]'] = results['rep_cost']
+        mg.loc[cluster_n, 'Total Cost [kEUR]'] = results['npc']
+        mg.loc[cluster_n, 'Energy Produced [MWh]'] = results['gen_energy']
+        mg.loc[cluster_n, 'Energy Demand [MWh]'] = results['load_energy']
+        mg.loc[cluster_n, 'LCOE [EUR/kWh]'] = results['npc'] / results['gen_energy']
+        mg.loc[cluster_n, 'CO2 [kg]'] = results['emissions']
+        mg.loc[cluster_n, 'Unavailability [MWh/y]'] = results['tot_unav']
         print(mg)
     mg = mg.round(decimals=4)
     mg.to_csv('Output/Microgrids/microgrids.csv', index=False)
