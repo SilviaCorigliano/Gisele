@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import json
+
 
 
 
@@ -10,6 +12,10 @@ def Load_results(instance):
 
     :param instance: The instance of the project resolution created by PYOMO.
     '''
+
+
+    with open('gisele/michele/Inputs/data.json') as f:
+        input_michele = json.load(f)
 
 
     project_duration = int(instance.project_duration.extract_values()[None])
@@ -29,9 +35,6 @@ def Load_results(instance):
     bess_ch = pd.DataFrame.from_dict(instance.bess_ch_power.get_values(), orient='index')
     lost_load = pd.DataFrame.from_dict(instance.lost_load.get_values(), orient='index')
     load = pd.DataFrame.from_dict(instance.Load.get_values(), orient='index')
-    emissions = pd.DataFrame.from_dict(instance.dg_fuel_emission.get_values(), orient='index')  # [gCO2]
-    tot_unav = float(instance.unav.get_values()[None])  # [MWh/year]
-
 
     load_tot_y=[] # list of yearly load [MWh]
     for y in range(num_years):
@@ -53,15 +56,121 @@ def Load_results(instance):
         lost_load_y = 0.001 * h_weight * sum(lost_load.iloc[(y*num_days*24+h),0] for h in range(num_days*24))
         lost_load_tot_y.append(lost_load_y)
 
-    em_tot_y=[] # list of yearly emissions [kg CO2]
-    for y in range(num_years):
-        em_y = 0.001 * h_weight * sum(emissions.iloc[(y*num_days*24+h),0] for h in range(num_days*24))
-        em_tot_y.append(em_y)
 
     gen_energy = sum(res_tot_y) + sum(dg_tot_y)
     dg_energy = sum(dg_tot_y)
     load_energy = sum(load_tot_y)
-    emissions = sum(em_tot_y)  # kgCO2
+
+    PV_types=instance.pv_types.extract_values()[None]
+    WT_types = instance.wt_types.extract_values()[None]
+    BESS_types = instance.bess_types.extract_values()[None]
+    Generator_types = instance.dg_types.extract_values()[None]
+
+
+    inst_pv = 0
+    inst_wind = 0
+    inst_bess = 0
+    inst_dg = 0
+    inst_inv_bess = 0
+    emissions = 0
+    tot_pv_unav=0
+    tot_wt_unav = 0
+    tot_dg_unav = 0
+
+
+    for i in range(1,PV_types+1):
+        Number_PV = int(instance.pv_units.get_values()[str(i)])
+        pv_nominal_capacity = float(
+            instance.pv_nominal_capacity.extract_values()[str(i)])
+        inst_pv=inst_pv+Number_PV*pv_nominal_capacity
+        pv_unav = input_michele['pv_unav'][str(i)]
+        tot_pv_unav = tot_pv_unav + pv_unav * Number_PV * pv_nominal_capacity
+
+
+    for i in range(1,WT_types+1):
+        Number_WT = int(instance.wt_units.get_values()[str(i)])
+        wt_nominal_capacity = float(
+            instance.wt_nominal_capacity.extract_values()[str(i)])
+        inst_wind=inst_wind+Number_WT*wt_nominal_capacity
+        wt_unav = input_michele['wt_unav'][str(i)]
+        tot_wt_unav = tot_wt_unav + wt_unav * Number_WT * wt_nominal_capacity
+
+
+    for i in range(1,BESS_types+1):
+        Number_BESS = int(instance.bess_units.get_values()[str(i)])
+        bess_nominal_capacity = float(
+            instance.bess_nominal_capacity.extract_values()[str(i)])
+        inst_bess=inst_bess+Number_BESS*bess_nominal_capacity
+        inv_bess_nominal_capacity = float(
+            instance.bess_power_max.get_values()[str(i)])
+        inst_inv_bess=inst_inv_bess + inv_bess_nominal_capacity
+    inst_inv = inst_inv_bess+inst_pv
+    inverter_unav = input_michele['inverter_unav']
+    tot_inv_unav = inst_inv * inverter_unav
+
+
+    for i in range(1,Generator_types+1):
+        Number_Generator = int(instance.dg_units.get_values()[str(i)])
+        dg_nominal_capacity = float(
+            instance.dg_nominal_capacity.extract_values()[str(i)])
+        inst_dg=inst_dg+Number_Generator*dg_nominal_capacity
+        dg_unav = input_michele['dg_unav'][str(i)]
+        tot_dg_unav = tot_dg_unav + dg_unav * Number_Generator * dg_nominal_capacity
+        em_factor = input_michele['dg_spec_emis'][str(i)] # devi tenere conto dell'indice....poi: rimettere instances{}, mettere loop in michele.py e spezzare modelresolution
+        fuel_tot = dg_fuel[i-1].sum()
+        emissions = emissions + 0.001 * h_weight * fuel_tot * em_factor  #kgCO2
+
+
+    tot_unav = load_energy / project_duration * (tot_pv_unav + tot_wt_unav + tot_dg_unav + tot_inv_unav) / \
+               (inst_pv + inst_wind + inst_dg + inst_inv)  # MWh/year
+
+
+
+    npc = instance.ObjectiveFunction.expr()
+    init_cost = float(instance.initial_investment.get_values()[None])
+    rep_cost = float(instance.replacement_cost.get_values()[None])
+    om_cost = float(instance.OM_cost.get_values()[None])
+    salvage_value = float(instance.salvage_value.get_values()[None])
+
+
+    print('PV installed=' + str(inst_pv))
+    print('wind installed=' + str(inst_wind))
+    print('diesel installed=' + str(inst_dg))
+    print('bess installed=' + str(inst_bess))
+    print('inv installed=' + str(inst_inv))
+
+    print('npc='+str(npc))
+    print('initial investment='+str(init_cost))
+    print('replacement cost='+str(rep_cost))
+    print('OM cost='+str(om_cost))
+    print('salvage value='+str(salvage_value))
+
+    print('emissions= ' + str(emissions))
+    dg_fuel_tot = h_weight * dg_fuel.sum(axis=0)
+    print('total fuel consumption='+str(dg_fuel_tot))
+
+    print('unavailability= ' + str(tot_unav))
+
+    results={}
+    results['inst_pv']=inst_pv
+    results['inst_wind']=inst_wind
+    results['inst_dg']=inst_dg
+    results['inst_bess']=inst_bess
+    results['inst_inv']=inst_inv
+    results['npc']=npc
+    results['init_cost']=init_cost
+    results['rep_cost']=rep_cost
+    results['om_cost']=om_cost
+    results['salvage_value']=salvage_value
+    results['gen_energy']=gen_energy
+    results['load_energy']=load_energy
+    results['emissions']=emissions
+    results['tot_unav']=tot_unav
+
+
+    return results
+
+    '''
     # graph on yearly dispatching of resources
     x=np.arange(1,num_years+1)
     y1=res_tot_y
@@ -78,7 +187,7 @@ def Load_results(instance):
     plt.legend(loc='upper left')
     # plt.show()
 
-
+    
     # graph on dispatching of first day
     x = np.arange(1,25)
     y1=res_tot.iloc[0:24, 0].values
@@ -103,50 +212,7 @@ def Load_results(instance):
     plt.ylabel('Dispatching of resources [kWh]')
     plt.legend(loc='upper left')
     # plt.show()
-
-    PV_types=instance.pv_types.extract_values()[None]
-    WT_types = instance.wt_types.extract_values()[None]
-    BESS_types = instance.bess_types.extract_values()[None]
-    Generator_types = instance.dg_types.extract_values()[None]
-
-    inst_pv = 0
-    inst_wind = 0
-    inst_bess = 0
-    inst_dg = 0
-    inst_inv_bess = 0
-
-
-    for i in range(1,PV_types+1):
-        Number_PV = int(instance.pv_units.get_values()[str(i)])
-        pv_nominal_capacity = float(
-            instance.pv_nominal_capacity.extract_values()[str(i)])
-        inst_pv=inst_pv+Number_PV*pv_nominal_capacity
-
-
-    for i in range(1,WT_types+1):
-        Number_WT = int(instance.wt_units.get_values()[str(i)])
-        wt_nominal_capacity = float(
-            instance.wt_nominal_capacity.extract_values()[str(i)])
-        inst_wind=inst_wind+Number_WT*wt_nominal_capacity
-
-    for i in range(1,BESS_types+1):
-        Number_BESS = int(instance.bess_units.get_values()[str(i)])
-        bess_nominal_capacity = float(
-            instance.bess_nominal_capacity.extract_values()[str(i)])
-        inst_bess=inst_bess+Number_BESS*bess_nominal_capacity
-
-
-    for i in range(1,Generator_types+1):
-        Number_Generator = int(instance.dg_units.get_values()[str(i)])
-        dg_nominal_capacity = float(
-            instance.dg_nominal_capacity.extract_values()[str(i)])
-        inst_dg=inst_dg+Number_Generator*dg_nominal_capacity
-
-    for i in range(1,BESS_types+1):
-        Number_BESS = int(instance.bess_units.get_values()[str(i)])
-        inv_bess_nominal_capacity = float(instance.bess_power_max.get_values()[str(i)])
-        inst_inv_bess=inst_inv_bess + inv_bess_nominal_capacity
-
+    
     # Number_PV = int(instance.pv_units.get_values()[1])
     # Number_WT = int(instance.wt_units.get_values()[1])
     # Number_BESS=int(instance.bess_units.get_values()[1])
@@ -163,41 +229,9 @@ def Load_results(instance):
     #                  Number_WT*wt_nominal_capacity, Number_BESS*bess_nominal_capacity]
     # plt.bar(unit_type,installed_units)
     # plt.show()
-
-    npc = instance.ObjectiveFunction.expr()
-    init_cost = float(instance.initial_investment.get_values()[None])
-    rep_cost = float(instance.replacement_cost.get_values()[None])
-    om_cost = float(instance.OM_cost.get_values()[None])
-    salvage_value = float(instance.salvage_value.get_values()[None])
-
-    # inst_pv = Number_PV*pv_nominal_capacity
-    # inst_wind = Number_WT*wt_nominal_capacity
-    # inst_dg = Number_Generator*dg_nominal_capacity
-    # inst_bess = Number_BESS*bess_nominal_capacity
-    inst_inv = inst_inv_bess+inst_pv
-
-    print('PV installed=' + str(inst_pv))
-    print('wind installed=' + str(inst_wind))
-    print('diesel installed=' + str(inst_dg))
-    print('bess installed=' + str(inst_bess))
-    print('inv installed=' + str(inst_inv))
-
-    print('npc='+str(npc))
-    print('initial investment='+str(init_cost))
-    print('replacement cost='+str(rep_cost))
-    print('OM cost='+str(om_cost))
-    print('salvage value='+str(salvage_value))
-
-    print('emissions= ' + str(emissions))
-    dg_fuel_tot = h_weight * dg_fuel.sum(axis=0)
-    print('total fuel consumption='+str(dg_fuel_tot))
-
-    print('unavailability= ' + str(tot_unav))
-
-    return inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, \
-        rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions, tot_unav
-
-    '''
+    
+    
+    
     Number_Years = int(instance.project_duration.extract_values()[None]/8760)
     Number_Periods = int(instance.project_duration.extract_values()[None])
     PV_types=instance.pv_types.extract_values()[None]

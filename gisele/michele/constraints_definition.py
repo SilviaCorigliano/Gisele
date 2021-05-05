@@ -107,12 +107,14 @@ def min_ren_frac(model):
 
 # this constraint computes hours of unavailability due to failures
 def tot_unavailabilty(model):
-    return model.unav == 0.001 * (
-        + sum(model.pv_units[p] * model.pv_unav[p] for p in model.pv)
-        + sum(model.wt_units[w] * model.wt_unav[w] for w in model.wt)
-        + sum(model.dg_units[g] * model.dg_unav[g] for g in model.dg)
-        + (sum(model.pv_units[p] for p in model.pv) + sum(model.bess_power_max[b] for b in model.bess)) * model.inverter_unav
-    )
+    return model.unav == 0.001 * sum(model.Load[h] for h in model.hours)/model.project_duration
+    '''
+           * (
+        + summation(model.pv_units,model.pv_unav) + summation(model.wt_units,model.wt_unav)
+        + summation(model.dg_units,model.dg_unav) + (summation(model.pv_units) + summation(model.bess_power_max)
+        * model.inverter_unav) ) / (summation(model.pv_units) + summation(model.wt_units)
+        + summation(model.dg_units) + (summation(model.pv_units) + summation(model.bess_power_max)))
+    '''
 
 # these constraints set the reserve requirement and its allocation among DG and BESS
 def total_reserve_req(model,h):
@@ -130,9 +132,6 @@ def reserve_allocation(model,h):
 def fuel_consumption_curve(model,h,g):  # linear characteristic
     return model.dg_fuel_consumption[h,g] == model.dg_cost_coeff_A[g]*model.dg_units_on[h,g]\
            +model.dg_cost_coeff_B[g]*model.dg_power[h,g]
-
-def fuel_emissions(model,h,g):
-    return model.dg_fuel_emission[h,g] == model.dg_fuel_consumption[h,g]*model.dg_spec_emis[g]
 
 def dg_power_max(model,h,g):
     # with reserve

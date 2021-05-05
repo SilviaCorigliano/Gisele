@@ -4,15 +4,9 @@ from pyomo.dataportal.DataPortal import DataPortal
 import pandas as pd
 
 
+#def Model_Instance(model):
 
 def Model_Resolution(model):
-    '''
-    This function creates the model and calls Pyomo to solve the instance of the project
-
-    :param model: Pyomo model as defined in the components_creation library
-
-    :return: The solution inside an object call instance.
-    '''
 
     instance = model.create_instance(r'gisele\michele\Inputs\data.json')  # load parameters
     # opt = SolverFactory('cplex',executable=r'C:\Program Files\IBM\ILOG\CPLEX_Studio1210\cplex\bin\x64_win64\cplex')
@@ -26,12 +20,15 @@ def Model_Resolution(model):
 
     renfr=-1  # initialize at a value lower than 0
 
+    #instances={}
+
     for i in range(n_ren):
         min_renfr=i*1/(n_ren-1)
         instance.ren_fraction=min_renfr
         print('Solving for minimum renewable fraction of '+str(min_renfr*100)+'%')
         if renfr>=min_renfr:
             print('Skipping solve as minimum renewable fraction already fulfilled')
+            #instances[i]=instances[i-1]
         else:
             results = opt.solve(instance, tee=True)  # Solving a model instance
             instance.solutions.load_from(results)  # Loading solution into instance
@@ -44,5 +41,8 @@ def Model_Resolution(model):
             load_tot = 0.001 * h_weight * sum(load.iloc[h, 0] for h in range(project_duration))
             renfr=1-dg_tot/load_tot
             print('Renewable fraction='+str(renfr*100)+'%')
-            return instance
+            #instances[i]=instance
+    return instance
+
+
 

@@ -1,6 +1,7 @@
 from pyomo.environ import AbstractModel, Var, value
 
 from gisele.michele.components_creation import Model_Creation
+#from gisele.michele.model_solve import Model_Instance
 from gisele.michele.model_solve import Model_Resolution
 from gisele.michele.results import Load_results
 from gisele.michele.components_initialization import importing
@@ -18,13 +19,9 @@ def start(load_profile, pv_avg, wt_avg,input_michele):
     instance = Model_Resolution(model)  # Resolution of the instance
 
     print('Show results')
+    results= Load_results(instance)
 
-    inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, rep_cost, \
-        om_cost, salvage_value, gen_energy, load_energy, emissions, tot_unav \
-        = Load_results(instance)
-
-    return inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, npc, init_cost, \
-        rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions, tot_unav
+    return results
 
 
 
