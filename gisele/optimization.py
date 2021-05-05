@@ -205,9 +205,11 @@ def milp_execution(geo_df_clustered, grid_resume, substations, coe, branch, line
     nation_emis = emission_factor(country,emission_type)  # kgCO2/MWh
     nation_rel = reliability_grid(country)
     line_rel = line_reliability()
+    with open('gisele/michele/Inputs/data.json') as f:
+        input_michele = json.load(f)
 
     lcoe_optimization.cost_optimization(p_max_lines, coe, nation_emis,
-                                        nation_rel, line_rel)
+                                        nation_rel, line_rel,input_michele)
 
     gdf_roads = gpd.read_file('Output/Datasets/Roads/gdf_roads.shp')
     roads_segments = gpd.read_file('Output/Datasets/Roads/roads_segments.shp')

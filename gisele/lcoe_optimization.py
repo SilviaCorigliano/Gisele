@@ -10,7 +10,10 @@ import numpy as np
 from datetime import datetime
 
 
-def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
+def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel, input_michele):
+    #useful parameters from michele
+    proj_lifetime =input_michele['num_years']
+
     # Initialize model
     model = AbstractModel()
     data = DataPortal()
@@ -276,7 +279,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
 
     # define loss of load  dependent on distance from connection point
     def lol_calculation_rule(model,i):
-        return model.lol_line[i] == model.dist[i]*line_rel*model.energy[i]/8760/20
+        return model.lol_line[i] == model.dist[i]*line_rel*model.energy[i]/8760/proj_lifetime
 
     model.lol_calculation = Constraint(model.clusters, rule =lol_calculation_rule)
 
@@ -304,7 +307,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
         return model.obj['rel'] == \
                sum(model.rel_mg[i]* (model.z[i])*100 for i in model.clusters)  +\
                summation(model.lol_line)+\
-               sum(model.energy[i] /8760/20* (1-model.z[i]) for i in model.clusters) * nation_rel
+               sum(model.energy[i] /8760/proj_lifetime* (1-model.z[i]) for i in model.clusters) * nation_rel
 
     model.Obj3 = Constraint(rule=ObjectiveFunctionRel)
 
@@ -422,6 +425,7 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
     print(payoff_table)
 
     multi_obj=True
+    k=0
     print('Find ranges of variation of each objective function:')
     for of in obj_list:
         instance.min_obj[of] = min(payoff_table[of])
@@ -429,9 +433,12 @@ def cost_optimization(p_max_lines, coe, nation_emis,nation_rel, line_rel):
         print('min' + str(of) + '=' + str(min(payoff_table[of])))
         print('max' + str(of) + '=' + str(max(payoff_table[of])))
         # do not make multiobjective optimization if there is a unique solution
+        #that means if all objective functions do not change
         if instance.min_obj[of] == instance.max_obj[of]:
-            multi_obj =False
-            print('Multi-obj not needed')
+            k=k+1
+    if k==num_of:
+        multi_obj =False
+        print('Multi-obj not needed')
 
 
     # for the second step, MultiObj is the OF to be used
