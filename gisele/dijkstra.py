@@ -5,16 +5,18 @@ from scipy import sparse
 
 
 def dijkstra_connection(geo_df, connecting_point, assigned_substation,
-                        c_grid_points, line_bc, resolution):
+                        c_grid_points, line_bc, resolution,limit_dist=''):
 
     connection = gpd.GeoDataFrame()
     connection_cost = 0
     connection_length = 0
     pts = []
-
+    if not limit_dist:
+        limit_dist = 50*resolution
     dist = assigned_substation.unary_union.distance(connecting_point.
                                                     unary_union)
-    if dist > 50 * resolution:
+    #if dist > 50 * resolution:
+    if dist > limit_dist:
         print('Connection distance too long to use Dijkstra')
         connection_cost = 999999
         connection_length = 999999
@@ -22,7 +24,7 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation,
         return connection, connection_cost, connection_length, pts
 
     df_box = create_box(pd.concat([assigned_substation, connecting_point]),
-                        geo_df)
+                        geo_df,resolution)
     dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
     dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
 
@@ -74,16 +76,17 @@ def dijkstra_connection(geo_df, connecting_point, assigned_substation,
 
 def dijkstra_connection_roads(geo_df, connecting_point, assigned_substation,
                               c_grid_points, line_bc, resolution, gdf_roads,
-                              roads_segments):
+                              roads_segments,limit_dist=''):
 
     connection = gpd.GeoDataFrame()
     connection_cost = 0
     connection_length = 0
     pts = []
-
+    if not limit_dist:
+        limit_dist = 50 * resolution
     dist = assigned_substation.unary_union.distance(connecting_point.
                                                     unary_union)
-    if dist > 50 * resolution:
+    if dist > limit_dist:
         print('Connection distance too long to use Dijkstra')
         connection_cost = 999999
         connection_length = 999999
@@ -91,20 +94,24 @@ def dijkstra_connection_roads(geo_df, connecting_point, assigned_substation,
         return connection, connection_cost, connection_length, pts
 
     df_box = create_box(pd.concat([assigned_substation, connecting_point]),
-                        geo_df)
+                        geo_df,resolution)
     n = df_box.shape[0]
-
-    df_box_roads = create_box(pd.concat([assigned_substation,
-                                         connecting_point]), gdf_roads)
-    df_box_roads.index = pd.Series(range(df_box.index.shape[0],
-                                         df_box.index.shape[0] +
+    df_box_roads=gdf_roads
+    #df_box_roads = create_box(pd.concat([assigned_substation,
+    #                                     connecting_point]), gdf_roads, resolution) This is done from before in Aleksandar's case.
+    df_box_roads.index = pd.Series(range(int(df_box['ID'].max())+1,
+                                         int(df_box['ID'].max())+1 +
                                          df_box_roads.index.shape[0]))
     n_roads = df_box_roads.shape[0]
     df_box_segments = create_box(pd.concat([assigned_substation,
-                                            connecting_point]), roads_segments)
+                                            connecting_point]), roads_segments,resolution)
 
     df_box = df_box.append(df_box_roads)
     df_box = df_box.drop_duplicates('ID')
+    df_box = df_box.reset_index(drop=True)
+    df_box['ID']=df_box['ID'].astype(int)
+    df_box_segments['ID1']= df_box_segments['ID1'].astype(int)
+    df_box_segments['ID2'] = df_box_segments['ID2'].astype(int)
 
     dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
     dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
@@ -132,6 +139,7 @@ def dijkstra_connection_roads(geo_df, connecting_point, assigned_substation,
         graph = nx.from_scipy_sparse_matrix(edges_matrix_sparse)
         for x in range(df_box_segments.shape[0]):
             # re-add segment of the road to the graph, with weight=distance[km]
+            print(x)
             graph.add_edge(
                 df_box.index[df_box['ID'] == int(df_box_segments.loc[x, 'ID1'])][0],
                 df_box.index[df_box['ID'] == int(df_box_segments.loc[x, 'ID2'])][0],

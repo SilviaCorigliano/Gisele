@@ -139,6 +139,7 @@ def rasters_to_points(study_area,crs,resolution_points,dir,protected_areas,stree
     pointData = pointData.reset_index(drop=True)
     pointData['ID'] = pointData.index
     pointData['Elevation'] = [x[0] for x in Elevation.sample(coords)]
+    pointData.loc[pointData.Elevation<0,'Elevation']=0
     print('Elevation finished')
     pointData['Slope'] = [x[0] for x in Slope.sample(coords)]
     print('Slope finished')
@@ -198,19 +199,29 @@ def rasters_to_points(study_area,crs,resolution_points,dir,protected_areas,stree
 
     return pointData, geo_df
 
-
+def locate_file(database,folder,extension):
+    root = database + '/' + folder
+    for file in os.listdir(root):
+        if extension in file:
+            path = os.path.join(root, file)
+            return path
 '''Set parameters for the analysis - by the user'''
-def input_file_creation(crs=21095, resolution=500, country='Uganda', case_study='Area in Uganda', landcover_option='ESACCI'):
-    resolution_population = 30
+
+def create_input_csv(crs,resolution,resolution_population,landcover_option,country,case_study,database,study_area):
+    #crs=21095
+
 
     '''Data processing'''
     #database=r'Database/'+country
-    database = r'C:\Users\silvi\OneDrive - Politecnico di Milano\Documents\2020-2021\Gisele shared\8.Case_Study/'+country
+    database = database+'/'+country
     crs_str=r'epsg:'+str(crs)
-    study_area = gpd.read_file(database+'/Study_area/Study_area.shp')
-    protected_areas = gpd.read_file(database+'/Protected_areas/Protected_area-Uganda.shp')
+
+    protected_areas_file=locate_file(database,folder='Protected_areas',extension='.shp')
+    protected_areas = gpd.read_file(protected_areas_file)
     protected_areas = protected_areas.to_crs(crs)
-    streets = gpd.read_file(database+'/Roads/uga_trs_roads_osm.shp')
+    roads_file=locate_file(database,folder='Roads',extension='.shp')
+    streets = gpd.read_file(roads_file)
+
     streets = streets.to_crs(crs)
     files_present=False # set this to True if you already have all the .shp and raster files locally
     study_area_crs=study_area.to_crs(crs)
@@ -234,7 +245,10 @@ def input_file_creation(crs=21095, resolution=500, country='Uganda', case_study=
             protected_areas_clipped.to_file(dir+'/Input/protected_area.shp')
 
         '''Clip the elevation and then change the crs'''
-        with rasterio.open(database+'/Elevation/Elevation_new.tif',
+
+        elevation_file=locate_file(database,folder='Elevation',extension='.tif')
+        with rasterio.open(elevation_file,
+
                 mode='r') as src:
             out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
             print(src.crs)
@@ -253,8 +267,10 @@ def input_file_creation(crs=21095, resolution=500, country='Uganda', case_study=
         warp = None  # Closes the files
 
         '''Clip the slope and then change the crs'''
-        with rasterio.open(
-                database+'/Slope/Slope_4326.tif',
+
+        slope_file = locate_file(database, folder='Slope', extension='.tif')
+        with rasterio.open(slope_file,
+
                 mode='r') as src:
             out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
             print(src.crs)
@@ -273,8 +289,11 @@ def input_file_creation(crs=21095, resolution=500, country='Uganda', case_study=
         warp = None  # Closes the files
 
         '''Clip the population and then change the crs'''
+
+        population_file = locate_file(database, folder='Population', extension='.tif')
         with rasterio.open(
-                database+'/Population/Population-fb/hrsl_uga_zeros.tif',
+                population_file,
+
                 mode='r') as src:
             out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
             print(src.crs)
@@ -294,8 +313,11 @@ def input_file_creation(crs=21095, resolution=500, country='Uganda', case_study=
         warp = None  # Closes the files
 
         '''Clip the land cover and then change the crs'''
+
+        landcover_file = locate_file(database, folder='LandCover', extension='.tif')
         with rasterio.open(
-                database+'/LandCover/Uganda.tif',
+                landcover_file,
+
                 mode='r') as src:
             out_image, out_transform = rasterio.mask.mask(src, study_area_buffered, crop=True)
             print(src.crs)
@@ -328,19 +350,32 @@ def input_file_creation(crs=21095, resolution=500, country='Uganda', case_study=
     streets_multipoint = MultiPoint(streets_points)
 
     df, geo_df = rasters_to_points(study_area_crs, crs, resolution, dir,protected_areas_clipped,streets_multipoint,resolution_population)
-    geo_df.to_file(dir+'/Input/'+case_study+'.shp')
+
+    geo_df.to_file(dir+'/Input/grid_of_points.shp')
+
     geo_df=geo_df.reset_index(drop=True)
     geo_df['ID']=geo_df.index
     df=df.reset_index(drop=True)
     df['ID']=df.index
-    df.to_csv(dir+'/Input/'+case_study+'.csv', index=False)
+
+    df.to_csv(dir+'/Input/grid_of_points.csv', index=False)
 
     '''cleaning the dataframe for easier clustering'''
-    df_clustering=df.drop(['Slope','Land_cover', 'Road_dist',
-                            'River_flow', 'Protected_area','geometry'],axis=1)
-    df_clustering = df_clustering.drop(df_clustering[df_clustering.Population==0].index)
-    df_clustering.to_csv(dir+'/Input/'+case_study+'_clustering'+'.csv',index=False)
+
 
     df_weighted= initialization.weighting(df, resolution, landcover_option)
-    df_weighted.to_csv(dir+'/Input/'+case_study+'_weighted.csv', index=False)
+    df_weighted.to_csv(dir+'/Input/weighted_grid_of_points.csv', index=False)
+
+
+#     df.to_csv(dir+'/Input/'+case_study+'.csv', index=False)
+
+#     '''cleaning the dataframe for easier clustering'''
+#     df_clustering=df.drop(['Slope','Land_cover', 'Road_dist',
+#                             'River_flow', 'Protected_area','geometry'],axis=1)
+#     df_clustering = df_clustering.drop(df_clustering[df_clustering.Population==0].index)
+#     df_clustering.to_csv(dir+'/Input/'+case_study+'_clustering'+'.csv',index=False)
+
+#     df_weighted= initialization.weighting(df, resolution, landcover_option)
+#     df_weighted.to_csv(dir+'/Input/'+case_study+'_weighted.csv', index=False)
+
     return df_weighted

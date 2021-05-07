@@ -64,6 +64,7 @@ def distance_2d(df1, df2, x, y):
     df1_loc = pd.DataFrame(data=d1_coordinates)
     df1_loc.index = df1['ID']
 
+
     d2_coordinates = {'x': df2[x], 'y': df2[y]}
     df2_loc = pd.DataFrame(data=d2_coordinates)
     df2_loc.index = df2['ID']
@@ -208,7 +209,9 @@ def create_roads(gdf_roads, geo_df):
     the GeoDataframes are also saves as shapefiles
 
     '''
-    w = geo_df.shape[0]
+    #w = geo_df.shape[0]
+    w = int(geo_df['ID'].max())+1 # this is because not all road points are included in the weighted grid of points. Basically,
+    #it could be 10500,10501 and then 10504. df.shape[0] will give us a bad starting point in this case-> we want to start from 10505
     line_vertices = pd.DataFrame(
         index=pd.Series(range(w, w + len(gdf_roads.index))),
         columns=['ID', 'X', 'Y', 'ID_line', 'Weight', 'Elevation'], dtype=int)
@@ -248,8 +251,8 @@ def create_roads(gdf_roads, geo_df):
                 zip(line_vertices['X'], line_vertices['Y'])]
     line_gdf = gpd.GeoDataFrame(line_vertices, crs=geo_df.crs,
                                 geometry=geometry)
-    line_gdf.to_file('Output/Datasets/Roads/gdf_roads.shp')
-    segments.to_file('Output/Datasets/Roads/roads_segments.shp')
+    #line_gdf.to_file('Output/Datasets/Roads/gdf_roads.shp')
+    #segments.to_file('Output/Datasets/Roads/roads_segments.shp')
     return line_gdf, segments
 
 
@@ -280,6 +283,32 @@ def create_box(limits, df):
 
     return df_box
 
+def create_box(limits, df,resolution):
+    """
+    Creates a delimiting box around a geodataframe.
+    :param limits: Linestring geodataframe being analyzed
+    :param df: Point geodataframe to be delimited
+    :return df_box: All points of df that are inside the delimited box
+    """
+    x_min = min(limits.X)
+    x_max = max(limits.X)
+    y_min = min(limits.Y)
+    y_max = max(limits.Y)
+
+    dist = Point(x_min, y_min).distance(Point(x_max, y_max))
+    if dist < 5*resolution:
+        extension = dist
+    elif dist < 15*resolution:
+        extension = dist * 0.6
+    else:
+        extension = dist / 4
+
+    bubble = box(minx=x_min - extension, maxx=x_max + extension,
+                 miny=y_min - extension, maxy=y_max + extension)
+    df_box = df[df.within(bubble)]
+    df_box.index = pd.Series(range(0, len(df_box.index)))
+
+    return df_box
 
 def edges_to_line(path, df, edges_matrix):
     """
@@ -417,78 +446,81 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
     num_typ_days = input_michele['num_days']
 
     for cluster_n in clusters_list.Cluster:
+        try:
+          l()
+          print('Creating the optimal Microgrid for Cluster ' + str(cluster_n))
+          l()
+          load_profile_cluster = load_profile.loc[:, cluster_n]
+          lat = geo_df_clustered[geo_df_clustered['Cluster']
+                                 == cluster_n].geometry.y.values[0]
+          lon = geo_df_clustered[geo_df_clustered['Cluster']
+                                 == cluster_n].geometry.x.values[0]
+          all_angles = pd.read_csv('Input/TiltAngles.csv')
+          tilt_angle = abs(all_angles.loc[abs(all_angles['lat'] - lat).idxmin(),
+                                          'opt_tilt'])
+          pv_prod = import_pv_data(lat, lon, tilt_angle)
+          wt_prod = import_wind_data(lat, lon, wt)
+          utc = pv_prod.local_time[0]
+          if type(utc) is pd.Timestamp:
+              time_shift = utc.hour
+          else:
+              utc = iso8601.parse_date(utc)
+              time_shift = int(utc.tzinfo.tzname(utc).split(':')[0])
+          div_round = 8760 // (num_typ_days * 24)
+          length = num_typ_days * 24
+          new_length= length *div_round
+          # pv_avg = pv_prod.groupby([pv_prod.index.month,
+          #                           pv_prod.index.hour]).mean()
 
-        l()
-        print('Creating the optimal Microgrid for Cluster ' + str(cluster_n))
-        l()
-        load_profile_cluster = load_profile.loc[:, cluster_n]
-        lat = geo_df_clustered[geo_df_clustered['Cluster']
-                               == cluster_n].geometry.y.values[0]
-        lon = geo_df_clustered[geo_df_clustered['Cluster']
-                               == cluster_n].geometry.x.values[0]
-        all_angles = pd.read_csv('Input/TiltAngles.csv')
-        tilt_angle = abs(all_angles.loc[abs(all_angles['lat'] - lat).idxmin(),
-                                        'opt_tilt'])
-        pv_prod = import_pv_data(lat, lon, tilt_angle)
-        wt_prod = import_wind_data(lat, lon, wt)
-        utc = pv_prod.local_time[0]
-        if type(utc) is pd.Timestamp:
-            time_shift = utc.hour
-        else:
-            utc = iso8601.parse_date(utc)
-            time_shift = int(utc.tzinfo.tzname(utc).split(':')[0])
-        div_round = 8760 // (num_typ_days * 24)
-        length = num_typ_days * 24
-        new_length= length *div_round
-        # pv_avg = pv_prod.groupby([pv_prod.index.month,
-        #                           pv_prod.index.hour]).mean()
+          pv_avg_new=np.zeros(24*num_typ_days)
+          pv_avg = pv_prod.values[0:new_length,1].reshape(24,div_round*num_typ_days,order='F')
+          wt_avg_new = np.zeros(24 * num_typ_days)
+          wt_avg = wt_prod.values[0:new_length].reshape(24,
+                                                           div_round * num_typ_days,
+                                                           order='F')
+          for i in range(num_typ_days):
+              pv_avg_new[i*24:(i+1)*24] = pv_avg[:,div_round*i:div_round*(i+1)].mean(axis=1)
 
-        pv_avg_new=np.zeros(24*num_typ_days)
-        pv_avg = pv_prod.values[0:new_length,1].reshape(24,div_round*num_typ_days,order='F')
-        wt_avg_new = np.zeros(24 * num_typ_days)
-        wt_avg = wt_prod.values[0:new_length].reshape(24,
-                                                         div_round * num_typ_days,
-                                                         order='F')
-        for i in range(num_typ_days):
-            pv_avg_new[i*24:(i+1)*24] = pv_avg[:,div_round*i:div_round*(i+1)].mean(axis=1)
-
-            wt_avg_new[i * 24:(i + 1) * 24] = wt_avg[:, div_round * i:div_round * (
-                    i + 1)].mean(axis=1)
-
-
-
-        pv_avg = pd.DataFrame(pv_avg_new)
-        pv_avg = pv_avg.append([pv_avg] * (proj_lifetime - 1), ignore_index=True)
-        pv_avg.reset_index(drop=True, inplace=True)
-        pv_avg = shift_timezone(pv_avg, time_shift)
+              wt_avg_new[i * 24:(i + 1) * 24] = wt_avg[:, div_round * i:div_round * (
+                      i + 1)].mean(axis=1)
 
 
-        # wt_prod = import_wind_data(lat, lon, wt)
-        # wt_avg = wt_prod.groupby([wt_prod.index.month,
-        #                           wt_prod.index.hour]).mean()
-        wt_avg = pd.DataFrame(wt_avg_new)
-        wt_avg = wt_avg.append([wt_avg] * (proj_lifetime - 1), ignore_index=True)
-        wt_avg.reset_index(drop=True, inplace=True)
-        wt_avg = shift_timezone(wt_avg, time_shift)
 
-        results = start(load_profile_cluster, pv_avg, wt_avg,input_michele)
+          pv_avg = pd.DataFrame(pv_avg_new)
+          pv_avg = pv_avg.append([pv_avg] * (proj_lifetime - 1), ignore_index=True)
+          pv_avg.reset_index(drop=True, inplace=True)
+          pv_avg = shift_timezone(pv_avg, time_shift)
 
-        mg.loc[cluster_n, 'Cluster'] = 'C'+str(cluster_n)
-        mg.loc[cluster_n, 'PV [kW]'] = results['inst_pv']
-        mg.loc[cluster_n, 'Wind [kW]'] = results['inst_wind']
-        mg.loc[cluster_n, 'Diesel [kW]'] = results['inst_dg']
-        mg.loc[cluster_n, 'BESS [kWh]'] = results['inst_bess']
-        mg.loc[cluster_n, 'Inverter [kW]'] = results['inst_inv']
-        mg.loc[cluster_n, 'Investment Cost [kEUR]'] = results['init_cost']
-        mg.loc[cluster_n, 'OM Cost [kEUR]'] = results['om_cost']
-        mg.loc[cluster_n, 'Replace Cost [kEUR]'] = results['rep_cost']
-        mg.loc[cluster_n, 'Total Cost [kEUR]'] = results['npc']
-        mg.loc[cluster_n, 'Energy Produced [MWh]'] = results['gen_energy']
-        mg.loc[cluster_n, 'Energy Demand [MWh]'] = results['load_energy']
-        mg.loc[cluster_n, 'LCOE [EUR/kWh]'] = results['npc'] / results['gen_energy']
-        mg.loc[cluster_n, 'CO2 [kg]'] = results['emissions']
-        mg.loc[cluster_n, 'Unavailability [MWh/y]'] = results['tot_unav']
-        print(mg)
+
+          # wt_prod = import_wind_data(lat, lon, wt)
+          # wt_avg = wt_prod.groupby([wt_prod.index.month,
+          #                           wt_prod.index.hour]).mean()
+          wt_avg = pd.DataFrame(wt_avg_new)
+          wt_avg = wt_avg.append([wt_avg] * (proj_lifetime - 1), ignore_index=True)
+          wt_avg.reset_index(drop=True, inplace=True)
+          wt_avg = shift_timezone(wt_avg, time_shift)
+
+          results = start(load_profile_cluster, pv_avg, wt_avg,input_michele)
+
+          mg.loc[cluster_n, 'Cluster'] = 'C'+str(cluster_n)
+          mg.loc[cluster_n, 'PV [kW]'] = results['inst_pv']
+          mg.loc[cluster_n, 'Wind [kW]'] = results['inst_wind']
+          mg.loc[cluster_n, 'Diesel [kW]'] = results['inst_dg']
+          mg.loc[cluster_n, 'BESS [kWh]'] = results['inst_bess']
+          mg.loc[cluster_n, 'Inverter [kW]'] = results['inst_inv']
+          mg.loc[cluster_n, 'Investment Cost [kEUR]'] = results['init_cost']
+          mg.loc[cluster_n, 'OM Cost [kEUR]'] = results['om_cost']
+          mg.loc[cluster_n, 'Replace Cost [kEUR]'] = results['rep_cost']
+          mg.loc[cluster_n, 'Total Cost [kEUR]'] = results['npc']
+          mg.loc[cluster_n, 'Energy Produced [MWh]'] = results['gen_energy']
+          mg.loc[cluster_n, 'Energy Demand [MWh]'] = results['load_energy']
+          mg.loc[cluster_n, 'LCOE [EUR/kWh]'] = results['npc'] / results['gen_energy']
+          mg.loc[cluster_n, 'CO2 [kg]'] = results['emissions']
+          mg.loc[cluster_n, 'Unavailability [MWh/y]'] = results['tot_unav']
+          print(mg)
+        except:
+          print('Region too large to compute the optimal microgrid.')
+
     mg = mg.round(decimals=4)
     mg.to_csv('Output/Microgrids/microgrids.csv', index=False)
 
@@ -526,8 +558,20 @@ def download_tif(area, crs, scale, image, out_path):
     print(path)
     download_url(path, out_path)
     return
-
-
+def MultiLine_to_Line(lines_shapefile):
+    lines=[]
+    for index, row in lines_shapefile.iterrows():
+        try:
+            row['geometry'][0]
+            multi_line = row['geometry']
+            lines_shapefile.drop(index,axis=0,inplace=True)
+            for i in multi_line:
+                lines.append(i)
+        except:
+            a=1
+    lines_shapefile=lines_shapefile.append(gpd.GeoDataFrame({'geometry': lines}))
+    lines_shapefile = lines_shapefile.reset_index(drop=True)
+    return lines_shapefile
 # def lcoe_analysis(clusters_list, total_energy, grid_resume, mg, coe,
 #                   grid_ir, grid_om, grid_lifetime):
 #     """
