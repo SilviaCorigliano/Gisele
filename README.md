@@ -2,7 +2,6 @@
 ![Screenshot](logo.PNG)
 
 # About
-iciaoaoaoaoao
 
 The GIS for electrification (Gisele) tool was developed as an effort to improve the planning of rural electrification in developing countries. It is an open source Python-based tool that uses GIS and terrain analysis to model the area under study, groups loads using a density-based clustering algorithm called DBSCAN and then it uses graph theory to find the least-costly electric network topology that can connect all the people in the area. 
 

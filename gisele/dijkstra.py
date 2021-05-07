@@ -118,7 +118,7 @@ def dijkstra_connection_roads(geo_df, connecting_point, assigned_substation,
 
     if np.any(dist_2d_matrix):
 
-        costs_matrix = cost_matrix(df_box, dist_3d_matrix, line_bc)
+        costs_matrix = cost_matrix(df_box, dist_3d_matrix, line_bc,resolution)
         edges_matrix = costs_matrix.copy()
         #  reduces the weights of edges already present in the cluster grid
         for i in c_grid_points:

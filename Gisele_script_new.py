@@ -13,7 +13,7 @@ from gisele import initialization, clustering, processing, collecting, \
     optimization, results, grid, branches
 import pyutilib.subprocess.GlobalData
 from gisele import QGIS_processing_polygon as qgis_process
-from SS_Clustering import locate_secondary_ss
+
 from gisele import MILP_Input_creation,MILP_models,process_output,grid_routing,Secondary_substations
 
 gisele_folder=os.getcwd()
@@ -26,11 +26,11 @@ load_capita=0.7
 pop_per_household=4
 resolution_population = 30 # this should be automatic from the raster
 landcover_option='ESACCI'
-database= r'C:\Users\alekd\Politecnico di Milano\Silvia Corigliano - Gisele shared\8.Case_Study'
+database= r'C:\Users\silvi\OneDrive - Politecnico di Milano\Documents\2020-2021\Gisele shared\8.Case_Study'
 
 # This should be inside the procedure, only now we are taking the clusters as an input
-cluster_folder = r'C:\Users\alekd\Politecnico di Milano\Silvia Corigliano - Gisele shared\8.Case_Study\Lesotho\Villages_areas.geojson'
-substations_folder = r'C:\Users\alekd\Politecnico di Milano\Silvia Corigliano - Gisele shared\8.Case_Study\Lesotho\con_point.shp'
+cluster_folder = r'C:\Users\silvi\OneDrive - Politecnico di Milano\Documents\2020-2021\Gisele shared\8.Case_Study\Lesotho\Villages_areas - Copy.geojson'
+substations_folder = r'C:\Users\silvi\OneDrive - Politecnico di Milano\Documents\2020-2021\Gisele shared\8.Case_Study\Lesotho\con_point - Copy.shp'
 study_area = gpd.read_file(database+'/'+country+'/Study_area/Study_area.shp')
 Clusters = gpd.read_file(cluster_folder)
 Clusters = Clusters[Clusters['final_clus']==final_clus]
@@ -80,13 +80,13 @@ print('1. CREATE A WEIGHTED GRID OF POINTS')
 
 '''For each cluster, perform further aglomerative clustering, locate secondary substations and perform MV grid routing'''
 print('2. LOCATE SECONDARY SUBSTATIONS INSIDE THE CLUSTERS.')
-#Secondary_substations.locate_secondary_ss(crs, resolution_population, load_capita, pop_per_household, road_coef,
-#                        Clusters, case_study, LV_distance, ss_data,landcover_option)
+# Secondary_substations.locate_secondary_ss(crs, resolution_population, load_capita, pop_per_household, road_coef,
+#                        Clusters, case_study, LV_distance, ss_data,landcover_option, gisele_folder)
 print('3. ROUTE THE MV GRID INSIDE THE CLUSTERS.')
-#grid_routing.routing(Clusters,gisele_folder,case_study,crs,resolution,Roads_option,simplify_road_coef_inside)
+grid_routing.routing(Clusters,gisele_folder,case_study,crs,resolution,Roads_option,simplify_road_coef_inside)
 '''Create the input for the MILP'''
 print('3. Create the input for the MILP.')
-#MILP_Input_creation.create_input(gisele_folder,case_study,crs,line_cost,resolution,mg_option,reliability_option,Roads_option,simplify_road_coef_outside)
+MILP_Input_creation.create_input(gisele_folder,case_study,crs,line_cost,resolution,mg_option,reliability_option,Roads_option,simplify_road_coef_outside)
 '''Execute the desired MILP model'''
 print('4. Execute the MILP according to the selected options.')
 n_clusters = Clusters.shape[0]

@@ -24,7 +24,7 @@ def steiner(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
     dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
     dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
 
-    edges_matrix = cost_matrix(df_box, dist_3d_matrix, line_bc)
+    edges_matrix = cost_matrix(df_box, dist_3d_matrix, line_bc,resolution)
     length_limit = resolution * 1.5
     edges_matrix[dist_2d_matrix > math.ceil(length_limit)] = 0
 
@@ -88,7 +88,7 @@ def steiner_roads(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
     dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
     dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
 
-    costs_matrix = cost_matrix(df_box, dist_3d_matrix, line_bc)
+    costs_matrix = cost_matrix(df_box, dist_3d_matrix, line_bc, resolution)
     edges_matrix = costs_matrix.copy()
     for i in branch_points:
         if i[0] in costs_matrix.index.values and \

@@ -9,7 +9,7 @@ from sklearn.cluster import AgglomerativeClustering
 from shapely.geometry import MultiPoint, Point, Polygon
 from shapely.ops import nearest_points
 from math import sqrt
-from gisele import initialization, SS_grid
+from gisele import initialization
 from shapely import geometry
 from functions import *
 
@@ -122,9 +122,9 @@ def categorize_substation(clusters_list, substations):
 
 
 def locate_secondary_ss(crs, resolution, load_capita, pop_per_household, road_coef,
-                        Clusters, case_study, LV_distance, ss_data,landcover_option):
+                        Clusters, case_study, LV_distance, ss_data,landcover_option,gisele_dir):
     dir_input = r'Case studies/' + case_study + '/Input'
-    gisele_dir = r'C:/Users/alekd/PycharmProjects/Gisele'
+
 
     dir_output = '/Case studies/' + case_study
     grid_500m_weighted = pd.read_csv(dir_input + '/weighted_grid_of_points.csv')
