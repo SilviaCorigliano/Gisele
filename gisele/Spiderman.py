@@ -51,16 +51,16 @@ def spider(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
             point_2 = gdf_cluster_pop[gdf_cluster_pop['ID'] == row.ID2]
             c_grid_points = list(zip(short_lines.ID1, short_lines.ID2))
 
-            segment, segment_cost, segment_length, seg_pts = \
-                dijkstra.dijkstra_connection_roads(geo_df, point_1, point_2,
-                                                   c_grid_points, line_bc,
-                                                   resolution, gdf_roads,
-                                                   roads_segments)
+            #segment, segment_cost, segment_length, seg_pts = \
+            #    dijkstra.dijkstra_connection_roads(geo_df, point_1, point_2,
+            #                                       c_grid_points, line_bc,
+            #                                       resolution, gdf_roads,
+            #                                       roads_segments)
 
-            # segment, segment_cost, segment_length, seg_pts = \
-            #     dijkstra.dijkstra_connection(geo_df, point_1, point_2,
-            #                                  c_grid_points, line_bc,
-            #                                  resolution)
+            segment, segment_cost, segment_length, seg_pts = \
+                 dijkstra.dijkstra_connection(geo_df, point_1, point_2,
+                                              c_grid_points, line_bc,
+                                              resolution)
 
             short_lines = pd.concat([short_lines, segment], sort=True)
             short_lines = short_lines.reset_index(drop=True)

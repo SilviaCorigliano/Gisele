@@ -20,7 +20,7 @@ def steiner(geo_df, gdf_cluster_pop, line_bc, resolution, branch_points=None):
     start_time = time.time()
 
     #  creating the box around the cluster and calculating edges matrix
-    df_box = create_box(gdf_cluster_pop, geo_df)
+    df_box = create_box(gdf_cluster_pop, geo_df,resolution)
     dist_2d_matrix = distance_2d(df_box, df_box, 'X', 'Y')
     dist_3d_matrix = distance_3d(df_box, df_box, 'X', 'Y', 'Elevation')
 
@@ -72,15 +72,15 @@ def steiner_roads(geo_df, gdf_cluster_pop, line_bc, resolution, gdf_roads,
     start_time = time.time()
 
     #  creating the box around the cluster and calculating edges matrix
-    df_box = create_box(gdf_cluster_pop, geo_df)
+    df_box = create_box(gdf_cluster_pop, geo_df,resolution)
     n = df_box.shape[0]
 
-    df_box_roads = create_box(gdf_cluster_pop, gdf_roads)
+    df_box_roads = create_box(gdf_cluster_pop, gdf_roads,resolution)
     df_box_roads.index = pd.Series(range(df_box.index.shape[0],
                                          df_box.index.shape[0] +
                                          df_box_roads.index.shape[0]))
     n_roads = df_box_roads.shape[0]
-    df_box_segments = create_box(gdf_cluster_pop, roads_segments)
+    df_box_segments = create_box(gdf_cluster_pop, roads_segments,resolution)
 
     df_box = df_box.append(df_box_roads)
     df_box = df_box.drop_duplicates('ID')

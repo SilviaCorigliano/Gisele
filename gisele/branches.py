@@ -120,7 +120,7 @@ def collateral(geo_df_clustered, geo_df, clusters_list, substations,
         l()
 
         if grid_resume.loc[i, 'Branch Length [km]'] == 0:
-
+            branch_points=[]
             # col, col_cost, col_length, col_points = \
             #     Steinerman.steiner_roads(geo_df, gdf_clusters_pop, line_bc,
             #                              resolution, gdf_roads,
