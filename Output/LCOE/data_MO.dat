@@ -1,0 +1,9 @@
+param: dir :=
+cost -1
+emis -1
+rel   1;
+param: weight :=
+cost 0.4
+emis 0.3
+rel  0.3;
+

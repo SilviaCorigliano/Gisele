@@ -14,17 +14,24 @@ def total_initial_investment(model):
 
 def total_replacement_cost(model):
     return  model.replacement_cost == 0.001 * (
-        +sum(sum(model.discount_rate[h]*model.h_weight*model.bess_wear_cost[b]*model.bess_dis_power[h,b] for b in model.bess) for h in model.hours) \
-        +sum(sum(model.discount_rate[h]*model.h_weight*model.dg_units_on[h,g]*model.dg_repl_cost[g] for g in model.dg) for h in model.hours) \
+        +sum(sum(model.discount_rate[h]*model.h_weight*model.bess_wear_cost[b]*model.bess_dis_power[h,b]
+                 for b in model.bess) for h in model.hours) \
+        +sum(sum(model.discount_rate[h]*model.h_weight*model.dg_units_on[h,g]*model.dg_repl_cost[g]
+                 for g in model.dg) for h in model.hours) \
     )
 
 def total_OM_cost(model):
     return  model.OM_cost == 0.001 * (
-        +sum(sum(model.discount_rate[h]*model.h_weight*model.fuel_cost*model.dg_fuel_consumption[h,g] for g in model.dg)for h in model.hours) \
-        +sum(sum(model.discount_rate[h]*model.h_weight*model.dg_OM_cost[g]*model.dg_units_on[h,g] for g in model.dg) for h in model.hours) \
-        +sum(sum(model.discount_rate[h]*model.pv_units[p]*model.pv_OM_cost[p] for p in model.pv) for h in model.hours_last) \
-        +sum(sum(model.discount_rate[h]*model.wt_units[w]*model.wt_OM_cost[w] for w in model.wt) for h in model.hours_last) \
-        +sum(sum(model.discount_rate[h]*model.bess_units[b]*model.bess_OM_cost[b] for b in model.bess) for h in model.hours_last)
+        +sum(sum(model.discount_rate[h]*model.h_weight*model.fuel_cost*model.dg_fuel_consumption[h,g]
+                 for g in model.dg)for h in model.hours) \
+        +sum(sum(model.discount_rate[h]*model.h_weight*model.dg_OM_cost[g]*model.dg_units_on[h,g]
+                 for g in model.dg) for h in model.hours) \
+        +sum(sum(model.discount_rate[h]*model.pv_units[p]*model.pv_OM_cost[p]
+                 for p in model.pv) for h in model.hours_last) \
+        +sum(sum(model.discount_rate[h]*model.wt_units[w]*model.wt_OM_cost[w]
+                 for w in model.wt) for h in model.hours_last) \
+        +sum(sum(model.discount_rate[h]*model.bess_units[b]*model.bess_OM_cost[b]
+                 for b in model.bess) for h in model.hours_last)
         #+sum(model.discount_rate[h]*model.lost_load[h]*model.lost_load_value for h in model.hours) \
     )
 
@@ -49,7 +56,7 @@ def total_load(model,h):
     else:
         return model.Load[h] == model.Load[h-(model.num_days*24)]*(1+model.demand_growth)
 
-# this group of constraints limits the number of units installed
+# this group of constraints limits the number of units installed (all inactive in file components_creation)
 def pv_installed(model,p):
     return model.pv_units[p] <= model.pv_max_units[p]
 
@@ -64,12 +71,14 @@ def dg_installed(model, g):
 
 # this constraint defines the maximum power produced by renewables
 def res_energy(model,h):
-    return model.total_power_res[h] <= sum(model.pv_units[p]*model.input_pv_prod[h,p] for p in model.pv) + sum(model.wt_units[w]*model.input_wt_prod[h,w] for w in model.wt)
+    return model.total_power_res[h] <= sum(model.pv_units[p]*model.input_pv_prod[h,p] for p in model.pv) \
+           + sum(model.wt_units[w]*model.input_wt_prod[h,w] for w in model.wt)
 
 # this constraints expresses the balance of the system
 def system_balance(model,h):
     return model.Load[h] == model.total_power_res[h] + sum(model.dg_power[h,g] for g in model.dg) + model.lost_load[h]+\
-           sum(model.bess_dis_power[h,b]*model.bess_dis_efficiency_nom[b]-model.bess_ch_power[h,b]/model.bess_ch_efficiency_nom[b] for b in model.bess)
+           sum(model.bess_dis_power[h,b]*model.bess_dis_efficiency_nom[b]
+               -model.bess_ch_power[h,b]/model.bess_ch_efficiency_nom[b] for b in model.bess)
 
 # these constraints define the maximum allowable yearly unmet demand
 def total_energy_req(model,h):
@@ -88,21 +97,41 @@ def limit_lost_load(model,h):
     if h<=(model.num_days*24):
         return model.lost_load_total[h]<= model.load_total[h]*model.lost_load_max
     else:
-        return model.lost_load_total[h] - model.lost_load_total[h-(model.num_days*24)] <= (model.load_total[h]- model.load_total[h-(model.num_days*24)])*model.lost_load_max
+        return model.lost_load_total[h] - model.lost_load_total[h-(model.num_days*24)] <= \
+               (model.load_total[h]- model.load_total[h-(model.num_days*24)])*model.lost_load_max
+
+# this constraint sets a minimum target of renewable penetration in terms of total energy supplied
+def min_ren_frac(model):
+    return sum(sum(model.dg_power[h,g] for g in model.dg) for h in model.hours) <= \
+           (1 - model.ren_fraction) * sum(model.Load[h] for h in model.hours)
+
+# this constraint computes hours of unavailability due to failures
+def tot_unavailabilty(model):
+    return model.unav == 0.001 * sum(model.Load[h] for h in model.hours)/model.project_duration
+    '''
+           * (
+        + summation(model.pv_units,model.pv_unav) + summation(model.wt_units,model.wt_unav)
+        + summation(model.dg_units,model.dg_unav) + (summation(model.pv_units) + summation(model.bess_power_max)
+        * model.inverter_unav) ) / (summation(model.pv_units) + summation(model.wt_units)
+        + summation(model.dg_units) + (summation(model.pv_units) + summation(model.bess_power_max)))
+    '''
 
 # these constraints set the reserve requirement and its allocation among DG and BESS
 def total_reserve_req(model,h):
-    return model.reserve[h] == model.load_forecast_error*model.Load[h]+model.pv_forecast_error*sum(model.pv_units[p]*model.input_pv_prod[h,p] for p in model.pv)\
+    return model.reserve[h] == model.load_forecast_error*model.Load[h]+model.pv_forecast_error\
+           *sum(model.pv_units[p]*model.input_pv_prod[h,p] for p in model.pv)\
            +model.wt_forecast_error*sum(model.wt_units[w]*model.input_wt_prod[h,w] for w in model.wt)
 
 def reserve_allocation(model,h):
-    return sum(model.reserve_dg[h,g] for g in model.dg)+sum(model.reserve_bess[h,b] for b in model.bess) >= model.reserve[h]
+    return sum(model.reserve_dg[h,g] for g in model.dg)+sum(model.reserve_bess[h,b] for b in model.bess) >= \
+           model.reserve[h]
 
 #########################################
 # constraints related to diesel generators
 
-def fuel_consumption_curve(model,h,g): #linear characteristic
-    return model.dg_fuel_consumption[h,g] == model.dg_cost_coeff_A[g]*model.dg_units_on[h,g]+model.dg_cost_coeff_B[g]*model.dg_power[h,g]
+def fuel_consumption_curve(model,h,g):  # linear characteristic
+    return model.dg_fuel_consumption[h,g] == model.dg_cost_coeff_A[g]*model.dg_units_on[h,g]\
+           +model.dg_cost_coeff_B[g]*model.dg_power[h,g]
 
 def dg_power_max(model,h,g):
     # with reserve
@@ -119,7 +148,8 @@ def dg_online(model,h,g):
 ###########################################
 # constraints related to batteries
 def battery_power_max(model,h,b): #maximum power flowing through batteries, to size converters
-    return model.bess_dis_power[h,b]*model.bess_dis_efficiency_nom[b]+model.bess_ch_power[h,b]/model.bess_ch_efficiency_nom[b] <= model.bess_power_max[b]
+    return model.bess_dis_power[h,b]*model.bess_dis_efficiency_nom[b]\
+           +model.bess_ch_power[h,b]/model.bess_ch_efficiency_nom[b] <= model.bess_power_max[b]
 
 # following two constraints to avoid charging and discharging at the same time
 def bess_condition1(model,h,b):
@@ -130,14 +160,18 @@ def bess_condition2(model,h,b):
 
 def bess_charging_level(model,h,b):
     if h==1:
-        return model.bess_total_energy[h,b] ==  model.bess_units[b]*model.bess_nominal_capacity[b]*model.bess_initial_SOC[b]+model.bess_ch_power[h,b]-model.bess_dis_power[h,b]
+        return model.bess_total_energy[h,b] ==  model.bess_units[b]*model.bess_nominal_capacity[b]\
+               *model.bess_initial_SOC[b]+model.bess_ch_power[h,b]-model.bess_dis_power[h,b]
 #    elif h==model.project_duration:
-#        return model.bess_total_energy[h,b] == 0.5*model.bess_units[b]*model.bess_nominal_capacity[b]*model.bess_initial_SOC[b]
+#        return model.bess_total_energy[h,b] == 0.5*model.bess_units[b]*model.bess_nominal_capacity[b]
+    #        *model.bess_initial_SOC[b]
     else:
-        return model.bess_total_energy[h,b] == model.bess_total_energy[h-1,b]+model.bess_ch_power[h,b]-model.bess_dis_power[h,b]
+        return model.bess_total_energy[h,b] == model.bess_total_energy[h-1,b]\
+               +model.bess_ch_power[h,b]-model.bess_dis_power[h,b]
 
 def bess_charging_level_min(model, h, b):
-    return model.bess_total_energy[h, b] >= model.bess_units[b]*model.bess_nominal_capacity[b]*(1-model.bess_depth_of_discharge[b])+model.reserve_bess[h,b]
+    return model.bess_total_energy[h, b] >= model.bess_units[b]*model.bess_nominal_capacity[b]\
+           *(1-model.bess_depth_of_discharge[b])+model.reserve_bess[h,b]
 
 def bess_charging_level_max(model, h, b):
     return model.bess_total_energy[h, b] <= model.bess_units[b]*model.bess_nominal_capacity[b]

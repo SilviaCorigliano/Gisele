@@ -45,7 +45,7 @@ def importing(load_profile, pv_avg, wt_avg):
     # input_load = pd.read_csv('gisele\michele\Inputs\load_Soroti_12repdays.csv')
     # input_load.set_index('h', inplace=True)
 
-    pv_prod = pd.DataFrame(data=list(pv_avg.electricity),
+    pv_prod = pd.DataFrame(data=list(pv_avg[0]),
                            index=np.arange(1, pv_avg.size + 1),
                            columns=['1'])
     # pv_prod = pd.read_csv(r'C:\Users\Vinicius\PycharmProjects\Gisele-full-version\gisele\michele\Inputs\solarPV_Soroti_12repdays.csv')
@@ -54,7 +54,7 @@ def importing(load_profile, pv_avg, wt_avg):
     # wt_prod = pd.read_csv(r'C:\Users\Vinicius\PycharmProjects\Gisele-full-version\gisele\michele\Inputs\windPower_Soroti_12repdays.csv')
     # wt_prod.set_index('h', inplace=True)
     #
-    wt_prod = pd.DataFrame(data=list(wt_avg.electricity),
+    wt_prod = pd.DataFrame(data=list(wt_avg[0]),
                            index=np.arange(1, wt_avg.size + 1),
                            columns=['1'])
 

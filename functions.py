@@ -11,6 +11,7 @@ import requests
 import pandas as pd
 import geopandas as gpd
 import numpy as np
+import json
 import shapely.ops
 import iso8601
 from scipy.spatial import distance_matrix
@@ -19,6 +20,7 @@ from shapely.geometry import Point, box, LineString, MultiPoint
 from shapely.ops import split
 from gisele.michele.michele import start
 from gisele.data_import import import_pv_data, import_wind_data
+from datetime import datetime
 
 
 def l():
@@ -95,7 +97,67 @@ def distance_3d(df1, df2, x, y, z):
     return value
 
 
-def cost_matrix(gdf, dist_3d_matrix, line_bc):
+def river_intersection(gdf,resolution):
+    '''
+    Check which lines in the adjacency matrix cross the rivers and assign
+     a very high weight to those lines
+    :param gdf:
+    :return:
+    '''
+    print('begin river intersection')
+    n = gdf['X'].size
+    weight_columns_x1 = np.repeat(gdf['X'].values[:,np.newaxis], n,1)
+    weight_columns_y1 = np.repeat(gdf['Y'].values[:,np.newaxis], n,1)
+    weight_columns_x2 = np.repeat(gdf['X'].values[np.newaxis,:], n,0)
+    weight_columns_y2 = np.repeat(gdf['Y'].values[np.newaxis,:], n,0)
+
+    weight_columns_x1_res = np.reshape(weight_columns_x1, (n*n, 1), order='F')
+    weight_columns_x2_res = np.reshape(weight_columns_x2, (n*n, 1), order='F')
+    weight_columns_y1_res = np.reshape(weight_columns_y1, (n*n, 1), order='F')
+    weight_columns_y2_res = np.reshape(weight_columns_y2, (n*n, 1), order='F')
+
+    df=pd.DataFrame()
+    df['x1'] = weight_columns_x1_res[:,0]
+    df['x2'] = weight_columns_x2_res[:,0]
+    df['y1'] = weight_columns_y1_res[:,0]
+    df['y2'] = weight_columns_y2_res[:,0]
+    # todo-> very slow passage, need to speed it up, no sense to compute it each time,
+    # it would be better to associate weights in advance,
+    df['2d_dist'] = ((df['x1']-df['x2'])**2+(df['y1']-df['y2'])**2)**0.5
+    # select only short lines and create linestrings
+    df_short_lines = df.loc[(df['2d_dist']<resolution * 1.5) &(df['2d_dist']>0)]
+    df_short_lines['geometry'] = df.apply(
+        lambda x: LineString([(x['x1'], x['y1']), (x['x2'], x['y2'])]), axis=1)
+
+    geodf = gpd.GeoDataFrame(df_short_lines, geometry='geometry')
+    geodf.crs = 'epsg:32737'
+    # intersect short lines
+    test_inters = gpd.read_file('test_inters.shp')
+    a = np.empty(shape=(geodf['geometry'].size, test_inters['geometry'].size))
+    for i, row in test_inters.iterrows():
+        a[:, i] = geodf['geometry'].intersects(row['geometry'])
+    a_tot = np.amax(a, 1)
+
+    geodf['intersection'] = a_tot
+    df['a_tot'] = 0
+    df.loc[geodf.index,'a_tot'] = geodf['intersection']
+    matrix = df['a_tot'].values.reshape((n, n), order='F') * 100
+
+    # df['geometry']=df.apply(lambda x: LineString([(x['x1'], x['y1']),(x['x2'], x['y2']) ]),axis=1)
+    # geodf= gpd.GeoDataFrame(df,geometry='geometry')
+    # geodf.crs = 'epsg:32737'
+    #
+    # test_inters=gpd.read_file('test_inters.shp')
+    # a=np.empty(shape =(geodf['geometry'].size,test_inters['geometry'].size))
+    # for i, row in test_inters.iterrows():
+    #       a[:,i] = geodf['geometry'].intersects(row['geometry'])
+    # a_tot = np.amax(a, 1)
+    # geodf['intersection']=a_tot
+    # matrix=a_tot.reshape((n, n), order='F')*100
+    return matrix
+
+
+def cost_matrix(gdf, dist_3d_matrix, line_bc,resolution):
     """
     Creates the cost matrix in €/km by finding the average weight between
     two points and then multiplying by the distance and the line base cost.
@@ -107,8 +169,10 @@ def cost_matrix(gdf, dist_3d_matrix, line_bc):
     # Altitude distance in meters
     weight = gdf['Weight'].values
     n = gdf['X'].size
+    #river_inters =river_intersection(gdf,resolution)
     weight_columns = np.repeat(weight[:, np.newaxis], n, 1)
     weight_rows = np.repeat(weight[np.newaxis, :], n, 0)
+    #total_weight = (weight_columns + weight_rows) / 2 + river_inters
     total_weight = (weight_columns + weight_rows) / 2
 
     # 3D distance
@@ -367,68 +431,98 @@ def sizing(load_profile, clusters_list, geo_df_clustered, wt, years):
     """
     geo_df_clustered = geo_df_clustered.to_crs(4326)
     mg = pd.DataFrame(index=clusters_list.index,
-                      columns=['PV [kW]', 'Wind [kW]', 'Diesel [kW]',
+                      columns=['Cluster','PV [kW]', 'Wind [kW]', 'Diesel [kW]',
                                'BESS [kWh]', 'Inverter [kW]',
-                               'Investment Cost [k€]', 'OM Cost [k€]',
-                               'Replace Cost [k€]', 'Total Cost [k€]',
-                               'Energy Produced [MWh]',
-                               'Energy Consumed [MWh]', 'LCOE [€/kWh]'],
+                               'Investment Cost [kEUR]', 'OM Cost [kEUR]',
+                               'Replace Cost [kEUR]', 'Total Cost [kEUR]',
+                               'Energy Demand [MWh]', 'Energy Produced [MWh]',
+                               'LCOE [EUR/kWh]','CO2 [kg]', 'Unavailability [MWh/y]'],
                       dtype=float)
+
+    #save useful values from michele input data
+    with open('gisele/michele/Inputs/data.json') as f:
+        input_michele = json.load(f)
+    proj_lifetime = input_michele['num_years']
+    num_typ_days = input_michele['num_days']
+
     for cluster_n in clusters_list.Cluster:
         try:
-            l()
-            print('Creating the optimal Microgrid for Cluster ' + str(cluster_n))
-            l()
-            load_profile_cluster = load_profile.loc[:, cluster_n]
-            lat = geo_df_clustered[geo_df_clustered['Cluster']
-                                   == cluster_n].geometry.y.values[0]
-            lon = geo_df_clustered[geo_df_clustered['Cluster']
-                                   == cluster_n].geometry.x.values[0]
-            all_angles = pd.read_csv('Input/TiltAngles.csv')
-            tilt_angle = abs(all_angles.loc[abs(all_angles['lat'] - lat).idxmin(),
-                                            'opt_tilt'])
-            pv_prod = import_pv_data(lat, lon, tilt_angle)
-            utc = pv_prod.local_time[0]
-            if type(utc) is pd.Timestamp:
-                time_shift = utc.hour
-            else:
-                utc = iso8601.parse_date(utc)
-                time_shift = int(utc.tzinfo.tzname(utc).split(':')[0])
-            pv_avg = pv_prod.groupby([pv_prod.index.month,
-                                      pv_prod.index.hour]).mean()
-            pv_avg = pv_avg.append([pv_avg] * (years - 1), ignore_index=True)
-            pv_avg.reset_index(drop=True, inplace=True)
-            pv_avg = shift_timezone(pv_avg, time_shift)
+          l()
+          print('Creating the optimal Microgrid for Cluster ' + str(cluster_n))
+          l()
+          load_profile_cluster = load_profile.loc[:, cluster_n]
+          lat = geo_df_clustered[geo_df_clustered['Cluster']
+                                 == cluster_n].geometry.y.values[0]
+          lon = geo_df_clustered[geo_df_clustered['Cluster']
+                                 == cluster_n].geometry.x.values[0]
+          all_angles = pd.read_csv('Input/TiltAngles.csv')
+          tilt_angle = abs(all_angles.loc[abs(all_angles['lat'] - lat).idxmin(),
+                                          'opt_tilt'])
+          pv_prod = import_pv_data(lat, lon, tilt_angle)
+          wt_prod = import_wind_data(lat, lon, wt)
+          utc = pv_prod.local_time[0]
+          if type(utc) is pd.Timestamp:
+              time_shift = utc.hour
+          else:
+              utc = iso8601.parse_date(utc)
+              time_shift = int(utc.tzinfo.tzname(utc).split(':')[0])
+          div_round = 8760 // (num_typ_days * 24)
+          length = num_typ_days * 24
+          new_length= length *div_round
+          # pv_avg = pv_prod.groupby([pv_prod.index.month,
+          #                           pv_prod.index.hour]).mean()
 
-            wt_prod = import_wind_data(lat, lon, wt)
-            wt_avg = wt_prod.groupby([wt_prod.index.month,
-                                      wt_prod.index.hour]).mean()
-            wt_avg = wt_avg.append([wt_avg] * (years - 1), ignore_index=True)
-            wt_avg.reset_index(drop=True, inplace=True)
-            wt_avg = shift_timezone(wt_avg, time_shift)
+          pv_avg_new=np.zeros(24*num_typ_days)
+          pv_avg = pv_prod.values[0:new_length,1].reshape(24,div_round*num_typ_days,order='F')
+          wt_avg_new = np.zeros(24 * num_typ_days)
+          wt_avg = wt_prod.values[0:new_length].reshape(24,
+                                                           div_round * num_typ_days,
+                                                           order='F')
+          for i in range(num_typ_days):
+              pv_avg_new[i*24:(i+1)*24] = pv_avg[:,div_round*i:div_round*(i+1)].mean(axis=1)
 
-            inst_pv, inst_wind, inst_dg, inst_bess, inst_inv, init_cost, \
-            rep_cost, om_cost, salvage_value, gen_energy, load_energy, emissions = \
-                start(load_profile_cluster, pv_avg, wt_avg)
+              wt_avg_new[i * 24:(i + 1) * 24] = wt_avg[:, div_round * i:div_round * (
+                      i + 1)].mean(axis=1)
 
-            mg.loc[cluster_n, 'PV [kW]'] = inst_pv
-            mg.loc[cluster_n, 'Wind [kW]'] = inst_wind
-            mg.loc[cluster_n, 'Diesel [kW]'] = inst_dg
-            mg.loc[cluster_n, 'BESS [kWh]'] = inst_bess
-            mg.loc[cluster_n, 'Inverter [kW]'] = inst_inv
-            mg.loc[cluster_n, 'Investment Cost [k€]'] = init_cost
-            mg.loc[cluster_n, 'OM Cost [k€]'] = om_cost
-            mg.loc[cluster_n, 'Replace Cost [k€]'] = rep_cost
-            mg.loc[cluster_n, 'Total Cost [k€]'] = rep_cost + om_cost + init_cost
-            mg.loc[cluster_n, 'Energy Produced [MWh]'] = gen_energy
-            mg.loc[cluster_n, 'Energy Consumed [MWh]'] = load_energy
-            mg.loc[cluster_n, 'LCOE [€/kWh]'] = (
-                                                        rep_cost + om_cost + init_cost) / gen_energy
-            print(mg)
+
+
+          pv_avg = pd.DataFrame(pv_avg_new)
+          pv_avg = pv_avg.append([pv_avg] * (proj_lifetime - 1), ignore_index=True)
+          pv_avg.reset_index(drop=True, inplace=True)
+          pv_avg = shift_timezone(pv_avg, time_shift)
+
+
+          # wt_prod = import_wind_data(lat, lon, wt)
+          # wt_avg = wt_prod.groupby([wt_prod.index.month,
+          #                           wt_prod.index.hour]).mean()
+          wt_avg = pd.DataFrame(wt_avg_new)
+          wt_avg = wt_avg.append([wt_avg] * (proj_lifetime - 1), ignore_index=True)
+          wt_avg.reset_index(drop=True, inplace=True)
+          wt_avg = shift_timezone(wt_avg, time_shift)
+
+          results = start(load_profile_cluster, pv_avg, wt_avg,input_michele)
+
+          mg.loc[cluster_n, 'Cluster'] = 'C'+str(cluster_n)
+          mg.loc[cluster_n, 'PV [kW]'] = results['inst_pv']
+          mg.loc[cluster_n, 'Wind [kW]'] = results['inst_wind']
+          mg.loc[cluster_n, 'Diesel [kW]'] = results['inst_dg']
+          mg.loc[cluster_n, 'BESS [kWh]'] = results['inst_bess']
+          mg.loc[cluster_n, 'Inverter [kW]'] = results['inst_inv']
+          mg.loc[cluster_n, 'Investment Cost [kEUR]'] = results['init_cost']
+          mg.loc[cluster_n, 'OM Cost [kEUR]'] = results['om_cost']
+          mg.loc[cluster_n, 'Replace Cost [kEUR]'] = results['rep_cost']
+          mg.loc[cluster_n, 'Total Cost [kEUR]'] = results['npc']
+          mg.loc[cluster_n, 'Energy Produced [MWh]'] = results['gen_energy']
+          mg.loc[cluster_n, 'Energy Demand [MWh]'] = results['load_energy']
+          mg.loc[cluster_n, 'LCOE [EUR/kWh]'] = results['npc'] / results['gen_energy']
+          mg.loc[cluster_n, 'CO2 [kg]'] = results['emissions']
+          mg.loc[cluster_n, 'Unavailability [MWh/y]'] = results['tot_unav']
+          print(mg)
         except:
-            print('Region too large to compute the optimal microgrid.')
+          print('Region too large to compute the optimal microgrid.')
+
     mg = mg.round(decimals=4)
-    mg.to_csv('Output/Microgrids/microgrids.csv', index_label='Cluster')
+    mg.to_csv('Output/Microgrids/microgrids.csv', index=False)
 
     return mg
 
